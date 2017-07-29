@@ -54,6 +54,11 @@ df	剩余空间
 
 mount -o remount, rw /
 
+### 查看进程
+
+``ps``
+
+``ps | grep packageName``
 
 ### keytool
 
