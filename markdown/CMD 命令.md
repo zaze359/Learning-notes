@@ -79,6 +79,7 @@ logcat -c
 
 ```
 
+[http://http://ghoulich.xninja.org/2015/12/08/android_logcat_manual/](http://http://ghoulich.xninja.org/2015/12/08/android_logcat_manual/ "Logcat")
 
 
 
