@@ -9,11 +9,11 @@
 ```
 brew deps *		# 列出软件包的依赖关系
 brew info *		# 查看软件包信息
-brew list				# 列出已安装的软件包
+brew list		# 列出已安装的软件包
 brew search *
 brew install *
 brew update	*		# 更新 Homebrew 的信息
-brew outdated			# 看一下哪些软件可以升级
+brew outdated		# 看一下哪些软件可以升级
 brew upgrade <xxx>	# 如果不是所有的都要升级，那就这样升级指定的
 brew upgrade; brew cleanup    # 如果都要升级，直接升级完然后清理干净
 
@@ -33,10 +33,7 @@ catalina run
 
 ## AA
 
-ifconfig
-
-
-
+ifconfig en0
 
 ## Android
 
@@ -46,6 +43,11 @@ shell中输入：logcat | grep ActivityManager 真机运行应用，可以实时
 
 cmd命令中输入：adb shell dumpsys activity activities
 
+###  刷机 双清
+
+adb reboot recovery
+
+adb reboot-bootloader
 
 ### 常用命令
 
@@ -69,7 +71,6 @@ keytool -list -v -keystore debug.keystore
 
 ```
 
-
 ### 日志
 
 ```
@@ -82,8 +83,12 @@ logcat -c
 [http://ghoulich.xninja.org/2015/12/08/android_logcat_manual/](http://ghoulich.xninja.org/2015/12/08/android_logcat_manual/ "Logcat")
 
 
+## TCPSpeed
+
+sudo java -jar tcpspeed_client.jar
 
 ## other
-管理终端连接密码
 
 511536
+
+636467
