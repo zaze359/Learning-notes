@@ -16,7 +16,7 @@ import ${corePackageName}.${baseActivity};
  * @author : ${author}
  * @version : ${.now?string("yyyy-MM-dd hh:mm")} 1.0
  */
-public class ${activityClass} extends BaseActivity implements ${viewInterface} {
+public class ${activityClass} extends ${baseActivity} implements ${viewInterface} {
     private ${presenterInterface} presenter;
 
     @Override

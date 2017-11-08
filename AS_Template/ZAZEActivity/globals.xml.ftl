@@ -8,7 +8,6 @@
     <#include "../common/common_globals.xml.ftl" />
 
     <global id="author" value="zaze" />
-
 	<global id="corePackageName" type="string" value="com.zaze.common.base" />
 	<global id="basePresenterName" type="string" value="ZBasePresenter" />
 	<global id="baseViewName" type="string" value="ZBaseView" />

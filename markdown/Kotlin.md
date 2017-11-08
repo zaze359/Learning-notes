@@ -26,18 +26,7 @@ compile "org.jetbrains.kotlin:kotlin-stdlib-jre7:$kotlin_version"
 
 ## 亮点
 
-### 一、字符串拼接
-
-```
-String a = "aa";
-String b = "b $a ${c()}"
-
-fun c : String() {
-	return "cc"
-}
-```
-
-### 二、不在使用findViewById()
+### 一、不在使用findViewById()
 
 gradle
 
@@ -64,6 +53,17 @@ example :
 ```
 // 直接就能访问到控件进行操作了
 tv_message.text = "Hello Kotlin!";
+```
+
+### 二、字符串拼接
+
+```
+String a = "aa";
+String b = "b $a ${c()}"
+
+fun c : String() {
+	return "cc"
+}
 ```
 
 

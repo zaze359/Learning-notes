@@ -30,11 +30,6 @@ catalina -h
 - 运行tomcat：
 catalina run
 
-
-## AA
-
-ifconfig en0
-
 ## Android
 
 ###  查看当前正在运行的Activity
@@ -43,13 +38,18 @@ shell中输入：logcat | grep ActivityManager 真机运行应用，可以实时
 
 cmd命令中输入：adb shell dumpsys activity activities
 
-###  刷机 双清
+###  bootloader recovery
 
 adb reboot recovery
 
 adb reboot-bootloader
 
 ### 常用命令
+
+ifconfig en0
+
+查看内核版本 ``cat /proc/version``
+
 
 du -m    以m为单位查看大小
 df	剩余空间
@@ -85,7 +85,7 @@ logcat -c
 
 ## TCPSpeed
 
-sudo java -jar tcpspeed_client.jar
+sudo java -jar ~/Documents/ZAZE/tcpspeed_client/tcpspeed_client.jar
 
 ## other
 

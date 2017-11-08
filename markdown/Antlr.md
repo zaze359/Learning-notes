@@ -5,8 +5,7 @@ Antlr是 将语法文件转换成可以识别改语法文件所描述的语言 �
 
 1. ANTLR 语言识别的一个工具 (ANother Tool for Language Recognition ) 是一种语言工具，它提供了一个框架，可以通过包含 Java, C++, 或 C# 动作（action）的语法描述来构造语言识别器，编译器和解释器。 计算机语言的解析已经变成了一种非常普遍的工作，在这方面的理论和工具经过近 40 年的发展已经相当成熟，使用 Antlr 等识别工具来识别，解析，构造编译器比手工编程更加容易，同时开发的程序也更易于维护。
 2. 语言识别的工具有很多种，比如大名鼎鼎的 Lex 和 YACC，Linux 中有他们的开源版本，分别是 Flex 和 Bison。在 Java 社区里，除了 Antlr 外，语言识别工具还有 JavaCC 和 SableCC 等。
-3. 和大多数语言识别工具一样，Antlr 使用上下文无关文法描述语言。最新的 Antlr 是一个基于 LL(*) 的语言识别器。在 Antlr 中通过解析用户自定义的上下文无关文法，自动生成词法分析器 (Lexer)、语法分析器 (Parser) 和树分析器 (Tree Parser)。
-
+3. 和大多数语言识别工具一样，Antlr 使用上下文无关文法描述语言。最新的 Antlr 是一个基于 LL(``*``) 的语言识别器。在 Antlr 中通过解析用户自定义的上下文无关文法，自动生成词法分析器 (Lexer)、语法分析器 (Parser) 和树分析器 (Tree Parser);
 
 
 ## 1.1 ANTLR全景
@@ -68,7 +67,7 @@ rule2 : ... | ... | ... ;
 文件的头部是 grammar 关键字，定义文法的名字，必须与文法文件文件的名字相同
 **Demo.g4**
 
-`` grammar Demo;``
+``grammar Demo;``
 
 
 **DemoLexer**是Antlr生成的**词法分析器**，**DemoParser**是 Antlr 生成的**语法分析器**
