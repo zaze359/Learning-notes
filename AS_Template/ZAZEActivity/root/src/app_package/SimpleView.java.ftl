@@ -1,6 +1,6 @@
 package ${packageName}.view;
 
-import ${corePackageName}.${baseActivity};
+import ${corePackageName}.${baseViewName};
 
 
 /**

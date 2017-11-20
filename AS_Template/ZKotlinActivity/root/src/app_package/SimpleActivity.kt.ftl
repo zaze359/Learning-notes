@@ -17,7 +17,7 @@ import kotlinx.android.synthetic.main.${layoutName}.*
  * @version : ${.now?string("yyyy-MM-dd hh:mm")} 1.0
  */
 open class ${activityClass} : ${baseActivity}(), ${viewInterface} {
-    var presenter : ${presenterInterface}? = null;
+    var presenter : ${presenterInterface}? = null
 
     override fun onCreate(savedInstanceState : Bundle?) {
         super.onCreate(savedInstanceState)
