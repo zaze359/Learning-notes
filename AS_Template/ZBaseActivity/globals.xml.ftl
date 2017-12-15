@@ -9,7 +9,8 @@
 
     <global id="author" value="zaze" />
 	<global id="corePackageName" type="string" value="com.zaze.common.base" />
-	<global id="basePresenterName" type="string" value="ZBasePresenter" />
-	<global id="baseViewName" type="string" value="ZBaseView" />
-    <global id="baseActivity" type="string" value="ZBaseActivity" />
+    <global id="mvpPackageName" type="string" value="com.zaze.common.base.mvp" />
+	<global id="basePresenterName" type="string" value="BaseMvpPresenter" />
+	<global id="baseViewName" type="string" value="BaseView" />
+    <global id="baseActivity" type="string" value="BaseActivity" />
 </globals>

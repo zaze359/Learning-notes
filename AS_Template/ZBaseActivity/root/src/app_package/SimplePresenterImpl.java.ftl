@@ -1,7 +1,7 @@
 package ${packageName}.presenter.impl;
 
 import ${packageName}.presenter.${presenterInterface};
-import ${corePackageName}.${basePresenterName};
+import ${mvpPackageName}.${basePresenterName};
 import ${packageName}.view.${viewInterface};
 
 /**
