@@ -2,10 +2,10 @@
 <template
     format="5"
     revision="5"
-    name="ZAZE Activity"
+    name="Z Base mvp Activity"
     minApi="9"
     minBuildApi="14"
-    description="Creates a ZAZE activity">
+    description="Creates a zaze base mvp activity">
 
     <category value="Activity" />
     <formfactor value="Mobile" />

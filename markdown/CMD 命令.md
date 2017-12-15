@@ -38,6 +38,8 @@ shell中输入：logcat | grep ActivityManager 真机运行应用，可以实时
 
 cmd命令中输入：adb shell dumpsys activity activities
 
+``ps |grep -E 'com.zaze.demo|com.zaze.test'``
+
 ###  bootloader recovery
 
 adb reboot recovery
