@@ -1,6 +1,14 @@
 
 # Kotlin
 
+Tags : ZAZE
+
+---
+
+[TOC]
+
+---
+
 ## 集成
 
 Project : gradle 
@@ -72,8 +80,15 @@ fun c : String() {
 
 fun
 
-var
+var, val
 
+
+### 延迟加载
+
+- lateinit 修饰符
+```
+有的成员属性不能在构造函数中初始化，会在稍后某的地方完成初始化，可以确定是非空
+```
 
 ### 单例
 

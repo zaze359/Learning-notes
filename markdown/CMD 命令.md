@@ -1,8 +1,15 @@
 
-# CMD 命令
+# 常用命令
 
+Tags : ZAZE
 
-## brew
+---
+
+[TOC]
+
+---
+
+## Brew
 
 安装``brew`` : ``ruby -e "$(curl -fsSL /homebrew/go)"``
 
@@ -19,34 +26,51 @@ brew upgrade; brew cleanup    # 如果都要升级，直接升级完然后清理
 
 ```
 
-## tomcat
+## Tomcat
 
 - 搜索tomcat是否存在：
-brew search tomcat
+``brew search tomcat``
 - 安装tomcat：
-brew install tomcat
+``brew install tomcat``
 - 检查是否安装成功：
-catalina -h
+``catalina -h``
 - 运行tomcat：
-catalina run
+``catalina run``
 
 ## Android
 
-###  查看当前正在运行的Activity
+- 查看当前正在运行的Activity
 
-shell中输入：logcat | grep ActivityManager 真机运行应用，可以实时
+`` logcat | grep ActivityManager``
+真机运行应用，可以实时
 
-cmd命令中输入：adb shell dumpsys activity activities
+``adb shell dumpsys activity activities``
 
 ``ps |grep -E 'com.zaze.demo|com.zaze.test'``
 
 ###  bootloader recovery
 
+```
 adb reboot recovery
-
 adb reboot-bootloader
+```
+### 刷机
+[Google原生固件包][1]
+```
+a
+```
 
-### 常用命令
+### root
+[SuperSu][3]
+
+```
+- 下载APK
+- 下载zip包
+- 下载TWRP .img
+
+```
+
+### 12345
 
 ifconfig en0
 
@@ -75,6 +99,8 @@ keytool -list -v -keystore debug.keystore
 
 ### 日志
 
+[Android的logcat日志工具使用详解][2]
+
 ```
 logcat
 logcat -d
@@ -82,15 +108,22 @@ logcat -c
 
 ```
 
-[http://ghoulich.xninja.org/2015/12/08/android_logcat_manual/](http://ghoulich.xninja.org/2015/12/08/android_logcat_manual/ "Logcat")
-
-
 ## TCPSpeed
 
 sudo java -jar ~/Documents/ZAZE/tcpspeed_client/tcpspeed_client.jar
 
-## other
+## Other
 
 511536
 
 636467
+
+
+
+
+
+
+
+[1]: https://developers.google.com/android/nexus/images
+[2]: http://ghoulich.xninja.org/2015/12/08/android_logcat_manual/
+[3]: http://www.supersu.com/download

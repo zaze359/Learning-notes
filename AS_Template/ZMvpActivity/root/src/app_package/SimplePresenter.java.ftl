@@ -1,5 +1,9 @@
 package ${packageName}.presenter;
 
+import ${packageName}.presenter.${presenterInterface};
+import ${corePackageName}.${basePresenterName};
+import ${packageName}.view.${viewInterface};
+
 /**
  * Description :
  * @author : ${author}
