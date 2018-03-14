@@ -44,5 +44,34 @@ mark
 
 #### 表格
 
+- form-inline : 水平排列
+
+- form-control ： 美化控件
+
+- input-lg(sm) : 大小变化
+
+
+#### 图片
+
+- img-rounded 圆角
+- img-circle 园
+- img-thumbnail 带边框的圆角
+
+
+
+### 二、Bootstrap 渐进
+
+#### 1、响应式开发
+
+**meta标签中的Viewport**
+
+- width, height
+- user-scalable, initial-scale
+- maximum-scale, minimum-scale
+```
+<meta name="viewport" content="width=device-width,initial-scale=1, maximum-scale=1,minimum-scale-1,user-scalable=no" >
+```
+
+#### 2、利用栅格系统适配不同环境
 
 
