@@ -21,8 +21,8 @@ brew search *
 brew install *
 brew update	*		# 更新 Homebrew 的信息
 brew outdated		# 看一下哪些软件可以升级
-brew upgrade <xxx>	# 如果不是所有的都要升级，那就这样升级指定的
 brew upgrade; brew cleanup    # 如果都要升级，直接升级完然后清理干净
+brew upgrade <xxx>	# 如果不是所有的都要升级，那就这样升级指定的
 
 ```
 
@@ -113,6 +113,12 @@ logcat -c
 sudo java -jar ~/Documents/ZAZE/tcpspeed_client/tcpspeed_client.jar
 
 ## Other
+
+### 显示隐藏文件
+
+``ls -aF``
+
+
 
 511536
 
