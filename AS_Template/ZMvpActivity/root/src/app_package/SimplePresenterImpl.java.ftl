@@ -10,7 +10,7 @@ import ${mvpPackageName}.${mvpPresenterName};
  * @version : ${.now?string("yyyy-MM-dd hh:mm")} 1.0
  */
 public class ${presenterImpl} extends ${mvpPresenterName}<${viewInterface}> implements ${presenterInterface} {
-	public ${presenterImpl}(${viewInterface}> view) {
+	public ${presenterImpl}(${viewInterface} view) {
         super(view);
     }
 }
