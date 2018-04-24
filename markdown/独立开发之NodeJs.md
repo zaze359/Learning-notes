@@ -1,27 +1,35 @@
+---
+
+Tags : ZAZE android
+
+[TOC]
+
+---
+
+
 ## Web开发
 
-写着玩玩
+### 学习的知识点
+
+```
+- node.js 
+- EJS, jade 
+- mongodb
+- bootstrap
+```
+
+### 学习流程
+> 1. 使用HTML5 CSS 写一些静态界面 练习
+> 2. 使用javaScript 润色
+> 3. 构造伪数据
+> 4. 构建真实数据库，实现数据交互 
 
 
-### 前端 
-* 第一步 使用HTML5 CSS 写一些静态界面 练习
-* 第二步 使用javaScript 润色
+### 项目配置
 
-
-### 后端
-
-node.js + EJS
-
-### 主页 
-
-* 一些基本介绍
-
-* 登录，注册等
-
-
-### 子页
-
-#### 一、发布一些自己制作的 Android 小项目
-
-
+```
+- 下载安装node.js
+- npm install express jade moment mongoose
+- bower install bootstrap
+```
 
