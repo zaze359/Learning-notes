@@ -1,7 +1,7 @@
 
 # 常用命令
 
-Tags : ZAZE
+Tags : zazen
 
 ---
 

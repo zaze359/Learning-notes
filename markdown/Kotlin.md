@@ -1,7 +1,7 @@
 
 # Kotlin
 
-Tags : ZAZE
+Tags : zazen
 
 ---
 

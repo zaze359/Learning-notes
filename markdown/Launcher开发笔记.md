@@ -1,6 +1,6 @@
 # Launcher开发笔记
 
-Tags: ZAZE Android
+Tags: zazen android
 
 ---
 

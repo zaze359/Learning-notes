@@ -1,7 +1,7 @@
 
 ## Gradle 
 
-Tags : ZAZE
+Tags : zazen
 
 ### 一、编译错误
 

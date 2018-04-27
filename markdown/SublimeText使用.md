@@ -1,6 +1,6 @@
 # Sublime Text
 
-Tags: ZAZE
+Tags: zazen
 
 ---
 
