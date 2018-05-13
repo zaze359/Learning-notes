@@ -54,10 +54,12 @@ brew upgrade <xxx>	# 如果不是所有的都要升级，那就这样升级指�
 adb reboot recovery
 adb reboot-bootloader
 ```
+
 ### 刷机
+
 [Google原生固件包][1]
+
 ```
-a
 ```
 
 ### root

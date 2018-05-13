@@ -1,13 +1,40 @@
-# Git
+---
+Tags : zaze
+
+---
+
+[TOC]
+
+---
+
+# Git 
+
+
+```
+git clone xxxx.git
+
+git checkout xxx
+
+git status -s
+
+git branch -r
+
+git log
+
+git diff
+
+git rm -r xxx
+```
+
+
+## SubTree
+
+
 
 ``git subtree add --prefix dependence http://xxx/xx/x.git master``
 
 ``git subtree pull --prefix dependence http://xxx/xx/x.git master``
 
-
-## 切换
-
-``git checkout [name] ``
 
 ## tag
 

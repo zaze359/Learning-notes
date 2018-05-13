@@ -40,7 +40,7 @@ Roboto的另一个字重，介于regular和bold之间，出现在微信左上角
 
 ### [生命周期][lifecycle]
 
-### 引用
+### 强,软,弱,虚引用
 
 - StrongReference(强引用)
 ```
