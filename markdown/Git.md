@@ -9,21 +9,51 @@ Tags : zaze
 
 # Git 
 
-
 ```
 git clone xxxx.git
 
-git checkout xxx
-
 git status -s
-
-git branch -r
 
 git log
 
 git diff
 
 git rm -r xxx
+```
+
+## 分支处理
+
+- 切换分支
+```
+git checkout xxx
+```
+
+- 创建分支
+
+```
+git branch branch_222
+```
+
+- 查看远程分支
+```
+git remote show origin 
+```
+
+- 查看本地分支
+```
+git branch
+git branch -r
+git branch -a
+```
+
+- 删除远程仓库已经不存在的分支
+```
+git remote prune origin
+```
+
+- 合并
+```
+git merge xxx
 ```
 
 
