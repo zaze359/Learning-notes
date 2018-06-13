@@ -46,7 +46,7 @@ git branch -r
 git branch -a
 ```
 
-- 删除远程仓库已经不存在的分支
+- 删除本地分支(远程仓库中已不存在的)
 ```
 git remote prune origin
 ```

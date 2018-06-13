@@ -1,7 +1,7 @@
 
 # 常用命令
 
-Tags : zazen
+Tags : zaze
 
 ---
 
@@ -41,8 +41,11 @@ brew upgrade <xxx>	# 如果不是所有的都要升级，那就这样升级指�
 
 - 查看当前正在运行的Activity
 
-`` logcat | grep ActivityManager``
+
 真机运行应用，可以实时
+`` logcat | grep ActivityManager``
+
+
 
 ``adb shell dumpsys activity activities``
 
