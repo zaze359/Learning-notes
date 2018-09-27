@@ -8,8 +8,14 @@
     <#include "../common/common_globals.xml.ftl" />
 
     <global id="author" value="zaze" />
-    <global id="corePackageName" type="string" value="com.zaze.common.base.mvp" />
-    <global id="basePresenterName" type="string" value="BaseMvpPresenter" />
-    <global id="baseViewName" type="string" value="BaseMvpView" />
-    <global id="baseActivity" type="string" value="BaseMvpActivity" />
+    <!-- base -->
+    <global id="corePackageName" type="string" value="com.zaze.common.base" />
+    <global id="basePresenterName" type="string" value="BasePresenter" />
+    <global id="baseViewName" type="string" value="BaseView" />
+    <!-- mvp -->
+    <global id="mvpPackageName" type="string" value="com.zaze.common.base.mvp" />
+    <global id="mvpPresenterName" type="string" value="BaseMvpPresenter" />
+    <global id="mvpActivity" type="string" value="BaseMvpActivity" />
+    <global id="mvpFragment" type="string" value="BaseMvpFragment" />
+
 </globals>

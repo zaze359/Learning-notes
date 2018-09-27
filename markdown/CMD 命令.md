@@ -40,16 +40,19 @@ brew upgrade <xxx>	# 如果不是所有的都要升级，那就这样升级指�
 ## Android
 
 - 查看当前正在运行的Activity
-
-
 真机运行应用，可以实时
 `` logcat | grep ActivityManager``
-
-
 
 ``adb shell dumpsys activity activities``
 
 ``ps |grep -E 'com.zaze.demo|com.zaze.test'``
+
+```
+adb shell am set-debug-app -w com.xxxx
+adb shell am set-debug-app -w -persitent xxxx
+adb shell am clear-debug-app
+```
+
 
 ###  bootloader recovery
 
@@ -66,7 +69,7 @@ adb reboot-bootloader
 ```
 
 ### root
-[SuperSu][3]
+[SuperSu][2]
 
 ```
 - 下载APK
@@ -103,8 +106,7 @@ keytool -list -v -keystore debug.keystore
 ```
 
 ### 日志
-
-[Android的logcat日志工具使用详解][2]
+[Android的logcat日志工具使用详解][3]
 
 ```
 logcat
@@ -130,11 +132,6 @@ sudo java -jar ~/Documents/ZAZE/tcpspeed_client/tcpspeed_client.jar
 636467
 
 
-
-
-
-
-
-[1]: https://developers.google.com/android/nexus/images
-[2]: http://ghoulich.xninja.org/2015/12/08/android_logcat_manual/
-[3]: http://www.supersu.com/download
+  [1]: https://developers.google.com/android/nexus/images
+  [2]: http://www.supersu.com/download
+  [3]: http://ghoulich.xninja.org/2015/12/08/android_logcat_manual/

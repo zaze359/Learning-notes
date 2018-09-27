@@ -1,14 +1,13 @@
-package ${packageName}.ui
-
+package ${packageName}.ui;
 
 <#if applicationPackage??>
-import ${applicationPackage}.R
+import ${applicationPackage}.R;
 </#if>
-import android.os.Bundle
-import ${packageName}.view.${viewInterface}
-import ${packageName}.presenter.${presenterInterface}
-import ${packageName}.presenter.impl.${presenterImpl}
-import ${corePackageName}.${baseActivity}
+import android.os.Bundle;
+import ${packageName}.contract.${contractInterface};
+import ${packageName}.presenter.${presenter};
+import ${mvpPackageName}.${mvpActivity};
+
 import kotlinx.android.synthetic.main.${layoutName}.*
 
 /**
@@ -16,13 +15,19 @@ import kotlinx.android.synthetic.main.${layoutName}.*
  * @author : ${author}
  * @version : ${.now?string("yyyy-MM-dd hh:mm")} 1.0
  */
-open class ${activityClass} : ${baseActivity}(), ${viewInterface} {
-    var presenter : ${presenterInterface}? = null
+open class ${activityClass} : ${mvpActivity}<${contractInterface}.View, ${contractInterface}.Presenter>(), ${contractInterface}.View {
 
-    override fun onCreate(savedInstanceState : Bundle?) {
+    override fun isNeedHead() :Boolean {
+        return true
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.${layoutName})
-        presenter = ${presenterImpl}(this)
+    }
+
+    override fun getPresenter() : ${contractInterface}.Presenter {
+        return ${presenter}(this)
     }
 
 }

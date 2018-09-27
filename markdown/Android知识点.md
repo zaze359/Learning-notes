@@ -1,6 +1,6 @@
 # Android知识点
 
-Tags : zazen android
+Tags : zaze android
 
 ---
 
@@ -8,7 +8,7 @@ Tags : zazen android
 
 ---
 
-## 字体
+## 一、字体
 
 > 摘自http://www.miui.com/thread-8343134-1-1.html
 
@@ -36,7 +36,7 @@ Roboto的另一个字重，介于regular和bold之间，出现在微信左上角
 ------
 
 
-## 基础篇
+## 二、基础篇
 
 ### [生命周期][lifecycle]
 
@@ -115,7 +115,7 @@ Android为了确保应用程序中关键代码的正确执行，提供了Wake Lo
 
 ------
 
-### MeasureSpecMode
+### 三、MeasureSpecMode
 
 ```
 /**
@@ -231,6 +231,91 @@ false : 关闭刷新UI
 ```
 刷新监听事件
 ```
+
+## 通知消息
+
+### 
+
+
+
+
+## Android 架构组件
+
+### Lifecycle
+
+- 用于感知LifecycleOwner的生命周期
+- Fragment实现了这个接口
+- Activity并没有 是在他的子类 SupportActivity中实现
+
+```
+public interface IPresenter extends DefaultLifecycleObserver {
+
+}
+
+public class MainActivity extends AppCompatActivity {
+
+    IPresenter mPresenter;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        ....
+        mPresenter = new Presenter();
+        getLifecycle().addObserver(mPresenter);
+    }
+}
+```
+
+### LiveData
+
+- 能够感知实现了LifecycleOwner接口的组件生命周期
+- 可以监听数据变化进行实时更新
+
+```
+public class MainActivity extends AppCompatActivity {
+    private MutableLiveData<String> mLiveData;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        ....
+        mLiveData = new MutableLiveData<>();
+        // 转入LifecycleOwner 监听生命周期
+        mLiveData.observer(this, new Observer<String>() {
+            @Override
+            public void onChanged(@Nullable String s) {
+                // 数据发生变化
+            }
+        });
+    }
+    
+    private void a() {
+        // 更新数据
+        // post 走的 消息机制 = handler.post({setValue()})
+        mLiveData.postValue("post");
+        mLiveData.setValue("set");
+    }
+}
+```
+```
+public class MyLiveData extends LiveData<String> {
+    ....
+    @Override
+    protected void onActive() {
+        super.onActive();
+        // 接收到状态变更检测到存在active状态observer
+    }
+
+    @Override
+    protected void onInactive() {
+        super.onInactive();
+        // 接收到状态变更检测到不存在active状态observer
+    }
+}
+```
+
+
+
+
+
 
 
 

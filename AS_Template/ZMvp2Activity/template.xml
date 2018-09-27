@@ -2,10 +2,10 @@
 <template
     format="5"
     revision="5"
-    name="Z Base mvp Activity"
+    name="Z MVP 2 Activity"
     minApi="9"
     minBuildApi="14"
-    description="Creates a zaze base mvp activity">
+    description="Creates a zaze mvp template">
 
     <category value="Activity" />
     <formfactor value="Mobile" />
@@ -35,28 +35,37 @@
         default="activity_main"
         help="The name of the layout to create for the activity" />
 
-    <parameter
+<!--     <parameter
         id="viewInterface" 
         name="View Interface"
         type="string"
         constraints="class|unique|nonempty"
         suggest="${className}View"
         help="View Interface" />
+ -->
 
-    <parameter 
+    <parameter
+        id="contractInterface" 
+        name="Contract Interface"
+        type="string"
+        constraints="class|unique|nonempty"
+        suggest="${className}Contract"
+        help="Contract Interface" />
+
+<!--     <parameter 
         id="presenterInterface"
         name="Presenter Interface"
         type="string"
         constraints="class|unique|nonempty"
         suggest="${className}Presenter"
-        help="Presenter Interface" />
+        help="Presenter Interface" /> -->
 
     <parameter
-        id="presenterImpl"
+        id="presenter"
         name="Presenter"
         type="string"
         constraints="class|unique|nonempty"
-        suggest="${className}PresenterImpl"
+        suggest="${className}Presenter"
         help="Presenter" />
 
     <parameter

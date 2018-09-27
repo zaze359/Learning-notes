@@ -36,27 +36,19 @@
         help="The name of the layout to create for the activity" />
 
     <parameter
-        id="viewInterface" 
-        name="View Interface"
+        id="contractInterface" 
+        name="Contract Interface"
         type="string"
         constraints="class|unique|nonempty"
-        suggest="${className}View"
-        help="View Interface" />
-
-    <parameter 
-        id="presenterInterface"
-        name="Presenter Interface"
-        type="string"
-        constraints="class|unique|nonempty"
-        suggest="${className}Presenter"
-        help="Presenter Interface" />
+        suggest="${className}Contract"
+        help="Contract Interface" />
 
     <parameter
-        id="presenterImpl"
+        id="presenter"
         name="Presenter"
         type="string"
         constraints="class|unique|nonempty"
-        suggest="${className}PresenterImpl"
+        suggest="${className}Presenter"
         help="Presenter" />
 
     <parameter

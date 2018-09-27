@@ -1,6 +1,6 @@
 # Anroid 测试用例
 
-Tags ： zazen android
+Tags ： zaze android
 
 ---
 

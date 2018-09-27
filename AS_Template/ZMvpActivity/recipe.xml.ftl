@@ -14,14 +14,11 @@
     <instantiate from="root/src/app_package/SimpleActivity.java.ftl"
                     to="${escapeXmlAttribute(srcOut)}/ui/${activityClass}.java" />
 
-	<instantiate from="root/src/app_package/SimpleView.java.ftl"
-                    to="${escapeXmlAttribute(srcOut)}/view/${viewInterface}.java" />
+	<instantiate from="root/src/app_package/SimpleContract.java.ftl"
+                    to="${escapeXmlAttribute(srcOut)}/contract/${contractInterface}.java" />
 
 	<instantiate from="root/src/app_package/SimplePresenter.java.ftl" 
- 					to="${escapeXmlAttribute(srcOut)}/presenter/${presenterInterface}.java" />
-
-	<instantiate from="root/src/app_package/SimplePresenterImpl.java.ftl" 
- 					to="${escapeXmlAttribute(srcOut)}/presenter/impl/${presenterImpl}.java" />
+ 					to="${escapeXmlAttribute(srcOut)}/presenter/${presenter}.java" />
 
     <instantiate from="root/res/layout/SimpleLayout.xml.ftl"
                  to="${escapeXmlAttribute(resOut)}/layout/${layoutName}.xml" /> 

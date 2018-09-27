@@ -1,7 +1,7 @@
 
 # Kotlin
 
-Tags : zazen
+Tags : zaze android
 
 ---
 
@@ -90,19 +90,36 @@ var, val
 有的成员属性不能在构造函数中初始化，会在稍后某的地方完成初始化，可以确定是非空
 ```
 
+- by layz(mode = x)
+```
+mode = LazyThreadSafetyMode.SYNCHRONIZED (线程安全)
+mode = LazyThreadSafetyMode.NONE (线程不安全)
+```
+
 ### 单例
 
-object class
+- object class
 
-### 注释
+
+### 注解
+
+- @JvmStatic
+```
+ 和object一起使用, 变成正在的静态, 不用INSTANCE
+```
+
+- @JvmOverloads
+```
+类似方法的多态
+
+@JvmOverloads fun test(a : String = "")
+
+等价下面
+fun test()
+fun test(a : String)
+
 
 ```
-/**
- * [context] 上下文
- * 
- ** /
-```
-
 ### 数组
 
 #### 1. 直接指定长度
@@ -140,3 +157,12 @@ println(asc.get(1))     //  1
 //    println(asc[10])      ArrayIndexOutOfBoundsException
 ```
 
+### 内联函数和内联扩展函数
+
+|函数|范例|函数体内的对象|返回值|
+|:--|:--|:--|:--|
+|let|obj.let{}|it表示obj|函数块最后一行的返回值|
+|with|with(obj){}|this指代obj2|函数块最后一行的返回值|
+|run|obj.run{}|this指代obj|函数块最后一行的返回值|
+|apply|obj.apply{}|this指代obj|obj对象|
+|also|obj.also{}|it指代obj|obj对象|

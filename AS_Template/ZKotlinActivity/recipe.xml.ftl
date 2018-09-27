@@ -14,14 +14,11 @@
     <instantiate from="root/src/app_package/SimpleActivity.kt.ftl"
                     to="${escapeXmlAttribute(srcOut)}/ui/${activityClass}.kt" />
 
-	<instantiate from="root/src/app_package/SimpleView.kt.ftl"
-                    to="${escapeXmlAttribute(srcOut)}/view/${viewInterface}.kt" />
+	<instantiate from="root/src/app_package/SimpleContract.kt.ftl"
+                    to="${escapeXmlAttribute(srcOut)}/contract/${contractInterface}.kt" />
 
 	<instantiate from="root/src/app_package/SimplePresenter.kt.ftl" 
- 					to="${escapeXmlAttribute(srcOut)}/presenter/${presenterInterface}.kt" />
-
-	<instantiate from="root/src/app_package/SimplePresenterImpl.kt.ftl" 
- 					to="${escapeXmlAttribute(srcOut)}/presenter/impl/${presenterImpl}.kt" />
+ 					to="${escapeXmlAttribute(srcOut)}/presenter/${presenter}.kt" />
 
     <instantiate from="root/res/layout/SimpleLayout.xml.ftl"
                  to="${escapeXmlAttribute(resOut)}/layout/${layoutName}.xml" /> 

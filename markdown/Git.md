@@ -1,3 +1,5 @@
+Git
+
 ---
 Tags : zaze
 
@@ -60,7 +62,6 @@ git merge xxx
 ## SubTree
 
 
-
 ``git subtree add --prefix dependence http://xxx/xx/x.git master``
 
 ``git subtree pull --prefix dependence http://xxx/xx/x.git master``
@@ -98,3 +99,15 @@ $ git push origin v0.1.2 # 将v0.1.2标签提交到git服务器
 $ git push origin –tags # 将本地所有标签一次性提交到git服务器
 ```
 
+## 流程
+
+```
+按功能或bugfix创建分支（基于master分支）：
+$ git checkout -b feature-xxx master
+
+开发完成后，合并功能分支到master：
+$ git checkout master
+$ git merge --no-ff feature-xxx
+$ git branch -d feature-xxx
+$ git push origin master
+```
