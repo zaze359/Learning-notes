@@ -15,7 +15,7 @@ Project : gradle
 
 ```
 buildscript {
-    ext.kotlin_version = '1.1.2-4'
+    ext.kotlin_version = '1.1.2-4' // 版本自己更新
     dependencies {
     	classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
@@ -25,10 +25,11 @@ buildscript {
 Module : gradle
 
 ```
-apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-android'  // kotin 基础
+apply plugin: 'kotlin-android-extensions'   //
+apply plugin: 'kotlin-kapt'    // kapt
 
 compile "org.jetbrains.kotlin:kotlin-stdlib-jre7:$kotlin_version"
-
 ```
 
 
@@ -76,12 +77,9 @@ fun c : String() {
 
 
 ## 语法
-看文档吧
 
-fun
-
-var, val
-
+看文档吧~~~
+[Kotlin中文站][Kotlin中文站]
 
 ### 延迟加载
 
@@ -103,6 +101,12 @@ mode = LazyThreadSafetyMode.NONE (线程不安全)
 
 ### 注解
 
+
+- @JvmFeild
+```
+
+```
+
 - @JvmStatic
 ```
  和object一起使用, 变成正在的静态, 不用INSTANCE
@@ -117,9 +121,10 @@ mode = LazyThreadSafetyMode.NONE (线程不安全)
 等价下面
 fun test()
 fun test(a : String)
-
-
 ```
+
+
+
 ### 数组
 
 #### 1. 直接指定长度
@@ -162,7 +167,15 @@ println(asc.get(1))     //  1
 |函数|范例|函数体内的对象|返回值|
 |:--|:--|:--|:--|
 |let|obj.let{}|it表示obj|函数块最后一行的返回值|
-|with|with(obj){}|this指代obj2|函数块最后一行的返回值|
 |run|obj.run{}|this指代obj|函数块最后一行的返回值|
-|apply|obj.apply{}|this指代obj|obj对象|
 |also|obj.also{}|it指代obj|obj对象|
+|apply|obj.apply{}|this指代obj|obj对象|
+|with|with(obj){}|this指代obj|函数块最后一行的返回值|
+
+
+
+
+
+
+
+[Kotlin中文站]: https://www.kotlincn.net/
