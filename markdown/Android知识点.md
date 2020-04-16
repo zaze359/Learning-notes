@@ -232,9 +232,22 @@ false : 关闭刷新UI
 刷新监听事件
 ```
 
-## 通知消息
+## GC
+```
+# Concurrent----后台回收内存，不暂停用户线程
+# Alloc----当app要申请内存，而堆又快满了的时候，会阻塞用户线程
 
-### 
+Explicit----调用Systemt.gc()等方法的时候触发，一般不建议使用
+
+NativeAlloc----当native内存有压力的时候触发
+
+Name
+Concurrent mark sweep----全部对象的检测回收
+Concurrent partial mark sweep----部分的检测回收
+Concurrent sticky mark sweep----仅检测上次回收后创
+建的对象，速度快，卡顿少，比较频繁
+
+```
 
 
 

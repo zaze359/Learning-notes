@@ -1,5 +1,10 @@
 # Android动画效果
 
+---
+Tags : zaze android
+
+---
+
 ### 复古风格
 
 ``overridePendingTransition(enterAnim, exitAnim);``
