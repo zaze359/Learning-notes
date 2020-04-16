@@ -23,32 +23,21 @@ git diff
 git rm -r xxx
 ```
 
-## 分支处理
+## 2. 分支处理
 
-- 切换分支
+### 2.1 分支操作
+
+- 分支切换
 ```
 git checkout xxx
 ```
 
 - 创建分支
-
 ```
 git branch branch_222
 ```
 
-- 查看远程分支
-```
-git remote show origin 
-```
-
-- 查看本地分支
-```
-git branch
-git branch -r
-git branch -a
-```
-
-- 删除本地分支(远程仓库中已不存在的)
+- 删除本地多余分支(远程仓库中已不存在的)
 ```
 git remote prune origin
 ```
@@ -58,6 +47,18 @@ git remote prune origin
 git merge xxx
 ```
 
+### 2.3 分支查看
+
+```
+git branch
+git branch -r
+git branch -a
+git remote show origin   // 查看远程分支
+```
+### 2.4 更换分支地址
+```
+git remote set-url origin "xxxxxx"
+```
 
 ## SubTree
 
@@ -99,6 +100,19 @@ $ git push origin v0.1.2 # 将v0.1.2标签提交到git服务器
 $ git push origin –tags # 将本地所有标签一次性提交到git服务器
 ```
 
+## 补丁
+
+
+```
+sha1开始最近一次的补丁
+git patch sha1  -1
+```
+
+```
+git diff sha1 sha2 > init.diff
+```
+
+
 ## 流程
 
 ```
@@ -111,3 +125,13 @@ $ git merge --no-ff feature-xxx
 $ git branch -d feature-xxx
 $ git push origin master
 ```
+
+## git - stash
+
+```
+git stash
+git stash pop
+git stash pop stash@{0}
+git stash apply stash@{0}
+```
+
