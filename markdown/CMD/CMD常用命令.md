@@ -4,6 +4,13 @@ Tags : zaze cmd
 
 # CMD常用命令
 
+## 输出到文件
+
+```
+// 标准输出和标准错误一起重定向到一个文件中
+cmd > fileName 2>&1 
+```
+
 ## unrar
 ```
 unrar e file.rar ——————》解压到当前目录
@@ -117,15 +124,15 @@ adb reboot-bootloader
 
 ### 12345
 
+```bash
 ifconfig en0
-
 查看内核版本 ``cat /proc/version``
-
-
 du -m    以m为单位查看大小
+du -hs xxx
 df	剩余空间
-
 mount -o remount, rw /
+```
+
 
 ### 查看进程
 

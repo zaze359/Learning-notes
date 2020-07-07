@@ -18,7 +18,15 @@ git config --add core.filemode false
 git reset HEAD~
 ```
 
-## 2. 分支处理
+## 参数配置
+```
+git config --global http.proxy http://127.0.0.1:7890
+git config --global https.proxy https://127.0.0.1:7890
+git config --global --unset http.proxy
+git config --global --unset https.proxy
+```
+
+## 分支处理
 
 ### 2.1 分支操作
 
