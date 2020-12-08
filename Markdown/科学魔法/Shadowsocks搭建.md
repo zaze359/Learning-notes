@@ -47,7 +47,7 @@ wget --no-check-certificate http://www.vofac.com/download/66R.sh&&bash 66R.sh
 ```
 
 - CentOS8
-```
+```bash
 sudo dnf update
 sudo dnf install python3
 sudo dnf install python3-pip
@@ -187,6 +187,8 @@ systemctl enable privoxy
 ```
 
 ### 3. 启动
+
 ```
 sslocal -c /home/zhaozhen/桌面/shadowsocks.json
 ```
+

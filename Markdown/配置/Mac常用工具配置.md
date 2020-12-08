@@ -11,7 +11,7 @@ Tags ： zaze cmd
 
 ### Homebrew
 
-- [官网地址][1]
+- [官网地址][https://brew.sh ]
 
 - 安装
 ```bash
@@ -67,6 +67,6 @@ $ xattr -c filename
 $ xattr -rc directory 
 ```
 
-  [1]: https://brew.sh
-  
-  [2]: https://ohmyz.sh
+[https://brew.sh]: https://brew.sh
+
+[2]: https://ohmyz.sh
