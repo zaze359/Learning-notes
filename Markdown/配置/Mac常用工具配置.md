@@ -40,7 +40,7 @@ brew cast install xx
 
 ### ohmyzsh
 
-- [官网地址][2]
+- [官网地址][https://ohmyz.sh ]
 
 - 安装
 ```bash
@@ -67,6 +67,21 @@ $ xattr -c filename
 $ xattr -rc directory 
 ```
 
-[https://brew.sh]: https://brew.sh
+## 显卡切换
 
-[2]: https://ohmyz.sh
+[pmset](https://sspai.com/post/61379)
+
+外接显示器时不生效，将强制使用独显
+
+```
+man pmset
+pmset -g # 查看配置
+sudo pmset -a gpuswitch 0 # 强制使用核显
+sudo pmset -a gpuswitch 1 # 强制使用独显
+sudo pmset -a gpuswitch 2 # 自动切换显卡
+```
+
+
+
+
+

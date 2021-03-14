@@ -14,7 +14,7 @@ Android中极力推荐用PULL的方式来解析
 ## SAX
 
 - 调用方式(固定的写法)
-```
+```java
 public void parser(String value) {
     SAXParserFactory factory = SAXParserFactory.newInstance();
     XMLReader xmlReader;
@@ -31,7 +31,7 @@ public void parser(String value) {
 ```
 
 - 通过继承DefaultHandler 来处理xml
-```
+```java
 public class ContentParserHandler extends DefaultHandler {
     private String value = "";
     @Override
@@ -72,7 +72,7 @@ public class ContentParserHandler extends DefaultHandler {
 
 PULL方式没有回调, 通过getEventType()来获取状态, 内部逻辑需要开发者来处理
 
-```
+```java
 public void parser(int xmlId) {
     XmlResourceParser parser = context.getResources().getXml(xmlId);
     try {

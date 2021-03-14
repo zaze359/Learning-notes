@@ -59,7 +59,7 @@ Android 4.1.3(16)及以上
 
 - 界面结构
 
-![launcher3界面结构.png-380.8kB][2.1.img-1]
+<img src="http://static.zybuluo.com/zaze/u0taljl9wno2wj827gljx5b4/launcher3%E7%95%8C%E9%9D%A2%E7%BB%93%E6%9E%84.png" style="zoom:50%;" />
 
 ### 2.2 项目知识点
 
@@ -157,5 +157,5 @@ private void bindWorkspace(...) {
 
 [author]: https://zaze359.github.io
 [2.1.img-1]: http://static.zybuluo.com/zaze/u0taljl9wno2wj827gljx5b4/launcher3%E7%95%8C%E9%9D%A2%E7%BB%93%E6%9E%84.png
-  
+
   
