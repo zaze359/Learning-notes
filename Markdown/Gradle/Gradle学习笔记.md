@@ -16,3 +16,32 @@ tasks在build.gradle中定义
 ### The Build Lifecycle(构建过程)
 
 
+
+## Gradle Debug
+
+- 项目根目录创建buildSrc目录
+
+- buildSrc下新建build.gradle
+
+  ```
+  repositories {
+      mavenLocal()
+      jcenter()
+      google()
+  }
+  
+  dependencies {
+      implementation('com.android.tools.build:gradle:3.2.1')
+      implementation('对应的插件')
+  }
+  ```
+
+- IDEA新建Remote,默认配置即可
+
+- 执行gradle
+
+  ```
+  ./gradlew clean xxxx -Dorg.gradle.daemon=false -Dorg.gradle.debug=true
+  ```
+
+  
