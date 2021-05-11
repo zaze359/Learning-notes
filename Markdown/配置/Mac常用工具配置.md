@@ -6,10 +6,11 @@ date: 2020-04-16 13:40
 ---
 Tags ： zaze cmd
 
-
 # Mac常用工具配置
 
-### Homebrew
+[TOC]
+
+## Homebrew
 
 - [官网地址][https://brew.sh ]
 
@@ -38,7 +39,7 @@ brew cast install xx
 ```
 
 
-### ohmyzsh
+## ohmyzsh
 
 - [官网地址][https://ohmyz.sh ]
 
@@ -48,7 +49,7 @@ sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.
 ```
 
 
-### unrar
+## unrar
 
 
 ### 文件已损坏
@@ -57,7 +58,7 @@ sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.
 sudo xattr -d com.apple.quarantine /Applications/StarUML.app
 ```
 
-### 处理html 无法直接打开问题
+## 处理html 无法直接打开问题
 ```bash
 这个 @ 属性是用户在 Finder中对文件进行任意操作后就会被附带上，这可能导致在 OS X 下打包后放到 Linux 系统分享文件的时候，会出现莫名其妙的错误，兼因 tar 命令本身并不能区分 extend attributes。
 这样的文件如果把扩展属性（Extend Attributes）去掉，就可以打开了。
