@@ -1,8 +1,6 @@
 ---
-
 title: Android逆向工程
 date: 2020-04-16 13:43
-
 ---
 Tags： zaze android cmd
 
@@ -306,11 +304,11 @@ java -jar AXMLPrinter2.jar AndroidManifest.xml > AndroidManifest.txt
 ![image_1dr2t0g351rs61vloir31f4tl509.png-133.1kB][4]
 
 
- 
+
 [apktool]: https://ibotpeaches.github.io/Apktool/
 
 
-  [1]: https://android.googlesource.com/
-  [2]: repo%20init%20-u%20https://android.googlesource.com/platform/manifest%20-b%20android-8.0.0_r17
-  [3]: https://source.android.google.cn/setup/building
-  [4]: http://static.zybuluo.com/zaze/3kv7jpews93qo233fo5rchbd/image_1dr2t0g351rs61vloir31f4tl509.png
+[1]: https://android.googlesource.com/
+[2]: repo%20init%20-u%20https://android.googlesource.com/platform/manifest%20-b%20android-8.0.0_r17
+[3]: https://source.android.google.cn/setup/building
+[4]: http://static.zybuluo.com/zaze/3kv7jpews93qo233fo5rchbd/image_1dr2t0g351rs61vloir31f4tl509.png
