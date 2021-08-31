@@ -9,7 +9,6 @@ date: 2020-05-29 16:58
 [清华大学开源软件镜像站：https://mirror.tuna.tsinghua.edu.cn/help/AOSP/](https://mirror.tuna.tsinghua.edu.cn/help/AOSP/)
 
 
-
 ## 基础环境配置
 
 ```shell
@@ -36,6 +35,7 @@ cd aosp
 git config --global user.name "Your Name"
 git config --global user.email "you@example.com"
 ```
+
 - Google
 
 ```shell
@@ -49,8 +49,6 @@ repo init -u https://android.googlesource.com/platform/manifest -b android-4.0.1
 ```shell
 repo init -u https://mirrors.tuna.tsinghua.edu.cn/git/AOSP/platform/manifest
 ```
-
-
 
 ## 同步Android源代码
 

@@ -1,82 +1,81 @@
----
+# Shadowsocks
 
-title: Shadowsocks搭建
-date: 2020-04-16 13:46
-author: zaze
+## 服务选择
 
----
-Tags： zaze cmd
+Just My Socks + Clash
 
-[TOC]
-
-# Shadowsocks搭建
----
-## 服务器购买
-- [ 搬瓦工](https://bwh88.net/)
-- [Just My Socks](https://justmysocks2.net/)
+### vps
+- [Just My Socks](https://justmysocks2.net/)(即买即用)
 - [Just My Socks中文网](https://www.jichang.us/)
 
-## Shaowsocks安装
+### 客户端下载地址
 
-- Debian/Ubuntu
-```
-sudo apt-get install shadowsocks
-```
+- [ClashX Mac](https://github.com/yichengchen/clashX)
+- [ClashForWindows](https://github.com/Fndroid/clash_for_windows_pkg)
+- [ClashForAndroid](https://github.com/Kr328/ClashForAndroid)
+- [shadowsocks-windows](https://github.com/shadowsocks/shadowsocks-windows)
+- [shadowsocks-android](https://github.com/shadowsocks/shadowsocks-android)
 
-```
-apt-get install python-pip
-pip install shadowsocks
-```
 
-- CentOS7
+## 自己搭建Shaowsocks
 
-```
-curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
-python get-pip.py
-pip install --upgrade pip
-pip install shadowsocks
-```
-
-```
-sudo yum install python-setuptools && easy_install pip
-sudo pip install shadowsocks
-```
-
-```
-wget --no-check-certificate http://www.vofac.com/download/66R.sh&&bash 66R.sh
-```
-
-- CentOS8
-```bash
-sudo dnf update
-sudo dnf install python3
-sudo dnf install python3-pip
-后续使用
-pip3 xxxxx
-
-```
-
+选择服务器
+[搬瓦工](https://bwh88.net/)
 
 - 一键安装
+
 ```
 wget –no-check-certificate  https://raw.githubusercontent.com/teddysun/shadowsocks_install/master/shadowsocks.sh
 chmod +x shadowsocks.sh
 ./shadowsocks.sh 2>&1 | tee shadowsocks.log
 ```
 
+- Debian/Ubuntu
 
+```bash
+sudo apt-get install shadowsocks
+```
 
+```bash
+apt-get install python-pip
+pip install shadowsocks
+```
 
+- CentOS7
 
-## 服务端Shaowsocks
+```bash
+curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
+python get-pip.py
+pip install --upgrade pip
+pip install shadowsocks
+```
 
-### 1. 购买VPS
+```bash
+sudo yum install python-setuptools && easy_install pip
+sudo pip install shadowsocks
+```
 
-[搬瓦工VPS - BandwagonHost 中文网][1]
+```bash
+wget --no-check-certificate http://www.vofac.com/download/66R.sh&&bash 66R.sh
+```
 
-### 2. 配置
+- CentOS8
 
+```bash
+sudo dnf update
+sudo dnf install python3
+sudo dnf install python3-pip
+后续使用
+pip3 xxxxx
+```
+
+## 服务端Shaowsocks配置
+
+### 创建并编辑shadowsocks.json文件
+
+```
 vi /etc/shadowsocks.json
+```
 
 ```
 {
@@ -94,9 +93,10 @@ vi /etc/shadowsocks.json
 }
 ```
 
-### 3. 配置防火墙
+### 配置防火墙
 
-- iptables
+- 使用iptables
+
 ```
 more /etc/sysconfig/iptables
 
@@ -111,7 +111,8 @@ vi /etc/sysconfig/iptables
 iptables -I INPUT -p tcp --dport 27726 -j ACCEPT
 ```
 
-- firewall
+- 使用firewall
+
 ```
 systemctl start firewalld.service
 systemctl stop firewalld.service
@@ -130,8 +131,7 @@ firewall-cmd --zone=public --add-port=8388/tcp --permanent
 firewall-cmd --zone=public --add-port=8389/tcp --permanent
 ```
 
-
-### 3. 启动/关闭
+### 开启/关闭 ss服务
 
 ```
 systemctl stop firewalld.service
@@ -140,55 +140,55 @@ ssserver -c /etc/shadowsocks.json -d stop
 ```
 
 
-## 客户端Shaowsocks
+## 客户端Shaowsocks配置
 
-### 1. 配置
-
-找到配置文件所在位置 例如在/etc/下
-```
-sudo vi /home/zhaozhen/桌面/shadowsocks.json
-```
-
+### 创建shadowsocks.json文件
 填写服务器信息
+
 ```
 {
-  "server":"104.225.151.111",
+  "server":"xxx.xxx.xxx.xxx",
   "local_address": "127.0.0.1",
   "local_port":1080,
   "server_port":443,
-  "password":"thEaN9cSgq",
+  "password":"123456",
   "timeout":300,
   "method":"aes-256-cfb"
 }
 ```
 
-
-### 2. privoxy socks转为http代理
+### privoxy socks转为http代理
 
 - 安装
+
 ```
 sudo apt-get install privoxy
 ```
 
 - 配置
+
+打开config文件
 ```
 sudo vim /etc/privoxy/config
 ```
+
+写入以下配置
+
 ```
 forward-socks5t   /               127.0.0.1:1080 .
-
 listen-address localhost:8118
-
 ```
-- privoxy
+
+- 启用privoxy
+
 ```
 sudo systemctl restart privoxy
 systemctl enable privoxy
 ```
 
-### 3. 启动
+### 客户端启动SS
 
 ```
-sslocal -c /home/zhaozhen/桌面/shadowsocks.json
+sslocal -c /home/shadowsocks.json
 ```
 

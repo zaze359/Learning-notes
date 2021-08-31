@@ -2,7 +2,6 @@
 
 ## Gradle For Android
 
-
 ### 了解Gradle
 
 Gradle是一种基于Groovy的动态DSL，而Groovy语言是一种基于jvm的动态语言。
@@ -14,7 +13,6 @@ Gradle是一种基于Groovy的动态DSL，而Groovy语言是一种基于jvm的�
 tasks在build.gradle中定义
 
 ### The Build Lifecycle(构建过程)
-
 
 
 ## Gradle Debug

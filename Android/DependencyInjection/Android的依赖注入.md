@@ -1,7 +1,5 @@
 # Android中的依赖注入
 
-
-
 [TOC]
 
 [Android 中的依赖项注入  | Android 开发者  | Android Developers (google.cn)](https://developer.android.google.cn/training/dependency-injection?hl=zh_cn)

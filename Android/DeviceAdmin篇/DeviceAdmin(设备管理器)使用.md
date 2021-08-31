@@ -113,8 +113,6 @@
    }
    ```
 
-
-
 ## ProfileOwner/DeviceOwner
 
 ```bash
