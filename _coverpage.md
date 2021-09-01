@@ -1,6 +1,4 @@
-<!-- _coverpage.md -->
-
-![logo](https://docsify.js.org/_media/icon.svg)
+<!-- ![logo](https://docsify.js.org/_media/icon.svg)
 
 # Learning Notes <small>1.0</small>
 
@@ -14,4 +12,5 @@
 [docsify GitHub](https://github.com/docsifyjs/docsify/)
 [docsify doc](https://docsify.js.org/#/zh-cn/)
 [GitHub](https://github.com/zaze359/Learning-notes/)
-[Get Started](#Learning-Notes)
+[Get Started](#Learning-Notes) -->
+

@@ -15,7 +15,8 @@ Tags： zaze android cmd
 
 ## 2. 环境配置
 
-- JDK
+安装openJdk
+
 ```
 sudo apt-get update
 sudo apt-get install openjdk-8-jdk
@@ -24,18 +25,21 @@ sudo apt-get install openjdk-8-jdk
 ## 3. 编译源码
 [Google官方编译流程][3]
 
-- 清理
+清理
+
 ```
 make clobber
 ```
-- 设置环境
+设置环境
+
 ```
 source build/envsetup.sh
 . build/envsetup.sh
 ```
 ## 4. 问题处理
 
-- 问题1
+问题1
+
 ```
 [  1% 1563/81559] Lex: checkpolicy <= external/selinux/checkpolicy/policy_scan.l
 FAILED: out/host/linux-x86/obj/EXECUTABLES/checkpolicy_intermediates/policy_scan.c 
@@ -54,7 +58,7 @@ Fix : export LC_ALL=C
 
 ## 5. 模拟器
 
-- 模拟器连接
+模拟器连接
 
 ```
 查询进程号
@@ -69,8 +73,8 @@ adb -s <serial number> shell
 adb nodaemon server 查看adb
 ```
 
+可读写运行模拟器
 
-- 可读写运行模拟器
 ```
 显示模拟器列表
 emulator -list-avds
@@ -83,7 +87,8 @@ adb root
 adb remount
 ```
 
-- 发生错误
+发生错误
+
 ```
 PANIC: Missing emulator engine program for 'x86' CPU.
 
@@ -118,12 +123,14 @@ public class Hello {
 }
 ```
 
-- 编译成.class文件
+编译成.class文件
+
 ```
 javac Hello.java
 ```
 
-- 反编译.class
+反编译.class
+
 ```
 javap Hello.class
 
@@ -174,19 +181,20 @@ public class Hello {
 
 ### 6.3. dex文件生成和反汇编
 
-- .class生产dex文件
+.class生产dex文件
+
 ```
 ../Android/Sdk/build-tools/28.0.2/dx --dex --output=Hello.dex Hello.class
 ```
 
-- 查看dex文件
+查看dex文件
 
 ```
 ../Android/Sdk/build-tools/28.0.2/dexdump.exe -d Hello.dex
 ```
 
+BakSmali反汇编dex
 
-- BakSmali反汇编dex
 ```
 java -jar baksmali.jar -o baksmaliout  Hello.dex
 java -jar baksmali.jar -x classes.odex -d framework
@@ -199,8 +207,7 @@ java -jar ddx.jar -d ddxut Hello.dex
 
 ### 6.4. 反编译apk命令
 
-
-- 加载框架
+加载框架
 
 ```
 版本过旧时会导致打包加载资源等失败
@@ -208,7 +215,7 @@ java -jar ddx.jar -d ddxut Hello.dex
 apktool if framework-res.apk
 ```
 
-- **decode** : 该命令用于进行反编译apk文件
+**decode** : 该命令用于进行反编译apk文件
 
 ```
 apktool d <file.apk> -f -o <dir>
@@ -216,7 +223,8 @@ apktool d <file.apk> -f -o <dir>
 apktool d demo.apk -o outdir
 ```
 
-- 反编译目录说明
+反编译目录说明
+
 |目录|说明|备注|
 |:--|:--|:--|
 |res|资源文件|提示信息往往是关键代码的风向标|
@@ -225,21 +233,19 @@ apktool d demo.apk -o outdir
 |AndroidManifest.xml|||
 |apktool.yml|||
 
-
-- **smali转dex**
+**smali转dex**
 
 ```
 java -jar ~/Documents/break/smali_baksmali/smali-2.1.3.jar outDir -o classes.dex
 ```
 
-
-- **dex2jar**
+**dex2jar**
 
 ```
 d2j-dex2jar classes.dex
 ```
 
-- 编译修改好的文件
+编译修改好的文件
 
 ```
 build:该命令用于编译修改好的文件，一般用法为: 
@@ -248,7 +254,7 @@ apktool b <dir>
 
 ### 6.5. 签名
 
-- 生成签名
+生成签名
 
 ```
 keytool -genkey -v -keystore android.keystore -alias android -keyalg RSA -validity 20000 -keystore /Users/zaze/android_demo.keystore
@@ -256,10 +262,10 @@ keytool -genkey -v -keystore android.keystore -alias android -keyalg RSA -validi
 keytool -list -v -keystore debug.keystore
 
 ```
-- 对apk进行签名
+对apk进行签名
 
 ```
-jarsigner -verbose -digestalg SHA1 -sigalg MD5withRSA -keystore /Users/zaze/Documents/ZAZE/android_zaze.keystore -storepass 3184582 -signedjar your_signed.apk source.apk android
+jarsigner -verbose -digestalg SHA1 -sigalg MD5withRSA -keystore /Users/zaze/Documents/ZAZE/android_zaze.keystore -storepass 123456 -signedjar your_signed.apk source.apk android
 ```
 
 ```
@@ -279,17 +285,20 @@ apksigner verify -v xxx.apk
 /Users/zhaozhen/Library/Android/sdk/build-tools/29.0.2/apksigner verify -v xxx.apk
 ```
 
-- **install-framework**
+**install-framework**
+
 ```
 该命令用于为APKTool安装特定的framework-res.apk文件，以方便进行反编译一些与ROM相互依赖的APK文件。具体情况请看常见问题
 ```
 
-- **aapt**
+**aapt**
+
 ```
 /Users/zaze/Library/Android/sdk/build-tools/21.1.1/aapt
 aapt l -a xx.apk > demo.txt
 ```
-- **AXMLPrinter2**
+**AXMLPrinter2**
+
 ```
 java -jar AXMLPrinter2.jar AndroidManifest.xml > AndroidManifest.txt
 ```
