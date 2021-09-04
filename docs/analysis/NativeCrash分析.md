@@ -23,7 +23,7 @@ find ~/Library/Android/sdk/ndk -name "*objdump"
 # 查看所以指令
 --help
 # 显示输出汇编内容
-arm-linux-androideabi/bin/objdump -d libmmkv.so > libmmkv.txt
+arm-linux-androideabi/bin/objdump -d libA.so > libA.txt
 ```
 
 ### addr2line
@@ -33,19 +33,19 @@ arm-linux-androideabi/bin/objdump -d libmmkv.so > libmmkv.txt
 
 1. 查找addr2line文件位置
 
-   ```bash
-   find ~/Library/Android/sdk/ndk -name "arm-linux-androideabi-addr2line"
-   find ~/Library/Android/sdk/ndk -name "aarch64-linux-android-addr2line"
-   ```
- 
+```bash
+find ~/Library/Android/sdk/ndk -name "arm-linux-androideabi-addr2line"
+find ~/Library/Android/sdk/ndk -name "aarch64-linux-android-addr2line"
+```
+
 2. 指令介绍
 
-   ```bash
-   # 查看所以指令
-   --help
-   # 
-   arm-linux-androideabi-addr2line -C -f -e libmmkv.so 0000b66c
-   ```
+```bash
+# 查看所以指令
+--help
+# 
+arm-linux-androideabi-addr2line -C -f -e libA.so 00001111
+```
 
-    
+​    
 
