@@ -51,9 +51,15 @@ hg clone https://hg.openjdk.java.net/jdk/jdk12
 
 [jdk下载地址](https://hg.openjdk.java.net/jdk)
 
-选择一个版本进入, 压缩包在左边。下载后本地直接解压即可。
+选择一个版本进入, 然后点击**brower**查看源码。
 
-<img src="/Users/zhaozhen/Documents/GitResponse/Learning-notes/docs/Java/JDK编译流程.assets/image-20210907004931037.png" align="left" alt="image-20210907004931037" style="zoom:50%;" />
+选择一个压缩包下载。
+
+下载后本地直接解压即可。
+
+![image-20210907220813653](JDK%E7%BC%96%E8%AF%91%E6%B5%81%E7%A8%8B.assets/image-20210907220813653-1024121.png)
+
+
 
 ## 编译准备
 
@@ -65,7 +71,7 @@ hg clone https://hg.openjdk.java.net/jdk/jdk12
 ### MacOS编译环境
 
 - MacOs X 10.13版本以上。
-- XCode 和 Command Line Tools for XCode。(提供CLang编译器以及Makefile中用到的其他外部命令)
+- 安装**XCode** 和 **Command Line Tools for XCode**。(提供CLang编译器以及Makefile中用到的其他外部命令)。
 
 Command Line Tools for XCode安装和更新
 
@@ -96,7 +102,9 @@ sudo apt-get install build-essential
 | libffi   | Portable Foreign Function Interface Library | sudo apt-get install libffi-dev                              |
 | Autoconf | Extensible Package of M4 Macros             | sudo apt-get install autoconf                                |
 
-### 执行编译
+
+
+### Bootstrap JDK
 
 编译 JDK N 之前必须安装一个至少为 N-1版本的已编译好的JDK(官方称为**Bootstrap JDK**)。
 
@@ -105,4 +113,39 @@ sudo apt-get install build-essential
 ```bash
 sudo apt-get install openjdk-11-jdk
 ```
+
+## 执行编译
+
+查看编译参数	
+
+```bash
+bash configure --help
+```
+
+> 编译参数记录表
+
+| 编译参数 |      |      |
+| -------- | ---- | ---- |
+|          |      |      |
+|          |      |      |
+|          |      |      |
+
+## 记录一次完成的编译操作过程
+
+> 编译过程可能会由于缺少组件而无法执行，根据提示安装.
+
+首先执行一次``bash configure``
+
+![image-20210907235308067](JDK%E7%BC%96%E8%AF%91%E6%B5%81%E7%A8%8B.assets/image-20210907235308067.png)
+提示没有找到**Autoconf**, 按照提示安装:
+
+```bash
+brew install autoconf
+```
+
+安装完成再次执行``bash configure``
+
+![image-20210907235954514](JDK%E7%BC%96%E8%AF%91%E6%B5%81%E7%A8%8B.assets/image-20210907235954514.png)
+
+还是报错😭, 猜测可能和没装xcode有关, 老老实实去App Store安装了xcode
 

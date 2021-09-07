@@ -53,6 +53,7 @@
 ## 版本控制
 
 - [Git](docs/VersionControl/git.md)
+- [Maven仓库配置](docs/VersionControl/Maven仓库配置)
 
 ## 科学魔法
 
