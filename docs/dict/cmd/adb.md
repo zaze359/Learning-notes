@@ -1,26 +1,51 @@
-# adb命令
+# adb相关指令
 
-标签（空格分隔）： cmd
+| 指令                         | 备注                      |      |
+| ---------------------------- | ------------------------- | ---- |
+| adb kill-server              | 关闭adb server            |      |
+| adb start-server             | 启动adb server            |      |
+| adb devices                  | 查看当前连接设备          |      |
+| adb -s <serial number> shell | 已shell方式连接到指定设备 |      |
+| adb nodaemon server          | 查看adb                   |      |
 
-[TOC]
+> 已``adb shell`` 连接到指定设备后, 后续操作命令不需要再带 ``adb shell``前缀。
 
 ---
 
-## 设备相关
+## adb 连接设备方式
 
-### adb服务开关
-```shell
-adb kill-server
-adb start-server
+### 1. USB方式
+
+### 2. 局域网调试(无需Root)
+
+- 连接ubs并使用tcpip设置端口
+
+```bash
+adb tcpip 5555
 ```
 
-### 设备连接
-```shell
-adb devices
-adb -s <serial number> shell
+- 查看android设备的ip
+- 使用connect连接设备
+
+```
+adb connect 192.168.31.219:5555
 ```
 
-打开signal开关
+![image-20210908171422370](adb.assets/image-20210908171422370.png)
+
+- 切回usb mode
+
+```
+adb usb
+```
+
+
+
+
+
+## 通过命令操作设备
+
+### 打开signal开关
 
 ```shell
 echo 1 > /d/tracing/events/signal/enable
@@ -31,38 +56,42 @@ cat /d/tracing/trace_pipe
 strace -CttTip 22829 -CttTip 22793
 ```
 
-### 状态栏修改
+### 控制虚拟键及顶部状态栏
 
-隐藏虚拟键及顶部状态栏：
-
-```
-adb shell settings put global policy_control immersive.full=*
-```
-
-隐藏顶部状态栏（底部虚拟键会显示）
+隐藏虚拟键及顶部状态栏:
 
 ```
-adb shell settings put global policy_control immersive.status=*
+settings put global policy_control immersive.full=*
 ```
 
-隐藏虚拟键（顶部状态栏会显示）
+只隐藏顶部状态栏, 底部虚拟键会显示:
 
 ```
-adb shell settings put global policy_control immersive.navigation=*
+settings put global policy_control immersive.status=*
 ```
 
-恢复原来的设置：
+隐藏虚拟键, 顶部状态栏会显示:
 
 ```
-adb shell settings put global policy_control null
+settings put global policy_control immersive.navigation=*
 ```
+
+恢复原来的设置:
+
+```
+settings put global policy_control null
+```
+
+
+
+
 
 ## 应用相关
 
 
 ### 启动应用
 ```
-adb shell am start -W -n com.zaze.demo/.WelcomeActivity -S -a com.zaze.launcher -c android.intent.category.DEFAULT -f 0x10200000
+am start -W -n com.zaze.demo/.WelcomeActivity -S -a com.zaze.launcher -c android.intent.category.DEFAULT -f 0x10200000
 ```
 
 ### dumpsys
@@ -71,8 +100,8 @@ dumpsys -l  // 显示所有支持的services
 dumpsys meminfo pkgxx
 dumpsys cpuinfo pkgxx
 
-adb shell dumpsys package   // 列出所有的安装应用的信息
-adb shell dumpsys activity activities
+dumpsys package   // 列出所有的安装应用的信息
+dumpsys activity activities
 ```
 
 ### am
@@ -81,7 +110,7 @@ adb shell dumpsys activity activities
 am set-debug-app -w com.xxxx
 am set-debug-app -w -persitent xxxx
 am clear-debug-app
-adb shell am force-stop "com.zaze.demo"
+am force-stop "com.zaze.demo"
 ```
 
 ### pm

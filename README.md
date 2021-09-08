@@ -14,7 +14,7 @@
 
 ## adb
 
-- [adb常用命令](docs/dict/cmd/adb命令.md)
+- [adb常用命令](docs/dict/cmd/adb.md)
 
 ## 存储
 

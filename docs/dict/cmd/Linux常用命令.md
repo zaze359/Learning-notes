@@ -59,6 +59,10 @@ ps -p pid
 ps | grep packageName
 ```
 
+
+
+
+
 ## ssh: 远程连接
 
 ```bash
