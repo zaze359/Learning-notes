@@ -254,36 +254,7 @@ apktool b <dir>
 
 ### 6.5. 签名
 
-生成签名
-
-```
-keytool -genkey -v -keystore android.keystore -alias android -keyalg RSA -validity 20000 -keystore /Users/zaze/android_demo.keystore
-
-keytool -list -v -keystore debug.keystore
-
-```
-对apk进行签名
-
-```
-jarsigner -verbose -digestalg SHA1 -sigalg MD5withRSA -keystore /Users/zaze/Documents/ZAZE/android_zaze.keystore -storepass 123456 -signedjar your_signed.apk source.apk android
-```
-
-```
-v1,v2
-apksigner sign -verbose --ks android_zaze.keystore --ks-key-alias android --out app-student-release-signed.apk app-student-release_protected.apk 
-
-
-java -jar apksigner.jar sign  --ks ***  --ks-key-alias ***  --ks-pass pass:***  --key-pass pass:***  --out output.apk  input.apk  
-```
-
-```
-keytool -list -v -keystore android_zaze.keystore
-```
-
-```
-apksigner verify -v xxx.apk
-/Users/zhaozhen/Library/Android/sdk/build-tools/29.0.2/apksigner verify -v xxx.apk
-```
+[APK手动签名参考文档](../apk/APK手动签名参考.md)
 
 **install-framework**
 
