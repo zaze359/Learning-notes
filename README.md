@@ -4,6 +4,7 @@
 
 - [常用命令备份](/docs/private/常用命令备份.md)
 - [问题处理记录](/docs/private/问题处理记录.md)
+- 
 
 # Android
 
@@ -47,6 +48,7 @@
 # Java
 
 - [JDK编译流程](docs/java/JDK编译流程.md)
+- [Java虚拟机(JVM)](docs/java/Java虚拟机.md)
 
 # Linux
 
@@ -62,7 +64,8 @@
 
 ## 版本控制
 
-- [Git](docs/version-control/git.md)
+- [Git常用命令](docs/version-control/git常用命令.md)
+- [Git 工作流](docs/version-control/git工作流)
 - [Maven仓库配置](docs/version-control/Maven仓库配置)
 
 ## 科学魔法

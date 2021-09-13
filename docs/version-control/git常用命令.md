@@ -1,6 +1,4 @@
-# Git学习笔记
-
-## 草稿
+# Git常用命令记录
 
 ```bash
 git clone xxxx.git
@@ -20,29 +18,7 @@ git grep $regexp $(git rev-list --all)
 git pull --rebase
 ```
 
-## 0. git工作流
-
-### 中心式协同工作流
-同一个分支开发
-
-- git pull origin master把代码同步下来
-- 改完后，git commit到本地仓库中
-- git push origin master到远程仓库中
-- 若失败则通过 git pull --rebase,将远程的提交合并到本地
-![git合并流程](https://static001.geekbang.org/resource/image/59/6b/5974a4026acca1000cd21772c4c52a6b.png)
-- 若有冲突，处理后通过git rebase --continue继续
-![git处理冲突流程](https://static001.geekbang.org/resource/image/75/e7/75b3fea18fa91b837f4f3ae6db6ab6e7.png)
-
-### 功能分支协同工作流
-开辟分支开发功能(此分支上采用中心式协同工作流)，完成后再合并到主干
-
-- git checkout -b new-feature 创建 “new-feature”分支
-- 在“new-feature”分支上开发
-- git push -u origin new-feature 把分支代码 push 到服务器
-- 通过git pull --rebase来拿到最新的这个分支的代码
-- 最后,提交合并到master
-
-## 1. Config参数配置
+## Config参数配置
 ```
 git config --list
 
@@ -52,15 +28,22 @@ git config --global --unset http.proxy
 git config --global --unset https.proxy
 ```
 
-1.1 设置文件夹大小写敏感
+- 设置文件夹大小写敏感
 
-git默认为大小写不敏感。
-```
-git config core.ignorecase = false
-```
+  由于git默认为大小写不敏感。通过以下命令修改
+
+  ```
+  git config core.ignorecase = false
+  ```
+
+  重命名文件夹调整大小写后提交到远程仓库
+
+  > ✨恭喜你远程仓库存在了未调整大小写前的文件夹和修改后的文件夹。简直了！👿
+
+  所以还有最后一步，删除之前到文件夹。🤪
 
 
-## 2. 关联远程仓库
+## 关联远程仓库
 1. 初始化git 仓库
 ```
 git init
@@ -85,7 +68,7 @@ git push --set-upstream origin master
 ```
 
 
-## 3. 分支操作
+## 分支操作
 
 ### 查看分支
 ```
@@ -144,13 +127,6 @@ git remote get-url origin
 git remote set-url origin "xxxx"
 ```
 
-## SubTree
-
-```bash
-git subtree add --prefix dependence http://xxx/xx/x.git master
-git subtree pull --prefix dependence http://xxx/xx/x.git master
-```
-
 ## tag
 
 ```bash
@@ -161,17 +137,17 @@ git tag -a v0.1.2 -m "0.1.2版本" #创建附注标签
 git tag -d v0.1.2
 ```
 
-- 标签发布
+- 发布tag
 
 ```bash
 git push origin v0.1.2 # 将v0.1.2标签提交到git服务器
 git push origin –tags # 将本地所有标签一次性提交到git服务器
 ```
 
-## 补丁
+## patch
 
 ```
-sha1开始最近一次的补丁
+# sha1开始最近一次的补丁
 git patch sha1  -1
 ```
 
@@ -179,28 +155,13 @@ git patch sha1  -1
 git diff sha1 sha2 > init.diff
 ```
 
+## SubTree
 
-## 流程
-
-1. 按功能或bugfix创建分支（基于master分支）
-
-```
-git checkout -b feature-xxx master
+```bash
+git subtree add --prefix dependence http://xxx/xx/x.git master
+git subtree pull --prefix dependence http://xxx/xx/x.git master
 ```
 
-2. 开发完成后，合并功能到master分支
-
-```
-git checkout master
-git merge --no-ff feature-xxx
-git push origin master
-```
-
-3. 删除分支
-
-```
-git branch -d feature-xxx
-```
 
 ## git  stash
 
