@@ -55,7 +55,7 @@ ps -p pid
 
 查询根据指定文本查询
 
-```bash
+```shell
 ps | grep packageName
 ```
 
@@ -63,16 +63,23 @@ ps | grep packageName
 
 
 
-## ssh: 远程连接
 
-```bash
-ssh -p 22 root@host
-ssh root@服务器IP
-```
 
 
 
 ## 网络相关
+
+> 若指令执行报错，根据提示安装net-tools即可
+
+```shell
+sudo apt install net-tools
+```
+
+### 查询本机ip
+
+```shell
+ifconfig -a
+```
 
 ### netstat: 监控TCP/IP网络
 
@@ -80,7 +87,7 @@ ssh root@服务器IP
 
 显示网络状态
 
-```bash
+```shell
 netstat -a
 ```
 

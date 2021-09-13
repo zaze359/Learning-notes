@@ -8,35 +8,23 @@ Tags： zaze android cmd
 
 # Android逆向工程
 ---
-## 1. 源码下载
+## 1. 资源文档
 
-[Google资源][1]
-[Nexus 6P][2]
+> [Google Source](https://android.googlesource.com/ )
+>
+> [下载源代码  | Android 开源项目  | Android Open Source Project](https://source.android.com/setup/downloading)
+>
+> [编译准备工作  | Android 开源项目  | Android Open Source Project (google.cn)](https://source.android.google.cn/setup/building)
+>
+> [清华大学开源软件镜像站](https://mirror.tuna.tsinghua.edu.cn/help/AOSP/)
+>
+> [Nexus 6P镜像](repo%20init%20-u%20https://android.googlesource.com/platform/manifest%20-b%20android-8.0.0_r17 )
 
-## 2. 环境配置
 
-安装openJdk
 
-```
-sudo apt-get update
-sudo apt-get install openjdk-8-jdk
-```
+## 2. [源码下载及编译](../aosp/AOSP下载及编译)
 
-## 3. 编译源码
-[Google官方编译流程][3]
-
-清理
-
-```
-make clobber
-```
-设置环境
-
-```
-source build/envsetup.sh
-. build/envsetup.sh
-```
-## 4. 问题处理
+## 3. 问题处理
 
 问题1
 
@@ -56,7 +44,7 @@ make: *** [run_soong_ui] Error 1
 Fix : export LC_ALL=C
 ```
 
-## 5. 模拟器
+## 4. 模拟器
 
 模拟器连接
 
@@ -254,7 +242,7 @@ apktool b <dir>
 
 ### 6.5. 签名
 
-[APK手动签名参考文档](../apk/APK手动签名参考.md)
+[APK手动签名参考文档](../publish/APK手动签名参考.md)
 
 **install-framework**
 

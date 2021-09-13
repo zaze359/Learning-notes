@@ -1,4 +1,6 @@
-# Apk的反编译和重编译
+# Apk
+
+# 反编译和重编译
 
 Tags : zaze
 
@@ -61,7 +63,7 @@ apktool b <dir>
 
 ### 2. sign apk
 
-[APK手动签名参考文档](../apk/APK手动签名参考.md)
+[APK手动签名参考文档](../publish/APK手动签名参考.md)
 
 ### 3. 一些可能用到指令
 

@@ -12,17 +12,19 @@
 - [adb简单介绍](docs/android/adb/adb.md)
 - [adb使用示例](docs/android/adb/adb使用示例.md)
 
-## APK
-
-- [APK手动签名参考](docs/android/apk/APK手动签名参考.md)
-
 ## AOSP
-- [源码下载](docs/android/aosp/Android源码下载.md)(未整理)
+- [Android源码下载及编译](docs/android/aosp/AOSP下载及编译.md)
+- [AOSP目录结构表](docs/android/aosp/AOSP目录结构表.md)
 
 ## Android逆向
 
-- [反编译和重编译](docs/android/反编译和重编译.md)(草稿)
+- [反编译和重编译](docs/android/反编译和重编译.md)
 - [Android逆向工程-笔记摘录](docs/android/逆向篇/Android逆向工程)(未整理)
+
+## 发布
+
+<!-- - [Android打包流程](docs/android/publish) -->
+- [APK手动签名参考](docs/android/publish/APK手动签名参考.md)
 
 ## 存储
 
@@ -46,11 +48,13 @@
 
 - [JDK编译流程](docs/java/JDK编译流程.md)
 
+# Linux
+
+- [Linux常用命令](docs/linux/Linux常用命令)
+- [Linux快捷键摘录](docs/linux/Linux快捷键摘录.md)
+- [ssh远程连接Linux](docs/linux/使用ssh建立远程连接)
+
 # 其他
-
-## Linux
-
-- [Linux常用命令](docs/dict/cmd/Linux常用命令)
 
 ## Gradle
 
