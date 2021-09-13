@@ -52,6 +52,13 @@ git config --global --unset http.proxy
 git config --global --unset https.proxy
 ```
 
+1.1 设置文件夹大小写敏感
+
+git默认为大小写不敏感。
+```
+git config core.ignorecase = false
+```
+
 
 ## 2. 关联远程仓库
 1. 初始化git 仓库

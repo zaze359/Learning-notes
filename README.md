@@ -18,7 +18,7 @@
 
 ## Android逆向
 
-- [反编译和重编译](docs/android/反编译和重编译.md)
+- [反编译和重编译](docs/android/逆向篇/Apk反编译和重编译.md)
 - [Android逆向工程-笔记摘录](docs/android/逆向篇/Android逆向工程)(未整理)
 
 ## 发布
@@ -28,7 +28,7 @@
 
 ## 存储
 
-- [存储分区介绍](docs/android/存储分区介绍)
+- [Android分区和文件系统](docs/android/file-system/android分区和文件系统)
 
 ## 性能
 
