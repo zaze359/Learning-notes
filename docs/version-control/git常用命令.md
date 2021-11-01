@@ -162,18 +162,50 @@ git subtree add --prefix dependence http://xxx/xx/x.git master
 git subtree pull --prefix dependence http://xxx/xx/x.git master
 ```
 
-
 ## git  stash
 
-```
-git stash 
-git stash save "aaa"
-git stash pop
-git stash pop stash@{0}
-git stash apply stash@{0}
-git stash show stash@{0}
-git stash drop stash@{0}
-```
+- 暂存
+
+  ```shell
+  git stash
+  # or
+  git stash save "aaa"
+  ```
+
+- 显示暂存列表
+
+  ```shell
+  git stash list
+  ```
+
+- 显示暂存内容
+
+  ```shell
+  # 默认stash@{0}
+  git stash show
+  # or
+  git stash show stash@{0}
+  ```
+
+- 恢复暂存内容
+
+  ```shell
+  # 获取并从暂存列表中删除, 默认stash@{0}
+  git stash pop
+  git stash pop stash@{0}
+  # 获取依然保留在暂存列表中, 默认stash@{0}
+  git stash apply
+  git stash apply stash@{0}
+  ```
+
+- 删除暂存内容
+
+  ```shell
+  # 默认stash@{0}
+  git stash drop
+  # or
+  git stash drop stash@{0}
+  ```
 
 ## git ignore
 查看哪个忽略规则把它忽略掉了

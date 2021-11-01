@@ -20,4 +20,5 @@
 ||oem||
 ||storage||
 ||/mnt/runtime/default/emulated||
+|开关机动画||/system/media/shutdownanimation<br />/system/media/bootanimation.zip<br />/system/framework/framework-res.apk/assets/images|
 

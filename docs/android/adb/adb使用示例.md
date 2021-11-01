@@ -72,12 +72,6 @@ settings put global policy_control null
 
 ## 应用相关
 
-
-### 启动应用
-```
-am start -W -n com.zaze.demo/.WelcomeActivity -S -a com.zaze.launcher -c android.intent.category.DEFAULT -f 0x10200000
-```
-
 ### dumpsys
 ```
 dumpsys -l  // 显示所有支持的services
@@ -95,6 +89,11 @@ am set-debug-app -w com.xxxx
 am set-debug-app -w -persitent xxxx
 am clear-debug-app
 am force-stop "com.zaze.demo"
+
+# 启动应用
+am start -W -n com.zaze.demo/.WelcomeActivity -S -a com.zaze.launcher -c android.intent.category.DEFAULT -f 0x10200000
+# 启动浏览器并打开指定页面
+adb shell am start -a android.intent.action.VIEW -d "http://www.bilibili.com"
 ```
 
 ### pm

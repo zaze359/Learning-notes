@@ -5,12 +5,13 @@ Tags : zaze android
 
 ---
 
-### 复古风格
+## 复古风格
 
 ``overridePendingTransition(enterAnim, exitAnim);``
 
+## Android Material Animations
 
-### Android Material Animations
+### Activity间跳转动画
 
 1. 平移
 
@@ -45,3 +46,5 @@ ActivityOptionsCompat.makeSceneTransitionAnimation(Activity activity, View share
 平滑的将多个控件平移的过渡到第二个activity
 ActivityOptionsCompat.makeSceneTransitionAnimation(Activity activity,Pair<View, String>… sharedElements)
 ```
+
+### View动画

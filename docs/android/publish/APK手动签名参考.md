@@ -87,6 +87,9 @@ keytool -list -v -keystore android_zaze.keystore
 ```
 
 #### 查看CERT.RSA文件
+
+RSA文件可通过解压apk文件后在META-INF中获取
+
 ```
 keytool -printcert -file CERT.RSA
 ```
@@ -96,8 +99,14 @@ keytool -printcert -file CERT.RSA
 #### 查看apk签名信息
 
 ```bash
-apksigner verify -v xxx.apk
 /Users/zhaozhen/Library/Android/sdk/build-tools/29.0.2/apksigner verify -v xxx.apk
+# 签名信息
+apksigner verify --print-certs xxx.apk
+# 签名版本
+apksigner verify -v xxx.apk
+#
+apksigner verify --min-sdk-version
+
 ```
 
 #### other
