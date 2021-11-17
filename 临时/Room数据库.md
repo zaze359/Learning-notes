@@ -1,14 +1,12 @@
 # Room数据库
 
-Tags : zaze android
+[使用 Room 持久保留数据  | Android Developers](https://developer.android.com/codelabs/basic-android-kotlin-training-persisting-data-room?hl=zh_cn&continue=https%3A%2F%2Fcodelabs.developers.google.com%2F%3Fcat%3Dandroid#0)
 
----
 
-[TOC]
 
----
+## Room主要组件
 
-## Entity文件
+### 数据实体:Entity
 
 实体类，表示一张表
 
@@ -30,7 +28,7 @@ public class Favorites {
 }
 ```
 
-- **@Entity(tableName = 'favorites') 必须**
+- **@Entity(tableName = 'favorites') **
 ```
 声明表 : tableName
 外键相关
@@ -40,9 +38,9 @@ foreignKeys = @ForeignKey(entity = A.class,parentColumns = "aid" ,childColumns =
 - onDelete = CASCADE属性, 外键相关联的数据删除时, 该表中的对应外键id数据也会被删除
 ```
 
-- **@PrimaryKey(autoGenerate=true) 必须**
+- **@PrimaryKey(autoGenerate=true) **
 ```
-声明主键(必须声明)
+声明主键(必须声明一个字段为主键)
 - autoGenerate = true 自增
 ```
 
@@ -64,7 +62,7 @@ foreignKeys = @ForeignKey(entity = A.class,parentColumns = "aid" ,childColumns =
 
 
 
-## Dao文件
+### Dao文件
 
 - @Query
 ```

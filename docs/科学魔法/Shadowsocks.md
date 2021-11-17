@@ -2,26 +2,15 @@
 
 ## 服务选择
 
-Just My Socks + Clash
-
-### vps
-- [Just My Socks](https://justmysocks2.net/)(即买即用)
-- [Just My Socks中文网](https://www.jichang.us/)
+[搬瓦工](https://bwh88.net/)
 
 ### 客户端下载地址
 
-- [ClashX Mac](https://github.com/yichengchen/clashX)
-- [ClashForWindows](https://github.com/Fndroid/clash_for_windows_pkg)
-- [ClashForAndroid](https://github.com/Kr328/ClashForAndroid)
 - [shadowsocks-windows](https://github.com/shadowsocks/shadowsocks-windows)
 - [shadowsocks-android](https://github.com/shadowsocks/shadowsocks-android)
 
 
 ## 自己搭建Shaowsocks
-
-选择服务器
-[搬瓦工](https://bwh88.net/)
-
 - 一键安装
 
 ```

@@ -8,6 +8,8 @@
 
 # Android
 
+- [小组件开发](docs/android/appwidget/Android小组件开发.md)
+
 ## ADB
 
 - [adb简单介绍](docs/android/adb/adb.md)
@@ -71,3 +73,5 @@
 ## 科学魔法
 
 - [Shadowsocks](docs/科学魔法/Shadowsocks)
+
+- [Just My Socks + ClashX](docs/科学魔法/JMS和Clash.md)

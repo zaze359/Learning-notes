@@ -2,7 +2,7 @@
 
 [TOC]
 
-## 项目信息
+## 项目下载
 
 * [Google官方](https://android.googlesource.com/platform/packages/apps/Launcher3/)
 * [GitHub](https://github.com/zaze359/Launcher3)
@@ -43,12 +43,14 @@
 
 挑选Launcher3整个项目中几个重要的类进行分析,了解项目的整体结构。
 
-| 类名       | 说明         |
-| :--------- | :----------- |
-| Launcher   | 主页面       |
-| CellLayout | 自定义的布局 |
-| WorkSpace  | 工作区       |
-| HotSeat    | 热键         |
+| 类名                     | 说明               |
+| :----------------------- | :----------------- |
+| Launcher                 | 主页面             |
+| CellLayout               | 自定义的布局       |
+| WorkSpace                | 工作区             |
+| HotSeat                  | 热键               |
+| WidgetsFullSheet         | 组件展示页         |
+| RecyclerViewFastScroller | 小组件的侧边滚动条 |
 
 
 

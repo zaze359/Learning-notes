@@ -1,4 +1,4 @@
-# adb使用示例
+# adb命令示例
 
 ## 常用指令表摘录
 
@@ -73,7 +73,7 @@ settings put global policy_control null
 ## 应用相关
 
 ### dumpsys
-```
+```bash
 dumpsys -l  // 显示所有支持的services
 dumpsys meminfo pkgxx
 dumpsys cpuinfo pkgxx
@@ -121,6 +121,15 @@ adb -s sn logcat
 ```
 
 
+
+## cmd
+
+```bash
+cmd statusbar expand-notifications
+```
+
+
+
 ## input
 
 ### input text 模拟输入
@@ -140,6 +149,7 @@ input keyevent 23   // Select/Ok
 input keyevent 24   // Volume+
 input keyevent 25   // Volume-
 input keyevent 82   // Menu 菜单
+input keyevent 187 	// KEYCODE_APP_SWITCH
 ```
 
 ### input tab 模拟触摸
@@ -152,6 +162,22 @@ input tab 600 800
 ```bash
 input swipe 666 888 666 666
 ```
+
+
+
+## statusbar
+
+
+
+```
+# 查看帮助
+cmd statusbar help
+
+```
+
+
+
+
 
 ## bootloader, recovery模式
 
