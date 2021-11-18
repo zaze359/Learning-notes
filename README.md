@@ -50,7 +50,11 @@
 # Java
 
 - [JDK编译流程](docs/java/JDK编译流程.md)
-- [Java虚拟机(JVM)](docs/java/Java虚拟机.md)
+
+## JVM
+
+- [JVM简单介绍](docs/java/jvm/JVM简单介绍.md)
+- [JVM内存区域](docs/java/jvm/JVM内存区域.md)
 
 # Linux
 
