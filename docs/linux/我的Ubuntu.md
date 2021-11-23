@@ -1,4 +1,4 @@
-# Linux系统安装及配置
+# 我的Ubuntu
 
 ## 一、安装Ubuntu
 
@@ -41,7 +41,7 @@ sudo dpkg -i xxx.deb
 由于缺少libgconf-2.so.4导致
 
 ```
-sudo apt -y install libgconf2-4
+sudo apt -y install libgconf-2-4
 ```
 
 ---
