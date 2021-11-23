@@ -1,5 +1,12 @@
 # Linux常用命令
 
+```
+
+# 打开当前目录, 类似mac open
+xdg-open .
+
+```
+
 ## apt: 软件包管理
 
 ```bash

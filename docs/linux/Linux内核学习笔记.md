@@ -123,17 +123,27 @@ make oldconfig
 
 ### 3. 执行编译
 
+```shell
+make -j4
 ```
-make
+
+#### 踩坑记录
+
+![image-20211124002206767](/home/zaze/桌面/git-repository/Learning-notes/docs/linux/Linux内核学习笔记.assets/image-20211124002206767.png)
+
+缺少openssl: ``fatal error: openssl/opensslv.h: xxxxxxxxxxxxxxxxx``。
+
+```
+sudo apt install libssl-dev
 ```
 
+同理: ``fatal error: libelf.h: xxxxxxxxxxxxxxx``
 
+```
+sudo apt install libelf-dev
+```
 
-
-
-
-
-
+> 可以通过 ``apt search openssl``这种方式查找对应依赖。
 
 
 
