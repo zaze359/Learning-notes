@@ -1,8 +1,8 @@
 # Android应用信息分析
 
+## 基础属性
 
-
-## PackageInfo
+### PackageInfo
 
 此类主要是应用apk相关的信息， 我们可以通过``PackageManager``获取。
 
@@ -30,8 +30,11 @@
       }
   ```
 
-  
 
-## ApplicationInfo
+### ApplicationInfo
 
 包含应用的一些基础信息，对应项目``AndroidManifest.xml``文件下 ``<application>``标签中的内容
+
+
+
+## 应用使用情况统计

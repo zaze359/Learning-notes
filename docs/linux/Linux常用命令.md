@@ -7,19 +7,9 @@ xdg-open .
 
 ```
 
-## apt: 软件包管理
+## 文件管理
 
-```bash
-sudo apt-get upgrade
-## git 
-sudo apt-get install git
-## curl
-sudo apt-get install curl
-## python
-sudo apt-get install python
-```
-
-## du: 查看文件大小
+### du: 查看文件大小
 
 ```shell
 ## 控制显示单位
@@ -33,16 +23,46 @@ du -gs /sdcard/
 du -h -d1
 ```
 
-## df: 查询剩余空间
+### df: 查询剩余空间
 
 ```shell
 df
 ```
 
-## mount: 分区挂载
+### mount: 分区挂载
 
 ```
 mount -o remount, rw /
+```
+
+
+
+### ls -l
+
+![image-20220214102626948](Linux常用命令.assets/image-20220214102626948.png)
+
+
+
+| 文件属性                                                     |      | 拥有者 | 拥有者所在的组 | 文件所占用的空间(以字节为单位) | 最近修改时间     | README.md |
+| ------------------------------------------------------------ | ---- | ------ | -------------- | ------------------------------ | ---------------- | --------- |
+| -rw-rw----                                                   | 1    | root   | scared_rw      | 5942417                        | 2020-09-28 15:18 | README.md |
+| 第一个字符表示文件类型<br />'-': 表示普通文件<br />'d': 表示目录<br />'i':链接文件<br />'b':块设备文件<br />'c':字符设备文件<br />'p':命令管道<br />'s':sock文件 |      |        |                |                                |                  |           |
+| r表是读 (Read) 、w表示写 (Write) 、x表示执行 (eXecute)       |      |        |                |                                |                  |           |
+
+
+
+
+
+## apt: 软件包管理
+
+```bash
+sudo apt-get upgrade
+## git 
+sudo apt-get install git
+## curl
+sudo apt-get install curl
+## python
+sudo apt-get install python
 ```
 
 
@@ -65,10 +85,6 @@ ps -p pid
 ```shell
 ps | grep packageName
 ```
-
-
-
-
 
 
 

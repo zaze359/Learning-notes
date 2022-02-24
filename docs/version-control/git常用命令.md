@@ -107,12 +107,6 @@ git remote prune origin
 git merge branch2
 ```
 
-**cherry-pick**: 挑选指定的功能合并到当前分支
-
-```bash
-git cherry-pick
-```
-
 ### 分支地址操作
 
 查看远程地址
@@ -126,6 +120,39 @@ git remote get-url origin
 ```bash
 git remote set-url origin "xxxx"
 ```
+
+### cherry-pick
+
+[git cherry-pick 教程](https://www.ruanyifeng.com/blog/2020/04/git-cherry-pick.html)
+
+挑选``指定提交``应用到当前分支
+
+```shell
+git cherry-pick <commitHash>
+```
+
+选择``某分支的最后一次提交``应用到当前分支
+
+```shell
+git cherry-pick <branchName>
+```
+
+选择多个提交
+
+```shell
+git cherry-pick <HashA> <HashB>
+```
+
+选择一系列连续的提交
+
+```shell
+## 不包含A提交
+git cherry-pick A..B 
+## 包含A提交 添加^
+git cherry-pick A^..B 
+```
+
+
 
 ## tag
 

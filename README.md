@@ -1,14 +1,16 @@
-> 学习笔记.
+> 学习笔记索引目录～～
 
 # Private
 
 - [常用命令备份](/docs/private/常用命令备份.md)
-- [问题处理记录](/docs/private/问题处理记录.md)
-- 
+
+- [问题处理记录](docs/private/问题处理记录.md)
+
+  
 
 # Android
 
-- [小组件开发](docs/android/appwidget/Android小组件开发.md)
+
 
 ## ADB
 
@@ -19,14 +21,26 @@
 - [Android源码下载及编译](docs/android/aosp/AOSP下载及编译.md)
 - [AOSP目录结构表](docs/android/aosp/AOSP目录结构表.md)
 
-## Android逆向
+## 应用插件化
 
-- [反编译和重编译](docs/android/逆向篇/Apk反编译和重编译.md)
-- [Android逆向工程-笔记摘录](docs/android/逆向篇/Android逆向工程)(未整理)
+- [Android插件化开发](docs/android/plugin/Android插件化开发.md)
 
-## 发布
+## 应用开发
 
-<!-- - [Android打包流程](docs/android/publish) -->
+### AppWidget
+
+- [开发小组件](docs/android/appwidget/Android小组件开发.md)
+
+- [添加AppWidget到应用中](docs/android/appwidget/加载AppWidgets.md)
+
+### 弹幕
+
+[bilibiliDanmaku集成](docs/android/danmaku/bilibiliDanmaku集成)
+
+## 应用发布
+
+- [Android打包流程](docs/android/publish/Android打包流程.md)
+
 - [APK手动签名参考](docs/android/publish/APK手动签名参考.md)
 
 ## 存储
@@ -61,6 +75,13 @@
 - [Linux常用命令](docs/linux/Linux常用命令)
 - [Linux快捷键摘录](docs/linux/Linux快捷键摘录.md)
 - [ssh远程连接Linux](docs/linux/使用ssh建立远程连接)
+
+
+
+# 逆向工程
+
+- [Android反编译和重编译](docs/android/逆向篇/Apk反编译和重编译.md)
+- [Android逆向工程-笔记摘录](docs/android/逆向篇/Android逆向工程)(未整理)
 
 # 其他
 
