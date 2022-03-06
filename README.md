@@ -2,6 +2,8 @@
 
 # Private
 
+- [Docsify环境配置](/docs/private/Docsify环境配置.md)
+
 - [常用命令备份](/docs/private/常用命令备份.md)
 
 - [问题处理记录](docs/private/问题处理记录.md)

@@ -129,7 +129,7 @@ make -j4
 
 #### 踩坑记录
 
-![image-20211124002206767](/home/zaze/桌面/git-repository/Learning-notes/docs/linux/Linux内核学习笔记.assets/image-20211124002206767.png)
+![image-20211124002206767](./Linux内核学习笔记.assets/image-20211124002206767.png)
 
 缺少openssl: ``fatal error: openssl/opensslv.h: xxxxxxxxxxxxxxxxx``。
 

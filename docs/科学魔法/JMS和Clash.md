@@ -7,9 +7,11 @@
 
 ## 客户端下载地址
 
-- [ClashX Mac](https://github.com/yichengchen/clashX)
-- [Clash For Windows](https://github.com/Fndroid/clash_for_windows_pkg)
-- [Clash For Android](https://github.com/Kr328/ClashForAndroid)
+- [ClashX Mac](https://github.com/yichengchen/clashX/releases)
+- [Clash For Linux](https://github.com/Dreamacro/clash/releases)
+- [Clash For Windows](https://github.com/Fndroid/clash_for_windows_pkg/releases)
+
+- [Clash For Android](https://github.com/Kr328/ClashForAndroid/releases)
 
 
 ## 简单配置
@@ -65,3 +67,34 @@ rules:
   - GEOIP,CN,DIRECT
   - MATCH,DIRECT
 ```
+
+
+
+## Linux上的使用Clash
+
+### 1.下载完成后解压, 然后修改文件权限
+
+```shell
+sudo chmod +x ./clash-linux-XXXX
+```
+
+### 2. 执行文件
+
+```shell
+clash-linux-XXXX
+```
+
+### 3. 修改配置
+
+```
+cd ~/.confing/clash
+vim config.yaml
+```
+
+### 4. 网页上查看启动的clash
+
+[Clash UI](http://clash.razord.top/#/proxies)
+
+### 5. 启动代理
+
+![image-20220305132257560](./JMS和Clash.assets/image-20220305132257560-16464577809101.png)

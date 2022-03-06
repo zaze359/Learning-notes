@@ -18,9 +18,11 @@
 
 ---
 
-## 二、问题处理记录
 
-### 应用安装问题
+
+## 二、应用的安装
+
+### 可能碰到一些应用无法安装的问题
 
 #### 1. deb文件无法安装
 
@@ -36,7 +38,23 @@ sudo apt-get install -f xxx.deb
 sudo dpkg -i xxx.deb
 ```
 
-#### 2. CMD Markdown无法打开
+
+
+### Chrome
+
+```
+
+```
+
+
+
+
+
+---
+
+## E、问题处理记录
+
+#### CMD Markdown无法打开
 
 由于缺少libgconf-2.so.4导致
 

@@ -19,3 +19,23 @@
 ### inline-block
 
 简单来说就是将对象呈现为inline对象，但是对象的内容作为block对象呈现。之后的内联对象会被排列在同一行内。比如我们可以给一个link（a元素）inline-block属性值，使其既具有block的宽度高度特性又具有inline的同行特性。
+
+## 标签
+
+### audio、video
+
+|属性|描述|
+|:--|--|
+|src|资源地址|
+|controls|显示播放控制器|
+|autoplay|自动播放(部分浏览器不生效,也可能是浏览器禁用了自动播放)|
+|loop|循环播放|
+
+example:
+```html
+
+<audio src="D:\CloudMusic\冰糖IO - 下一站更甜.mp3" controls autoplay loop></audio>
+
+<!-- muted 默认静音播放 -->
+<video src="D:\CloudMusic\MV\泠鸢yousa - 神的随波逐流.mp4" controls autoplay muted></video>
+```
