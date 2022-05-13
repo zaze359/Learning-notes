@@ -43,3 +43,10 @@ tasks在build.gradle中定义
   ```
 
   
+
+|           |                                               |                                                              |
+| --------- | --------------------------------------------- | ------------------------------------------------------------ |
+| dependsOn | generateAssetsTask.dependsOn createCopyTask() | 表示在``generateAssetsTask.dependsOn``之前先执行``createCopyTask`` |
+|           |                                               |                                                              |
+|           |                                               |                                                              |
+

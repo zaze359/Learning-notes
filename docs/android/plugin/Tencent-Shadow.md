@@ -25,3 +25,4 @@ git clone git@github.com:Tencent/Shadow.git
 org.gradle.java.home=/Library/Java/JavaVirtualMachines/temurin-11.jdk/Contents/Home
 ```
 
+## 二、项目结构

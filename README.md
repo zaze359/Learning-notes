@@ -5,6 +5,7 @@
 - [Docsify环境配置](/docs/private/Docsify环境配置.md)
 - [常用命令备份](/docs/private/常用命令备份.md)
 - [问题处理记录](docs/private/问题处理记录.md)
+- [算法导论笔记](docs/private/算法导论笔记.md)
 
 # Android
 
@@ -18,11 +19,18 @@
 - [Android源码下载及编译](docs/android/aosp/AOSP下载及编译.md)
 - [AOSP目录结构表](docs/android/aosp/AOSP目录结构表.md)
 
+## 消息机制
+
+- [Android消息机制之Java篇](docs/android/消息机制/Android消息机制之Java篇.md)
+- [Android消息机制之Native篇](docs/android/消息机制/Android消息机制之Native篇.md)
+- [Binder篇](docs/android/消息机制/Binder篇.md)
+
 ## 应用插件化
 
 - [Android插件化开发](docs/android/plugin/Android插件化开发.md)
 
 ## 应用开发
+
 
 ### 图片处理
 
