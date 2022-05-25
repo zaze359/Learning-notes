@@ -1,6 +1,5 @@
 ---
-title: VS Code Spring Boot
-date: 2020-07-01 17:05
+
 ---
 # VS Code
 
@@ -32,6 +31,10 @@ npm init
 //
 npm i webpack vue vue-loader
 
+// npm audit fix无法修复问题
+// 使用淘宝镜像源修复
+npm i -g nrm
+nrm use taobao
 ```
 
 ## 问题处理记录

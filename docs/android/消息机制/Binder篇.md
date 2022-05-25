@@ -1347,7 +1347,9 @@ inline sp<INTERFACE> interface_cast(const sp<IBinder>& obj)
 [Linux字符设备驱动框架]: https://www.cnblogs.com/xiaojiang1025/p/6181833.html
 [Android系统开篇]: http://gityuan.com/android/
 [Linux 的虚拟文件系统]: https://blog.csdn.net/heikefangxian23/article/details/51579971
+
 [VFS]: http://www.ibm.com/developerworks/cn/linux/l-cn-vfs/3.jpg
+
 [设备与驱动的关系以及设备号、设备文件]: https://www.cnblogs.com/lidabo/p/5300529.html
 [图解Android - Binder 和 Service]: http://www.cnblogs.com/samchen2009/p/3316001.html
 [ServiceManager的类层次结构]: http://static.zybuluo.com/zaze/1767giazv6g21m2dvi016g4u/image_1cchrav4k4dvepjpmbvh1cum9.png
