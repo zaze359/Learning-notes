@@ -2,9 +2,9 @@
 
 # 个人备忘
 
-- [Docsify环境配置](/docs/private/Docsify环境配置.md)
-- [常用命令备份](/docs/private/常用命令备份.md)
+- [常用操作记录](/docs/private/常用操作记录.md)
 - [问题处理记录](docs/private/问题处理记录.md)
+- [Docsify环境配置](/docs/private/Docsify环境配置.md)
 - [算法导论笔记](docs/private/算法导论笔记.md)
 - [C++笔记](docs/C++笔记.md)
 
@@ -12,12 +12,11 @@
 
 ## 1. 应用开发
 
-
-### 1.1 图片处理
+> 图片处理
 
 - [Android矢量图](docs/android/drawable/Android矢量图.md)
 
-### 1.2 AppWidget
+> 应用小组件开发（AppWidget）
 
 - [开发小组件](docs/android/appwidget/Android小组件开发.md)
 - [添加AppWidget到应用中](docs/android/appwidget/加载AppWidgets.md)
@@ -29,15 +28,11 @@
 
 ## 3. 应用优化
 
-### 3.1 存储
-
 - [Android分区和文件系统](docs/android/file-system/android分区和文件系统)
-
-### 3.2 性能
 
 - [Doze模式和AppStandby模式](docs/android/性能/低电耗模式和应用待机模式.md)
 
-### 3.3 异常分析和处理
+> 异常分析和处理
 
 - [NativeCrash分析](docs/analysis/NativeCrash分析)
 
@@ -47,24 +42,24 @@
 
 ## 5. 常用工具
 
-### 5.1 ADB
+> ADB相关
 
 - [adb简单介绍](docs/android/adb/adb.md)
 - [adb使用示例](docs/android/adb/adb使用示例.md)
 
 ## 6. 源码学习
 
-### 6.1 AOSP下载
+>  AOSP下载
 
 - [Android源码下载及编译](docs/android/aosp/AOSP下载及编译.md)
 - [AOSP目录结构表](docs/android/aosp/AOSP目录结构表.md)
 
-### 6.2 Android逆向
+> Android逆向
 
 - [Android反编译和重编译](docs/android/逆向篇/Apk反编译和重编译.md)
 - [Android逆向工程-笔记摘录](docs/android/逆向篇/Android逆向工程)(未整理)
 
-### 6.3 消息机制分析
+> 消息机制分析
 
 - [Android消息机制之Java篇](docs/android/消息机制/Android消息机制之Java篇.md)
 - [Android消息机制之Native篇](docs/android/消息机制/Android消息机制之Native篇.md)
@@ -76,15 +71,15 @@
 
 ## 7. 三方库
 
+> 弹幕
+
 [bilibiliDanmaku集成](docs/android/danmaku/bilibiliDanmaku集成)
-
-
 
 # Flutter
 
 [Flutter学习笔记](docs/flutter/Flutter学习笔记.md)
 
-
+[Flutter项目管理](docs/flutter/Flutter项目管理.md)
 
 # Java
 
