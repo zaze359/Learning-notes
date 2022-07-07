@@ -9,6 +9,37 @@ xdg-open .
 
 ## 文件管理
 
+
+
+| 操作命令 | 说明         |      |
+| -------- | ------------ | ---- |
+| du       | 查看文件大小 |      |
+| df       | 查询剩余空间 |      |
+| mount    | 分区挂载     |      |
+| ls       | 列出文件列表 |      |
+| touch    | 创建文件     |      |
+
+### touch（创建文件）
+
+```shell
+# 创建一个文件,已存在时为修改文件时间
+touch aa.txt
+# 创建2个文件
+touch aa.txt bb.txt
+# 批量创建
+touch aa{0001..1000}.txt
+```
+
+### 文件重命名
+
+将所有后缀为.log的文件修改改.txt
+
+```shell
+rename 's/\.log/\.txt/' *
+```
+
+
+
 ### du: 查看文件大小
 
 ```shell
@@ -23,19 +54,11 @@ du -gs /sdcard/
 du -h -d1
 ```
 
-### df: 查询剩余空间
-
-```shell
-df
-```
-
 ### mount: 分区挂载
 
 ```
 mount -o remount, rw /
 ```
-
-
 
 ### ls -l
 

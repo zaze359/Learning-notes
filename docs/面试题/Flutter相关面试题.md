@@ -1,0 +1,9 @@
+# Flutter相关面试题
+
+## StatefulWidget和StatelessWidget在接口设计上，为什么会有区别？
+
+Widget相当于视图的配置信息，而StatelessWidget表示无状态组件，所以直接创建所需Widget即可。而StatefullWidget是状态感知的。状态发生变化相当于配置更新，此时需要更新Widget。所以State和Widget是相关联的，由State来创建Widget在逻辑上更清晰，同时这也是一种数据驱动视图更新的模式。
+
+为什么有createState()方法？
+
+我觉得首先应该是解偶，更加灵活。还有可能就是区分Stateless和Statefull两个组件的侧重点，前者侧重构建，后者更强调状态变化，突出数据驱动更新视图这一概念。

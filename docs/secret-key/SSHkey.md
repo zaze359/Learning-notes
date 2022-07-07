@@ -14,6 +14,8 @@ ls
 
 ### 2. 生成ssh key
 
+> 此处的邮箱地址只是生成 ssh key 的名称。
+
 ```bash
 ssh-keygen -t rsa -C "zhaozhen359@gmail.com"
 ```

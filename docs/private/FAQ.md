@@ -1,4 +1,4 @@
-# 问题处理记录
+# FAQ
 
 ## MacBook
 
@@ -12,7 +12,17 @@
 sudo ln -s /usr/local/bin/python3 python
 ```
 
+## CocoaPods错误
 
+error:
+```
+CDN: trunk URL couldn't be downloaded
+```
+
+修改``/etc/hosts``文件
+```
+199.232.4.133 raw.githubusercontent.com
+```
 
 
 
@@ -20,20 +30,20 @@ sudo ln -s /usr/local/bin/python3 python
 
 ### 依赖模式
 
-#### 1. implementation
+1. implementation
 
 ```
 - 该依赖方式所依赖的库不会传递(只会在当前module中生效)。
 - 远程库依赖时依然存在依赖传递
 ```
 
-#### 2. api
+2. api
 
 ```
 该依赖方式会传递所依赖的库。
 ```
 
-#### 3. compileOnly
+3. compileOnly
 
 ```
 只在编译时有效，不参与打包。
@@ -46,7 +56,7 @@ sudo ln -s /usr/local/bin/python3 python
 - 动态加载jar?
 ```
 
-#### 4. runtimeOnly
+4. runtimeOnly
 
 ```
 编译时不参与, 只参与apk打包
@@ -224,3 +234,18 @@ Error: Another active Homebrew update process is already in progress.
 ```
 rm -rf /usr/local/var/homebrew/locks
 ```
+
+
+
+## SQL
+
+```bash
+unrecognized token: "xxxx"
+```
+
+字符串字段使用时注意增加 单引号。
+
+```sqlite
+SELECT * FROM books WHERE url='$url'
+```
+
