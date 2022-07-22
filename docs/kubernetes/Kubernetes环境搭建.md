@@ -1,6 +1,10 @@
 # Kubernetes环境搭建
 
-
+> 容器是软件、应用、进程。
+>
+> Kubernetes则是一个生产级别的容器编排平台和集群管理系统。
+>
+> 相当于操作系统，负责资源管理和作业调度。
 
 ## 虚拟机方式
 
@@ -8,13 +12,9 @@
 
 [VirtualBox]([Downloads – Oracle VM VirtualBox](https://www.virtualbox.org/wiki/Downloads)) 或者 [VMWare Fusion]([Download VMware Fusion | VMware](https://www.vmware.com/products/fusion/fusion-evaluation.html))
 
-
-
 ### 2. 下载Linux镜像
 
 [Ubuntu 22.04 Jammy Jellyfish 桌面版](https://ubuntu.com/download/desktop)
-
-
 
 ### 3.  虚拟机配置
 
@@ -47,7 +47,9 @@ sudo apt update
 sudo apt install -y git vim curl jq
 ```
 
-配置远程登录:
+
+
+## 配置远程登录
 
 ```shell
 sudo apt install -y openssh-server
@@ -62,3 +64,60 @@ ssh 用户名@xxx.xxx.xxx
 ```
 
 > 最后拍个快照，方便后续进行恢复。
+
+
+
+## 搭建minikube环境
+
+> 官方推荐 `kind` 和 `minikube` 两种方式
+>
+> minikube管理Kubernetes集群环境。
+
+下载：
+
+```shell
+curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+```
+
+安装：
+
+```shell
+sudo install minikube /usr/local/bin/
+```
+
+检测：
+
+```shell
+minikube version
+```
+
+安装`kebectl`操作Kubernetes：
+
+```shell
+minikube kubectl
+```
+
+启动minikube：
+
+```
+minikube start --kubernetes-version=v1.23.3
+```
+
+
+
+
+
+## 安装Docker Engine
+
+```shell
+sudo apt install -y docker.io
+```
+
+```shell
+sudo service docker start
+```
+
+```shell
+sudo usermod -aG docker ${USER}
+```
+

@@ -80,6 +80,14 @@ pickResult?.files.forEach((element) {
 flutter pub add permission_handler
 ```
 
+## 图片
+
+[cached_network_image | Flutter Package (pub.dev)](https://pub.dev/packages/cached_network_image)
+
+````shell
+flutter pub add cached_network_image
+````
+
 ## 相机
 
 ```bash

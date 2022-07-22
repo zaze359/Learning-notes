@@ -4,13 +4,11 @@ date: 2020-07-01 17:05
 ---
 # VS-Code配置
 
-## 编译环境配置
+## 1. C/C++编译环境配置
 
-### C语言
+### 1.1 Windows安装C编译器
 
-#### 1. Windows安装C编译器
-
-##### 在线安装（我失败了，最终使用了离线安装）
+#### 在线安装（我失败了，最终使用了离线安装）
 [下载 MinGW-W64 GCC](https://www.mingw-w64.org/downloads/)
 
 选择 ``Sourceforge``点击下载即可
@@ -48,7 +46,7 @@ date: 2020-07-01 17:05
 
 ![result](image/VS-Code配置/1649490901801.png)
 
-##### 离线安装
+#### 离线安装
 
 在线安装出现报错: ``This file has been downloaded incorrently!``。
 
@@ -70,13 +68,13 @@ path中添加 ``D:\mingw64\bin``; 根据自己实际安装位置调整。
 gcc -v
 ```
 
-#### 2. 安装需要的插件
+### 1.2 安装需要的插件
 
 - C/C++
 
 
 
-#### 3. 项目配置
+### 1.3 项目配置
 
 修改``c_cpp_properties.json``，添加一下include目录。
 
@@ -107,15 +105,9 @@ gcc -v
 
 
 
-## 插件安装
+## 2. Spring Boot配置
 
-### Markdown
-
-Office Viewer
-
-## Spring Boot
-
-### 初始化
+初始化
 
 - DevTools（代码修改热更新，无需重启）
 
@@ -125,7 +117,7 @@ Office Viewer
 - Thymeleaf （模板引擎）。
   YAML
 
-### Vue
+## 3. Vue配置
 
 ```
 // 安装webpack
@@ -136,6 +128,55 @@ npm init
 npm i webpack vue vue-loader
 
 ```
+
+
+
+## 4. kotlin配置
+
+### 4.1 下载安装kotlin
+
+#### 下载安装
+
+> [下载地址](https://github.com/JetBrains/kotlin/releases)
+
+- ``mac``也可直接通过brew安装
+
+```
+brew install kotlin
+```
+
+- ``windows``下载完成后需要配置环境变量
+
+```
+E:\kotlin\bin
+```
+
+#### 验证kotlin
+
+```
+kotlinc -version
+```
+
+### 4.2 安装插件
+
+- Kotlin Language
+- Code Runner
+
+
+### 4.3 配置Setting.json
+
+管理 >> 设置 >> 右上角的编辑按钮
+
+```
+"code-runner.runInTerminal": true,
+"terminal.integrated.shell.windows": "powershell.exe"
+```
+
+
+
+
+
+
 
 ## 问题处理记录
 
@@ -155,3 +196,11 @@ npm i webpack vue vue-loader
 # chcp + 代码
 chcp 65001
 ```
+
+
+
+## 插件安装
+
+### Markdown
+
+Office Viewer
