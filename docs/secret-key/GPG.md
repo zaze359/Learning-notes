@@ -26,7 +26,7 @@ gpg --generate-key
 ----------------------------------
 pub   ed25519 2021-07-20 [SC] [有效至：2023-07-20]
       752319xxxxxxxxxxxxxxxxxxxxxxxCE1A2961
-uid             [ 绝对 ] zhen zhao <359635919@qq.com>
+uid             [ 绝对 ] username <xxx@qq.com>
 sub   cv25519 2021-07-20 [E] [有效至：2023-07-20]
 ```
 - 生成 secretKeyRingFile

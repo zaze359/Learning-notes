@@ -17,7 +17,7 @@ ls
 > 此处的邮箱地址只是生成 ssh key 的名称。
 
 ```bash
-ssh-keygen -t rsa -C "zhaozhen359@gmail.com"
+ssh-keygen -t rsa -C "xxx@gmail.com"
 ```
 
 ### 3. 后续需要设置文件名和密码，可直接回车跳过即可
@@ -36,7 +36,7 @@ cat id_rsa.pub
 
 ```bash
 Host github.com
-User zhaozhen359@gmail.com
+User xxxx@gmail.com
 Hostname ssh.github.com
 PreferredAuthentications publickey
 IdentityFile C:/Users\Administrator/.ssh/id_rsa

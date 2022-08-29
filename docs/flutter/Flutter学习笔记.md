@@ -68,7 +68,32 @@ export PUB_HOSTED_URL=https://pub.flutter-io.cn
 export FLUTTER_STORAGE_BASE_URL=https://storage.flutter-io.cn
 ```
 
-### 2.1 mac下使用brew安装
+### 2.1 安装Flutter
+
+### 配置镜像站点
+
+[Using Flutter in China | Flutter](https://docs.flutter.dev/community/china)
+
+Mac 修改`~/.bash_profile `
+
+```properties
+export PUB_HOSTED_URL=https://pub.flutter-io.cn  
+export FLUTTER_STORAGE_BASE_URL=https://storage.flutter-io.cn
+```
+
+Windows 配置环境变量：
+
+```
+# 新建用户变量 PUB_HOSTED_URL
+https://pub.flutter-io.cn
+# 新建用户变量 FLUTTER_STORAGE_BASE_URL
+https://storage.flutter-io.cn
+
+```
+
+#### mac下使用brew安装
+
+命令：
 
 ```shell
 # 安装flutter
@@ -87,13 +112,43 @@ brew link --overwrite dart
 /usr/local/Caskroom/flutter/
 ```
 
+#### Windows下安装
+
+[在 Windows 操作系统上安装和配置 Flutter 开发环境 - Flutter 中文文档 - Flutter 中文开发者网站 - Flutter](https://flutter.cn/docs/get-started/install/windows)
+
+下载Flutter SDK：[Flutter SDK releases | Flutter](https://docs.flutter.dev/development/tools/sdk/releases?tab=windows)
+
+安装Dart SDK：[Get the Dart SDK | Dart](https://dart.dev/get-dart)
+
+> 需要先安装[choco](https://chocolatey.org/install)包管理工具
+>
+> dart sdk安装完成位置：`C:\tools\dart-sdk`
+
+```shell
+# To install the Dart SDK:
+choco install dart-sdk
+# To upgrade the Dart SDK:
+choco upgrade dart-sdk
+```
+
+配置环境变量：
+
+> 用户变量path
+
+```shell
+# flutter的安装目录
+D:\flutter\bin
+```
+
 检测依赖：
 
 ```shell
 flutter doctor
 ```
 
-Android Studio插件安装：
+Android Studio 配置Dart SDK Path
+
+Android Studio 插件安装：
 
 *   Flutter插件
 

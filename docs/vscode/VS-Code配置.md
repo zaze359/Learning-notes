@@ -64,7 +64,7 @@ path中添加 ``D:\mingw64\bin``; 根据自己实际安装位置调整。
 
 - 校验是否配置成功
 
-```
+```shell
 gcc -v
 ```
 
@@ -95,7 +95,8 @@ gcc -v
             "compilerPath": "D:\\mingw64\\bin\\gcc.exe",
             "cStandard": "gnu17",
             "cppStandard": "gnu++14",
-            "intelliSenseMode": "windows-gcc-x64"
+            "intelliSenseMode": "gcc-x64"
+            // "intelliSenseMode": "windows-msvc-x64"
         }
     ],
     "version": 4
@@ -119,7 +120,7 @@ gcc -v
 
 ## 3. Vue配置
 
-```
+```shell
 // 安装webpack
 npm install -g webpack 
 // 
@@ -131,9 +132,37 @@ npm i webpack vue vue-loader
 
 
 
-## 4. kotlin配置
+## 4. Java配置
 
-### 4.1 下载安装kotlin
+下载OpenJDK
+
+[Java Platform, Standard Edition 13 Reference Implementations](https://jdk.java.net/java-se-ri/13)
+
+新建系统变量`JAVA_HOME`
+
+```shell
+D:\openjdk\jdk-13
+```
+
+添加环境变量`path`
+
+```shell
+%JAVA_HOME%\bin
+```
+
+验证：
+
+```shell
+java -version
+```
+
+
+
+## 5. kotlin配置
+
+> 依赖Java环境，首先配置Java。
+
+### 5.1 下载安装kotlin
 
 #### 下载安装
 
@@ -141,29 +170,29 @@ npm i webpack vue vue-loader
 
 - ``mac``也可直接通过brew安装
 
-```
+```shell
 brew install kotlin
 ```
 
 - ``windows``下载完成后需要配置环境变量
 
-```
+```shell
 E:\kotlin\bin
 ```
 
 #### 验证kotlin
 
-```
+```shell
 kotlinc -version
 ```
 
-### 4.2 安装插件
+### 5.2 安装插件
 
 - Kotlin Language
 - Code Runner
 
 
-### 4.3 配置Setting.json
+### 5.3 配置Setting.json
 
 管理 >> 设置 >> 右上角的编辑按钮
 
@@ -171,10 +200,6 @@ kotlinc -version
 "code-runner.runInTerminal": true,
 "terminal.integrated.shell.windows": "powershell.exe"
 ```
-
-
-
-
 
 
 

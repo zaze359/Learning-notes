@@ -19,13 +19,16 @@ git pull --rebase
 ```
 
 ## Config参数配置
-```
+```shell
 git config --list
 
 git config --global http.proxy http://127.0.0.1:7890
 git config --global https.proxy https://127.0.0.1:7890
 git config --global --unset http.proxy
 git config --global --unset https.proxy
+
+git config --global user.name "Your Name"
+git config --global user.email "you@example.com"
 ```
 
 - 设置文件夹大小写敏感

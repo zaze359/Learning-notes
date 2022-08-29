@@ -94,7 +94,7 @@ PANIC: Missing emulator engine program for 'x86' CPU.
 
 [下载地址][apktool]
 
-> windows 将解压路径添加到PATH环境变量中
+> windows 将解压路径添加到`PATH`环境变量中
 
 
 ### 6.2. java文件编译和反编译

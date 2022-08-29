@@ -28,6 +28,40 @@ CDN: trunk URL couldn't be downloaded
 
 ## Android相关
 
+### Console控制台乱码
+
+`Help->Edit Custom VM Options`添加以下内容：
+
+```tex
+-Dfile.encoding=UTF-8
+```
+
+
+
+### 编译时提示 `编码 GBK 的不可映射字符`
+
+> 需要`build.gradle`
+
+```groovy
+tasks.withType(JavaCompile) {
+    options.addStringOption('Xdoclint:none', '-quiet')
+    options.encoding = "UTF-8"
+}
+```
+
+### JavaDoc导出编码错误
+
+> Tools -> Generate JavaDoc
+
+```shell
+# Other command line arguments
+-encoding utf-8 -charset utf-8
+```
+
+
+
+
+
 ### 依赖模式
 
 1. implementation

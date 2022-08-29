@@ -2,9 +2,19 @@
 
 
 
-## Flutter执行命令时出现lock的问题
+## 1. Android Studio Flutter 项目不显示 App Inspection
 
-### 问题描述
+```shell
+File -> Project Structure
+选择 Facets
+选择 + 
+选择 Android
+选择对应项目名称
+```
+
+
+
+## 2. Flutter执行命令时出现lock的问题
 
 ```bash
 Waiting for another flutter command to release the startup lock...
@@ -29,9 +39,7 @@ Waiting for another flutter command to release the startup lock...
 
 
 
-## PageController.initialPage修改后不一定生效的问题
-
-### 问题描述
+## 3. PageController.initialPage修改后不一定生效的问题
 
 此处在每次更新时都会修改`initialPage`，但是最终结果却是页面并不会自动跳转到指定页，仅第一次生效了。不过内部的Text显示的内容变更了。
 
@@ -262,5 +270,64 @@ Widget build(BuildContext context) {
     },
   );
 }
+```
+
+
+
+
+
+## 4. 布局溢出问题
+
+`Row` 和 `Column` 使用时常会碰到布局溢出的问题。
+
+### 问题处理
+
+#### 1. 使用流式布局
+
+考虑使用`Wrap`或者`Flow`。超出屏幕部分会自动折叠，不会出现布局的溢出报错
+
+#### 2. 指定宽度
+
+使用`SizeBox`或者`Container`等容器指定。
+
+#### 3. Expanded包裹
+
+通过`Expanded`指定权重给定具体的宽高。
+
+> 此处的是Text文本过长导致的溢出。
+>
+> `Text`指定的`overflow: TextOverflow.ellipsis`不生效的原因是，没有具体的宽度。
+>
+> 通过`Expanded`使得具有宽度。
+
+```dart
+Row(
+    children: [
+        SizedBox(
+            height: 160,
+            child: Text("第一个"),
+        ),
+        Expanded(
+            child: Padding(
+                padding: EdgeInsets.fromLTRB(8, 0, 4, 0),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                        Text(
+                            "宽度溢出宽度溢出宽度溢出宽度溢出宽度溢出宽度溢出宽度溢出宽度溢出",
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 20, color: Colors.black),
+                        ),
+                        Text(
+                            "12333333",
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 14, color: Colors.black),
+                        ),
+                    ],
+                ),
+            ),
+        )
 ```
 

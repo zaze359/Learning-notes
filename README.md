@@ -6,13 +6,19 @@
 
 * [FAQ](docs/private/FAQ.md)
 
-* [Docsify环境配置](/docs/private/Docsify环境配置.md)
+* [Docsify环境配置](docs/private/Docsify环境配置.md)
 
 * [算法导论笔记](docs/private/算法导论笔记.md)
 
-*   [正则表达式](/docs/base/正则表达式.md)
+* [正则表达式](/docs/base/正则表达式.md)
+
+*   [VS-Code配置](docs/vscode/VS-Code配置.md)
 
 
+
+# 3D建模
+
+[MMD-3D学习小抄本](https://www.yuque.com/koujiakoubengyuewei/mmd)
 
 # 开发语言
 
@@ -37,6 +43,22 @@
 * [C语言基础](docs/language/C语言基础.md)
 
 * [C++笔记](docs/language//C++笔记.md)
+
+# Flutter
+
+[Flutter学习笔记](docs/flutter/Flutter学习笔记.md)
+
+[Flutter数据持久化](docs/flutter/Flutter数据持久化.md)
+
+[Flutter项目资源管理](docs/flutter/Flutter项目资源管理.md)
+
+[Flutter常用库](docs/flutter/Flutter常用库.md)
+
+[Flutter常用组件](docs/flutter/Flutter常用组件.md)
+
+[Flutter问题集](docs/flutter/Flutter问题集.md)
+
+[Flutter核心原理](docs/flutter/Flutter核心原理.md)
 
 # Android
 
@@ -112,17 +134,7 @@
 
 [bilibiliDanmaku集成](docs/android/danmaku/bilibiliDanmaku集成)
 
-# Flutter
 
-[Flutter学习笔记](docs/flutter/Flutter学习笔记.md)
-
-[Flutter数据持久化](docs/flutter/Flutter数据持久化.md)
-
-[Flutter项目资源管理](docs/flutter/Flutter项目资源管理.md)
-
-[Flutter常用库](docs/flutter/Flutter常用库.md)
-
-[Flutter常用组件](docs/flutter/Flutter常用组件.md)
 
 # Web前端
 
