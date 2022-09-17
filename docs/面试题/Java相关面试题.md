@@ -93,12 +93,50 @@
 
 
 
+---
 
-
-### 4. Java是解释执行吗？
+## 4. Java是解释执行吗？
 
 > Java是解释执行，但是也支持编译执行。
 
 ​	Java通过Javac编译成.class类型文件，在运行时Java虚拟机内嵌的解释器，逐条读入，逐条解释运行，此时是解释执行，这也是Java实现跨平台的原因。
 
 ​	Java虚拟机都提供了JIT编译器，能在运行时将热点代码直接编译成机器码，此时这些热点代码就属于编译执行。
+
+---
+
+## 5. 动态代理
+
+> 主要考察反射机制。
+>
+> 动态代理解决了什么问题。
+
+
+
+## 6. Daemon线程和User线程
+
+User线程
+
+> `new Thread`默认创建的就是User线程。
+
+```java
+Thread threadA = new Thread(new Runnable(){...});
+threadA.start();
+```
+
+如何创建`Daemon线程`：
+
+```java
+Thread threadA = new Thread(new Runnable(){...});
+// 设置为Daemon线程，需要在start之前调用。
+threadA.setDaemon(true);
+threadA.start();
+
+// 可以通过 threadA.isDaemon()判断。
+```
+
+User线程和Daemon线程的差异
+
+* JVM进程退出的条件是，不存在User线程。
+* main函数所在线程的退出，不影响其他User线程的运行，也不影响JVM进程是否退出执行。
+* 当JVM中所有的User线程退出后，所有的Daemon线程也会马上退出执行，并且JVM进程也会退出。

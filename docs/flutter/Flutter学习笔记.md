@@ -68,7 +68,7 @@ export PUB_HOSTED_URL=https://pub.flutter-io.cn
 export FLUTTER_STORAGE_BASE_URL=https://storage.flutter-io.cn
 ```
 
-### 2.1 安装Flutter
+### 2.1 Flutter安装与配置
 
 ### 配置镜像站点
 
@@ -116,12 +116,18 @@ brew link --overwrite dart
 
 [在 Windows 操作系统上安装和配置 Flutter 开发环境 - Flutter 中文文档 - Flutter 中文开发者网站 - Flutter](https://flutter.cn/docs/get-started/install/windows)
 
-下载Flutter SDK：[Flutter SDK releases | Flutter](https://docs.flutter.dev/development/tools/sdk/releases?tab=windows)
-
-安装Dart SDK：[Get the Dart SDK | Dart](https://dart.dev/get-dart)
+1. **安装Dart SDK**：[Get the Dart SDK | Dart](https://dart.dev/get-dart)
 
 > 需要先安装[choco](https://chocolatey.org/install)包管理工具
 >
+> PowerShell中输入以下命令，等待一会，直到完成。
+
+```shell
+Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+```
+
+安装失败删除`C:\ProgramData\chocolatey`，重新执行即可。
+
 > dart sdk安装完成位置：`C:\tools\dart-sdk`
 
 ```shell
@@ -131,7 +137,9 @@ choco install dart-sdk
 choco upgrade dart-sdk
 ```
 
-配置环境变量：
+2. **下载Flutter SDK**：[Flutter SDK releases | Flutter](https://docs.flutter.dev/development/tools/sdk/releases?tab=windows)
+
+3. **配置环境变量**：
 
 > 用户变量path
 
@@ -140,19 +148,21 @@ choco upgrade dart-sdk
 D:\flutter\bin
 ```
 
-检测依赖：
+4. **检测依赖**：
 
 ```shell
 flutter doctor
 ```
 
-Android Studio 配置Dart SDK Path
+5. **Android Studio 配置**
 
-Android Studio 插件安装：
+   * 配置Dart SDK Path
 
-*   Flutter插件
+   *   安装Flutter插件
 
-*   Dart插件
+
+   *   安装Dart插件
+
 
 ### 2.2 常用命令记录
 
@@ -330,6 +340,14 @@ class RenderCustomObject extends RenderBox{
 
 ### 3.4 生命周期
 
+| 方法  | 类                  | 说明                                                 |
+| ----- | ------------------- | ---------------------------------------------------- |
+| mount | RenderObjectElement | 生命周期的第一步，负责初始化。将RenderObject插到树上 |
+|       |                     |                                                      |
+|       |                     |                                                      |
+
+
+
 #### 3.4.1 State生命周期
 
 ![](https://guphit.github.io/assets/img/2-5.a59bef97.jpg)
@@ -348,8 +366,6 @@ class RenderCustomObject extends RenderBox{
 #### 3.4.2 App生命周期
 
 > 利用WidgetsBindingObserver监听App生命周期。
-
-
 
 帧绘制回调：
 

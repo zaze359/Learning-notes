@@ -6,11 +6,11 @@
 >
 > 相当于操作系统，负责资源管理和作业调度。
 
-## 虚拟机方式
+## 安装虚拟机
 
 ### 1. 下载虚拟机软件
 
-[VirtualBox]([Downloads – Oracle VM VirtualBox](https://www.virtualbox.org/wiki/Downloads)) 或者 [VMWare Fusion]([Download VMware Fusion | VMware](https://www.vmware.com/products/fusion/fusion-evaluation.html))
+[Downloads – Oracle VM VirtualBox](https://www.virtualbox.org/wiki/Downloads) 或者[Download VMware Fusion | VMware](https://www.vmware.com/products/fusion/fusion-evaluation.html)
 
 ### 2. 下载Linux镜像
 
@@ -24,7 +24,7 @@
 VMWare Fusion -> 偏好设置 -> 网络 -> + （添加一个网络）
 ```
 
-![image-20220706175103184](Kubernetes环境搭建.assets/image-20220706175103184.png)
+![image-20220706175103184](./Kubernetes%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA.assets/image-20220706175103184.png)
 
 安装虚拟机
 
@@ -46,8 +46,6 @@ VMWare Fusion -> 偏好设置 -> 网络 -> + （添加一个网络）
 sudo apt update
 sudo apt install -y git vim curl jq
 ```
-
-
 
 ## 配置远程登录
 
@@ -101,23 +99,5 @@ minikube kubectl
 
 ```
 minikube start --kubernetes-version=v1.23.3
-```
-
-
-
-
-
-## 安装Docker Engine
-
-```shell
-sudo apt install -y docker.io
-```
-
-```shell
-sudo service docker start
-```
-
-```shell
-sudo usermod -aG docker ${USER}
 ```
 

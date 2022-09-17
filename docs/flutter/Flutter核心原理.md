@@ -64,6 +64,12 @@ Flutter的UI界面主要是通过``Widget组合``来实现。
 
 UI发生变化时，不直接修改DOM，而是通过更新状态。以``响应式``的模式让框架根据新的状态来重新构建UI。
 
+* Widget：配置文件
+* Element：连接Widget和RenderObject的桥梁，负责主要的逻辑。
+* RenderObject：负责绘制
+
+
+
 #### 绘制原理
 
 > OpenGL仅时操作系统API的一个封装库，相当于直接调用系统API。
@@ -86,7 +92,7 @@ GPU线程将这些数据进行图层合成，随后交给Skia引擎加工成GPU�
 
 渲染
 
-
+#### 绘制流程
 
 1.  根据`Widget树`生成一个`Element树`。
 

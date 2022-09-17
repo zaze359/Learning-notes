@@ -3,22 +3,18 @@
 # 个人备忘
 
 * [常用操作记录](/docs/private/常用操作记录.md)
-
 * [FAQ](docs/private/FAQ.md)
-
-* [Docsify环境配置](docs/private/Docsify环境配置.md)
-
 * [算法导论笔记](docs/private/算法导论笔记.md)
-
 * [正则表达式](/docs/base/正则表达式.md)
+*   [MMD-3D学习小抄本](https://www.yuque.com/koujiakoubengyuewei/mmd)
 
-*   [VS-Code配置](docs/vscode/VS-Code配置.md)
+# 环境配置
 
-
-
-# 3D建模
-
-[MMD-3D学习小抄本](https://www.yuque.com/koujiakoubengyuewei/mmd)
+* [VS-Code配置](docs/env/VS-Code配置.md)
+* [Docker配置](docs/env/Docker配置.md)
+* [Tomcat配置](docs/env/Tomcat配置.md)
+* [Docsify环境配置](docs/private/Docsify环境配置.md)
+* [Kubernetes环境搭建](./docs/env/kubernetes环境搭建.md)
 
 # 开发语言
 
@@ -42,7 +38,7 @@
 
 * [C语言基础](docs/language/C语言基础.md)
 
-* [C++笔记](docs/language//C++笔记.md)
+* [C++笔记](docs/language/C++笔记.md)
 
 # Flutter
 
@@ -88,7 +84,7 @@
 
 *   [Android分区和文件系统](docs/android/file-system/android分区和文件系统)
 
-*   [Doze模式和AppStandby模式](docs/android/性能/低电耗模式和应用待机模式.md)
+*   [电量优化](docs/android/性能/电量优化.md)
 
 > 异常分析和处理
 
@@ -152,11 +148,6 @@
 
 # 其他
 
-## 服务端
-
-*   [Docker](docs/web/Docker.md)
-
-*   [Tomcat配置](docs/web/Tomcat配置.md)
 
 ## Gradle
 

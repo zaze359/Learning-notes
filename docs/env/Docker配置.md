@@ -1,24 +1,24 @@
 # Docker配置
 
+目前Docker使用存在两个选择：**Docker Desktop** 和 Docker Engine。
 
+**Docker Desktop**是商业产品，个人使用免费，有直观的图形界面。
 
-目前Docker使用存在两个选择：Docker Desktop 和 Docker Engine。
-
-Docker Desktop是商业产品，个人使用免费，有直观的图形界面。
-
-Docker Engine完全免费，但只能在Linux上使用。
+**Docker Engine**完全免费，但只能在Linux上使用。
 
 ## Docker Engine配置
 
 ### 1、安装
 
 ```shell
+#安装Docker Engine
 sudo apt install -y docker.io
 ```
 
 ### 2、启动服务
 
 ```shell
+#启动docker服务
 sudo service docker start
 ```
 
@@ -37,4 +37,6 @@ sudo usermod -aG docker ${USER}
 ```shell
 docker version
 ```
+
+
 
