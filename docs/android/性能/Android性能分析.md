@@ -40,3 +40,24 @@
 
 - 将dmtrace.trace转换成html输出
 ``dmtracedump -h dmtrace.trace > aa.html``
+
+## UI渲染性能测量
+
+### 指令输出
+
+#### gfxinfo
+
+```shell
+# 输出包含各阶段发生的动画以及帧相关的性能信息
+adb shell dumpsys gfxinfo 包名
+# 获取最近120 帧每个绘制阶段的耗时信息
+adb shell dumpsys gfxinfo 包名 framestats
+```
+
+#### SurfaceFlinger
+
+```shell
+# 拿到系统 SurfaceFlinger 相关的信息：Graphic Buffer内存的占用情况
+adb shell dumpsys SurfaceFlinger
+```
+

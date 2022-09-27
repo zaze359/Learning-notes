@@ -1,7 +1,5 @@
 # Python配置
 
-
-
 ## 在Windows上安装Python
 
 [下载python Download Python | Python.org](https://www.python.org/downloads/)

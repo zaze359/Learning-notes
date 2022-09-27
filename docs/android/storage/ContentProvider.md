@@ -1,5 +1,25 @@
 # ContentProvider
 
+> 一种支持**不同进程甚至是应用程序之间共享数据**的机制。
+>
+> 例如：相册、日历、音频等系统模块。
+
+## 实现机制
+
+ContentProvider 在进行跨进程数据传递时，利用了`Binder` 和 `匿名共享内存(ashmem)`机制。
+
+通过`Binder`传递`CursorWindow`对象内部的匿名共享的文件描述符，从而使用文件描述符来操作同一块匿名内存，达到不同进程访问相同数据的目的。
+
+![image-20220919160109522](./ContentProvider.assets/image-20220919160109522.png)
+
+## 生命周期
+
+>  ContentProvider 的生命周期在` Application onCreate() `之前，而且都是在主线程创建的。
+>
+> 在初始化时需要避免耗时操作，导致启动速度变慢。
+
+![image-20220919160851695](./ContentProvider.assets/image-20220919160851695.png)
+
 
 ## ----
 
@@ -49,6 +69,8 @@ public String getType(Uri)
 * 第一部分是``"content://"``。可以看作是网址中的``"http://"``。
 * 第二部分是主机名或authority，用于唯一标识这个ContentProvider，外部应用需要根据这个标识来找到它。可以看作是网址中的主机名，比如``"blog.csdn.NET"``。
 * 第三部分是路径名，用来表示将要操作的数据。可以看作网址中细分的内容路径。
+
+
 
 
 

@@ -51,9 +51,7 @@ date: 2020-07-01 17:05
 初始化
 
 - DevTools（代码修改热更新，无需重启）
-
-- [X] Web（集成tomcat、SpringMVC） @2020-11-03 10:07:00
-
+- Web（集成tomcat、SpringMVC）
 - Lombok（智能生成setter、getter、toString等接口，无需手动生成，代码更简介）
 - Thymeleaf （模板引擎）。
   YAML
@@ -104,9 +102,7 @@ java -version
 
 ### 5.1 下载安装kotlin
 
-#### 下载安装
-
-> [下载地址](https://github.com/JetBrains/kotlin/releases)
+> [kotlin-compiler 下载地址](https://github.com/JetBrains/kotlin/releases)
 
 - ``mac``也可直接通过brew安装
 
@@ -117,7 +113,7 @@ brew install kotlin
 - ``windows``下载完成后需要配置环境变量
 
 ```shell
-E:\kotlin\bin
+E:\kotlinc\bin
 ```
 
 #### 验证kotlin
@@ -155,6 +151,18 @@ kotlinc -version
 
 ## 问题处理记录
 
+### 编码GBK的不可映射字符
+
+打开设置，修改`settings.json`：
+
+```json
+"code-runner.executorMap": {
+"java": "cd $dir && javac -encoding utf8 $fileName && java $fileNameWithoutExt",
+},
+```
+
+
+
 ### 控制台乱码
 
 终端中输入 ``chcp``查看当前编码格式。
@@ -174,8 +182,8 @@ chcp 65001
 
 
 
-## 插件安装
+## 插件记录
 
-### Markdown
+### Markdown插件
 
 Office Viewer

@@ -38,7 +38,7 @@ CDN: trunk URL couldn't be downloaded
 
 
 
-### 编译时提示 `编码 GBK 的不可映射字符`
+### 编译时提示 `编码GBK的不可映射字符`
 
 > 需要`build.gradle`
 
