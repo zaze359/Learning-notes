@@ -407,4 +407,14 @@ Android为了确保应用程序中关键代码的正确执行，提供了Wake Lo
 
 ***
 
-作者 : [口戛口崩月危.Z](https://zaze359.github.io)
+
+
+
+
+## R.java 和 Resource.arsc
+
+* `R.java`是一个资源索引文件，可以通过`R.`的方式应用资源的id。
+
+* `Resources.arsc`是一个资源索引表，在运行时通过id找到具体对应的资源文件。
+
+`AssetManager`在初始化时将`Resources.arsc`加载进了内存，应用运行时通过将资源id传给Resources类，Resources将id传给`AssetManager`,然后调用jni中的android_util_AssetManager.cpp文件，在资源索引表查找文件的路径，从而加载对应的资源。

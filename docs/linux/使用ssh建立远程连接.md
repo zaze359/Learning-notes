@@ -14,9 +14,15 @@ sudo apt-get install openssh-server
 ### 查看ssh状态
 
 ```shell
+# 查看ssh状态
 sudo systemctl status ssh
 # or; 查看是否存在sshd进程
 ps -e |grep sshd
+```
+
+### 启动ssh
+
+```shell
 # 启动ssh.service
 sudo /etc/init.d/ssh start
 ```
@@ -53,6 +59,7 @@ PermitRootLogin yes
 
 ```shell
 ifconfig
+ip addr
 ```
 
 例如我的Linux在局域网中ip为192.168.50.58, 以root账号进行连接。
@@ -62,3 +69,24 @@ ifconfig
 ## 默认22端口
 ssh root@192.168.50.58
 ```
+
+## 文件传输
+
+### scp
+
+```shell
+# 将本地文件localFile.txt 上传到 远程remoteDir文件中取名localFile.txt。远程结果：remoteDir/localFile.txt
+scp ./localFile.txt root@192.168.50.58:remoteDir/localFile.txt
+# 将远程remoteDir/localFile.txt 下载到 当前目录中localFile.txt。本地结果：./localFile.txt
+scp root@192.168.50.58:remoteDir/localFile.txt localFile.txt
+
+
+
+# 将本地文件夹localDir 上传到 远程remoteDir文件中。远程结果：remoteDir/localDir
+scp -r localDir root@192.168.50.58:remoteDir
+# 将远程remoteDir文件夹 下载到 localDir中。本地结果：localDir/remoteDir
+scp -r root@192.168.50.58:remoteDir /localDir
+```
+
+
+

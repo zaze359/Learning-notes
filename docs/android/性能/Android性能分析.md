@@ -61,3 +61,26 @@ adb shell dumpsys gfxinfo 包名 framestats
 adb shell dumpsys SurfaceFlinger
 ```
 
+## Perfetto
+
+[perfetto  | Android 开发者  | Android Developers (google.cn)](https://developer.android.google.cn/studio/command-line/perfetto?hl=zh_cn)
+
+### 抓取方式
+
+> 直接跳转到设置中的页面操作跟踪
+
+```
+adb shell am start com.android.traceur/com.android.traceur.MainActivity
+```
+
+> 命令行方式
+
+```
+adb shell perfetto --config CONFIG-FIle --out FILE
+```
+
+
+
+## 将trace文件导入到perfetto中
+
+打开https://ui.perfetto.dev/网页。选择`Open trace file`。

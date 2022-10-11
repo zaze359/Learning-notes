@@ -1,28 +1,8 @@
 # FAQ
 
-## MacBook
+## MacBook相关问题
 
 [如何重置 Mac 的 SMC - Apple 支持 (中国)](https://support.apple.com/zh-cn/HT201295)
-
-
-
-## python3软连接方式处理python无法运行的问题
-
-```shell
-sudo ln -s /usr/local/bin/python3 python
-```
-
-## CocoaPods错误
-
-error:
-```
-CDN: trunk URL couldn't be downloaded
-```
-
-修改``/etc/hosts``文件
-```
-199.232.4.133 raw.githubusercontent.com
-```
 
 
 
@@ -60,40 +40,22 @@ tasks.withType(JavaCompile) {
 
 
 
+### Gradle升级7.0.2之后发生报错,需要使用java11
 
+> 可以选择Android Studio内置的，也可使用自己下载jdk11
 
-### 依赖模式
+![image-20220217182552440](./FAQ.assets/image-20220217182552440.png)
 
-1. implementation
+方式一：IDE settings
 
-```
-- 该依赖方式所依赖的库不会传递(只会在当前module中生效)。
-- 远程库依赖时依然存在依赖传递
-```
+![image-20220217182447922](./FAQ.assets/image-20220217182447922.png)
 
-2. api
+方式二：gradle.properties添加配置
 
-```
-该依赖方式会传递所依赖的库。
-```
+> 添加jdk11的位置
 
-3. compileOnly
-
-```
-只在编译时有效，不参与打包。
-```
-
-```
-使用场景:
-- 单模块调试时, 将其他模块标志为compileOnly
-- 处理依赖冲突
-- 动态加载jar?
-```
-
-4. runtimeOnly
-
-```
-编译时不参与, 只参与apk打包
+```properties
+org.gradle.java.home=/Library/Java/JavaVirtualMachines/temurin-11.jdk/Contents/Home
 ```
 
 ### Gradle编译错误
@@ -107,17 +69,17 @@ A problem occurred configuring project ':app'.
 
 ```
 
-```
-- 原因
+```shell
+# 原因
 gradle-wrapper.properties和gradle 版本不兼容问题
-- 处理方式
-更新配置到最新
-使用项目本身的 gradlew 编译
+# 处理方式
+# 更新配置到最新
+# 使用项目本身的 gradlew 编译
 ```
 
 报错资源无法找到
 
-```
+```shell
 AAPT: error: resource drawable/default_background (aka com.xxxx:drawable/xxxx.xml
 ```
 
@@ -131,6 +93,16 @@ AAPT: error: resource drawable/default_background (aka com.xxxx:drawable/xxxx.xm
 ```
 
 ---
+
+### Gradle权限问题
+
+> permission denied: ./gradlew
+
+```shell
+ chmod +x gradlew
+```
+
+
 
 ### 依赖库发生冲突
 
@@ -205,6 +177,22 @@ aaptOptions.useNewCruncher=false
 > 还是自己根据原图编辑.9比较靠谱
 
 ---
+
+### Android Studio如何下载ndk16、低版本cmake等
+
+对应问题有：
+
+`Invalid revision: 3.22.1-g37088a8-dirty`。
+
+处理方式：
+
+勾选`Show Package Details`即可下载旧版本的ndk、cmake。
+
+将高版本的cmake卸载。
+
+![image-20221009210404431](./FAQ.assets/image-20221009210404431.png)
+
+
 
 ## 浏览器相关清理
 
@@ -283,3 +271,46 @@ unrecognized token: "xxxx"
 SELECT * FROM books WHERE url='$url'
 ```
 
+
+
+
+
+## python3软连接方式处理python无法运行的问题
+
+```shell
+sudo ln -s /usr/local/bin/python3 python
+```
+
+## CocoaPods错误
+
+error:
+
+```
+CDN: trunk URL couldn't be downloaded
+```
+
+修改``/etc/hosts``文件
+
+```
+199.232.4.133 raw.githubusercontent.com
+```
+
+
+
+## 虚拟机报错
+
+```tex
+不能为虚拟电脑 u22041 打开一个新任务.
+
+Failed to open/create the internal network 'HostInterfaceNetworking-VirtualBox Host-Only Ethernet Adapter' (VERR_INTNET_FLT_IF_NOT_FOUND).
+
+Failed to attach the network LUN (VERR_INTNET_FLT_IF_NOT_FOUND).
+
+返回 代码: E_FAIL
+组件: ConsoleWrap
+界面: IConsole
+```
+
+找到对应虚拟网络**禁用再启用**即可
+
+![image-20221010005144902](./FAQ.assets/image-20221010005144902.png)

@@ -28,32 +28,32 @@
 
 
 
-## 设置开发环境
+## 为项目配置Compose
 
 [将 Jetpack Compose 添加到应用中  | Android Developers (google.cn)](https://developer.android.google.cn/jetpack/compose/interop/adding)
 
-### 1. 配置Android Gradle插件版本
+### 配置Android Gradle插件版本
 
-配置``项目/build.gradle``, 需要 gradle版本``7.0.0``及以上。
+配置``root/build.gradle``
 
 ```groovy
 buildscript {
     ...
     dependencies {
-        classpath "com.android.tools.build:gradle:7.0.0"
+        classpath "com.android.tools.build:gradle:7.2.2"
         ...
     }
 }
 ```
 
-### 2. 配置Kotlin
+### 配置Kotlin版本
 
-配置``项目/build.gradle``， 需要kotlin版本``1.6.10``及以上。
+配置``root/build.gradle``
 
 ```groovy
 buildscript {
 		ext {
-        kotlin_version = '1.6.10'
+        kotlin_version = '1.7.10'
     }
     ...
     dependencies {
@@ -65,13 +65,15 @@ buildscript {
 
 添加kotlin插件
 
-```
+```groovy
 plugins {
     id 'kotlin-android'
 }
 ```
 
-### 3. 配置Gradle
+### Gradle参数配置
+
+最低 API 级别设置为 21 或更高级别，并且开启 Jetpack Compose
 
 ```groovy
 android {
@@ -96,14 +98,35 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion '1.1.1'
+        kotlinCompilerExtensionVersion '1.3.0'
     }
+}
+```
+
+### 添加依赖项
+
+> 使用 `activity-compose` 依赖项时，`androidx.activity` 也必须位于 1.3.0 版中。
+
+```groovy
+dependencies {
+    // Integration with activities
+    implementation 'androidx.activity:activity-compose:1.5.1'
+    // Compose Material Design
+    implementation 'androidx.compose.material:material:1.2.1'
+    // Animations
+    implementation 'androidx.compose.animation:animation:1.2.1'
+    // Tooling support (Previews, etc.)
+    implementation 'androidx.compose.ui:ui-tooling:1.2.1'
+    // Integration with ViewModels
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.5.1'
+    // UI Tests
+    androidTestImplementation 'androidx.compose.ui:ui-test-junit4:1.2.1'
 }
 ```
 
 
 
-### 4. 其他配置
+### 其他配置
 
 #### 需要Java 11
 

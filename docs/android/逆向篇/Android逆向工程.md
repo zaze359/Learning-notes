@@ -2,8 +2,6 @@
 title: Android逆向工程
 date: 2020-04-16 13:43
 ---
-Tags： zaze android cmd
-
 [TOC]
 
 # Android逆向工程
@@ -48,13 +46,13 @@ Fix : export LC_ALL=C
 
 模拟器连接
 
-```
-查询进程号
+```shell
+# 查询进程号
 lsof -i |grep pid
 adb connect 127.0.0.1:xxxx
 ```
 
-```
+```shell
 adb kill-server
 adb start-server
 adb -s <serial number> shell
@@ -63,21 +61,21 @@ adb nodaemon server 查看adb
 
 可读写运行模拟器
 
-```
+```shell
 显示模拟器列表
 emulator -list-avds
 打开队员模拟器
 emulator -avd Pixel_2_API_29 -writable-system
 ```
 
-```
+```shell
 adb root
 adb remount
 ```
 
 发生错误
 
-```
+```shell
 PANIC: Missing emulator engine program for 'x86' CPU.
 
 默认使用../Android/sdk/tools/下的emulator 脚本
@@ -90,15 +88,9 @@ PANIC: Missing emulator engine program for 'x86' CPU.
 
 ## 6. 反编译Apk文件
 
-### 6.1. 下载apktool
-
-[下载地址][apktool]
-
-> windows 将解压路径添加到`PATH`环境变量中
-
 
 ### 6.2. java文件编译和反编译
-```
+```java
 public class Hello {
 	public int foo(int a, int b) {
 		return (a + b) * (a - b);
@@ -119,7 +111,7 @@ javac Hello.java
 
 反编译.class
 
-```
+```java
 javap Hello.class
 
 Compiled from "Hello.java"
@@ -129,7 +121,7 @@ public class Hello {
   public static void main(java.lang.String[]);
 }
 ```
-```
+```java
 javap -c -classpath . Hello
 
 Compiled from "Hello.java"
@@ -205,7 +197,7 @@ apktool if framework-res.apk
 
 **decode** : 该命令用于进行反编译apk文件
 
-```
+```shell
 apktool d <file.apk> -f -o <dir>
 
 apktool d demo.apk -o outdir

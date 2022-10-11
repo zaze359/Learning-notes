@@ -12,6 +12,8 @@ sudo apt-get install g++
 
 ```shell
 gcc a.cpp -o a
+# 若编译报错 undefined reference to `std::xxx`
+gcc a.cpp -lstdc++ -o a
 ```
 
 > G++编译命令

@@ -2,6 +2,8 @@
 
 [Linux内核之旅 (kerneltravel.net)](http://www.kerneltravel.net/)
 
+[Linux基础 — Linux Tools Quick Tutorial (linuxtools-rst.readthedocs.io)](https://linuxtools-rst.readthedocs.io/zh_CN/latest/base/index.html)
+
 ## 获取内核源码
 
 ### 源码下载

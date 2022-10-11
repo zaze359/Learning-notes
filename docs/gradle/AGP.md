@@ -3,16 +3,16 @@ title: Gradle Plugin
 date: 2020-07-24 18:11
 ---
 
-# Gradle Plugin
+# Android Gradle Plugin
 
 ## 1. 开发
 ### 1.1. 项目配置
-1. 新建项目PluginDemo
-2. 创建module: z-plugin
-3. 删除文件, 仅保留build.gradle
-4. 新建文件夹src/main/groovy
-5. 新建resources/META-INF/gradle-plugins文件夹
-6. 创建 xxx.properties文件
+1. 新建项目`PluginDemo`
+2. 创建`module: z-plugin`
+3. 删除文件, 仅保留`build.gradle`
+4. 新建文件夹`src/main/groovy`
+5. 新建`resources/META-INF/gradle-plugins`文件夹
+6. 创建` xxx.properties`文件
 ```properties
 // 此文件内声明插件入口
 // xxx即为插件id (com.zaze.plugin)
@@ -21,14 +21,15 @@ implementation-class=com.zaze.plugin.PluginLauncher
 处理后的项目结构大体如下
 ![](./_image/2020-07-24/2020-07-31-16-39-12.png)
 
+### 1.2. 开始gradle插件开发...
 
-### 1.2. 开始基于groovy开发
+可以使用java，groovy，kotlin编写。
 
 ---
 ## 2. 插件打包上传
 创建 **gradle-mvn-push.gradle文件** , 用于将插件打包上传
 
-```
+```groovy
 apply plugin: 'maven'
 def userHome = System.getProperty("user.home")
 uploadArchives {
@@ -44,7 +45,7 @@ uploadArchives {
 ```
 
 修改plugin模块中的 **build.gradle** 文件
-```
+```groovy
 apply plugin: 'groovy'
 dependencies {
     implementation gradleApi()

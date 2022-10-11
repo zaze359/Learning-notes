@@ -4,8 +4,8 @@
 
 ## Android Debug Bridge组成
 
-- A client : 客户端一般情况下就是我们的**开发设备**，用于**发送命令**, 。
-- A server : 在**开发设备**上作为后台服务，用于**管理Client和Damon之间的通信**。
+- A client : 客户端一般情况下就是我们的**开发设备PC**，用于**发送命令**, 。
+- A server : 在**开发设备PC**上作为后台服务，用于**管理Client和Damon之间的通信**。
 - A damon(adbd) : 以后台进程的方式运行在**Android设备**上，用于**运行命令**。
 
 ## 开发设备上adb位置
@@ -52,19 +52,19 @@
 
 5. 拔掉USB线, 使用**connect连接到此IP对应的设备。
 
-   ```bash
+   ```shell
    adb connect 192.168.50.114:5555
    ```
    
 6. 切回USB模式
 
-   ```bash
+   ```shell
    adb usb
    ```
 
 8. 断开连接
 
-   ```bash
+   ```shell
    adb disconnect
    ```
 
@@ -88,3 +88,16 @@ adb connect 192.168.50.114:42497
 ![image-20210911002836252](adb.assets/image-20210911002836252.png)
 
 ![image-20210911002250555](adb.assets/image-20210911002250555.png)
+
+### 3. 模拟器的端口记录
+
+```shell
+adb connect 127.0.0.1:7555
+```
+
+| 模拟器 | 端口 |
+| ------ | ---- |
+| mumu   | 7555 |
+|        |      |
+|        |      |
+
