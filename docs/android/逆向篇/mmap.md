@@ -27,6 +27,31 @@ void* mmap(void* addr, size_t size, int prot, int flags, int fd, off_t offset) {
 }
 ```
 
-## addr参数
+> Linux一页大小默认为4KB = 4096B = 0x1000 >> 0x0000 ~ 0x0fff
+>
+> 
 
-映射到哪个地址，实际映射的地址不一定是传入的地址，返回值才是真正的地址。
+## addr
+
+映射到哪个地址。
+
+实际映射的地址不一定是传入的地址，返回值才是真正的地址。
+
+## size
+
+需要映射大小。
+
+实际映射的大小不一定等于传入的大小，实际的大小mmap会做一个页边界对齐的上取整，多余部分补0。
+
+## port
+
+* PROT_READ 可读
+
+ *				PROT_WRITE 可写
+ *				PROT_EXEC 可执行
+
+## flags
+
+ * MAP_PRIVATE私有不共享
+ * MAP_SHARED共享
+ * MAP_FIXED传入的地址无法分配时直接失败,所以此时传入的addr一定是4k页对齐的地址。

@@ -1,8 +1,11 @@
----
-title: webpack
-date: 2020-07-13 16:15
----
+# WebPack
 
-npm -i webpack -g  全局安装
+```shell
+# 全局安装 
+npm install webpack -g
+# 局部安装
+npm install webpack -D
 npm init -y    
 npm i jquery -S
+```
+

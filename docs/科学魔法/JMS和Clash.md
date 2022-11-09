@@ -98,3 +98,7 @@ vim config.yaml
 ### 5. 启动代理
 
 ![image-20220305132257560](./JMS和Clash.assets/image-20220305132257560-16464577809101.png)
+
+
+
+## Windows

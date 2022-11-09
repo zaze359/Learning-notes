@@ -79,13 +79,19 @@ mount -o remount, rw /
 ## apt: 软件包管理
 
 ```bash
-sudo apt-get upgrade
-## git 
-sudo apt-get install git
-## curl
-sudo apt-get install curl
-## python
-sudo apt-get install python
+# 更新
+sudo apt upgrade
+
+# -y 安装过程提示选择全部为"yes"
+# -q 不显示安装过程
+# git 
+sudo apt install -y git
+# curl
+sudo apt install curl
+# python
+sudo apt install python
+#
+
 ```
 
 

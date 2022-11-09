@@ -1,18 +1,6 @@
 # Flutter学习笔记
 
-## 参考资料
-
-[Flutter - Build apps for any screen](https://flutter.dev/)
-
-[Flutter 中文开发者网站 | Flutter —— 为所有屏幕构建精美应用](https://flutter.cn/)
-
-***
-
-[Flutter中文网 (flutterchina.club)](https://flutterchina.club/)
-
-[第二版序 | 《Flutter实战·第二版》 (flutterchina.club)](https://book.flutterchina.club/)
-
-以下内容部分摘自以上资料。
+[Flutter核心原理](./Flutter核心原理.md)
 
 ## 一、Flutter简介
 
@@ -45,17 +33,7 @@ Embedder层：
 
 调用所在平台的操作系统的API。
 
-### 1.3 绘制流程
 
-1.  根据`Widget树`生成一个`Element树`。
-
-2.  根据`Element树`生成`Render树`（包含真正的布局和渲染逻辑）。
-
-3.  根据`Render树`生成`Layer树`。
-
-4.  最终显示在屏幕上。
-
-![](https://guphit.github.io/assets/img/2-2.59d95f72.png)
 
 ## 二、搭建Flutter开发环境
 
@@ -72,6 +50,8 @@ export FLUTTER_STORAGE_BASE_URL=https://storage.flutter-io.cn
 
 ### 配置镜像站点
 
+> 提示信号灯超时时间已到相关问题时，通过使用国内镜像修复。
+
 [Using Flutter in China | Flutter](https://docs.flutter.dev/community/china)
 
 Mac 修改`~/.bash_profile `
@@ -83,12 +63,11 @@ export FLUTTER_STORAGE_BASE_URL=https://storage.flutter-io.cn
 
 Windows 配置环境变量：
 
-```
+```shell
 # 新建用户变量 PUB_HOSTED_URL
 https://pub.flutter-io.cn
 # 新建用户变量 FLUTTER_STORAGE_BASE_URL
 https://storage.flutter-io.cn
-
 ```
 
 #### mac下使用brew安装
@@ -164,40 +143,6 @@ flutter doctor
    *   安装Dart插件
 
 
-### 2.2 常用命令记录
-
-Flutter SDK分支：
-
-```shell
-# 查看所有分支
-flutter channel
-# 切换分支
-flutter channel master
-```
-
-更新
-
-```shell
-# 更新flutter sdk 和依赖包
-flutter upgrade
-# 仅更新packages
-flutter pub upgrade
-# 查看需要更新内容
-flutter pub outdated
-```
-
-```bash
-# 查看可用模拟器
-flutter emulators
-# 启动指定模拟器
-flutter emulators --launch apple_ios_simulator
-# macos也可使用一下命令打开ios模拟器
-open -a Simulator
-# 运行flutter项目
-flutter run
-```
-
-
 
 ### 2.3 创建项目
 
@@ -253,21 +198,40 @@ git clone git@github.com:flutter/gallery.git
 
 ## 三、基础简介
 
-> Widget就是UI元素的配置信息。
->
-> Flutter中的UI都是由一个个Widget嵌套组合构成的。
+### 3.1 Widget
 
-### 3.1 StatefulWidget
+> Flutter中的UI都是由一个个Widget嵌套组合构成的，Widget是对视图的一种结构化描述。内部存储的是视图渲染相关的配置信息（布局、渲染、响应事件等）。
 
-*   继承自`Widget`。
+* Widget不仅表示UI元素，同时也可以表示功能性组件（`GestureDetector`、`theme`等）。
+* Widget是不可变的，配置有变化时Flutter会以重建Widget树的方式进行数据更新（数据驱动UI更新）。
 
-*   有状态的组件。
+| 属性            |                                                              |      |
+| --------------- | ------------------------------------------------------------ | ---- |
+| key             | 在`canUpdate()`方法中，会通过`key`和`runtimeType`来判断是否在下一次build时复用旧的widget。 |      |
+| createElement() | 创建对应节点的Element对象。                                  |      |
+|                 |                                                              |      |
 
-*   状态在widget生命周期是可以改变的。
+#### Element
 
-#### 3.1.1 定义widget
+> Element 是 Widget 的一个实例化对象，它承载了视图构建的上下文数据（`BuildContext就是Element`），是连接结构化的配置信息到完成最终渲染的桥梁。
+
+对于Element 的创建，Flutter 会在遍历 Widget 树时，调用 createElement 去同步 Widget 自身配置，从而生成对应节点的 Element 对象。
+
+* Element同时持有Widget和RenderObject，相当于中间代理。
+* Element将Widget树变化的部分做了抽象，只将真正需要修改的部分同步到RenderObject中，而不是整个渲染视图重建。
+
+#### RenderObject
+
+其中的布局和绘制由RenderObject完成。
+
+#### StatelessWidget（无状态组件）
+
+#### StatefulWidget（有状态的组件）
+
+> 状态在widget生命周期是可以改变的。
 
 ```dart
+/// 定义widget：
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
 
@@ -278,13 +242,7 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-```
-
-#### 3.1.2 定义State
-
-> 对应的StatefulWidget需要维护的状态信息。
-
-```dart
+/// 定义State,对应的StatefulWidget需要维护的状态信息。
 class _MyHomePageState extends State<MyHomePage> {
   /// 组件的状态：计数值
   int _counter = 0;
@@ -300,13 +258,15 @@ class _MyHomePageState extends State<MyHomePage> {
 }
 ```
 
-### 3.2 StatelessWidget
+#### RenderObjectWidget
 
-*   继承自`Widget`。
+StatelessWidget 和 StatefulWidget 只是用来组装控件的容器, 并不负责最后的布局和绘制。布局和绘制工作实际上是由 RenderObjectWidget 完成的。
 
-*   无状态组件。
+[绘制流程](./Flutter核心原理.md)
 
-### 3.3 RenderObject自定义Widget
+
+
+### 3.2 使用RenderObject自定义Widget
 
 ```dart
 class CustomWidget extends LeafRenderObjectWidget{
@@ -322,7 +282,7 @@ class CustomWidget extends LeafRenderObjectWidget{
   }
 }
 
-class RenderCustomObject extends RenderBox{
+class RenderCustomObject extends RenderBox {
 
   @override
   void performLayout() {
@@ -338,7 +298,7 @@ class RenderCustomObject extends RenderBox{
 
 
 
-### 3.4 生命周期
+### 3.3 生命周期
 
 | 方法  | 类                  | 说明                                                 |
 | ----- | ------------------- | ---------------------------------------------------- |
@@ -348,7 +308,7 @@ class RenderCustomObject extends RenderBox{
 
 
 
-#### 3.4.1 State生命周期
+#### 3.3.1 State生命周期
 
 ![](https://guphit.github.io/assets/img/2-5.a59bef97.jpg)
 
@@ -363,7 +323,7 @@ class RenderCustomObject extends RenderBox{
 | deactivate            | 组件被移除时调用。                            | 组建不可见时                                                 |
 | dispose               | 销毁组建，释放资源。                          | 组件被永久移除                                               |
 
-#### 3.4.2 App生命周期
+#### 3.3.2 App生命周期
 
 > 利用WidgetsBindingObserver监听App生命周期。
 
@@ -1180,3 +1140,35 @@ appBar: AppBar(
       ),
 ```
 
+## 五、package和插件
+
+[Flutter Packages 的开发和提交 - Flutter 中文文档 - Flutter 中文开发者网站 - Flutter](https://flutter.cn/docs/development/packages-and-plugins/developing-packages#step-1-create-the-package-1)
+
+## 开发原生插件类型的 packages
+
+```shell
+# -org： 指定包名，用于android 和 ios
+# --platforms：指定平台
+# -a：指定android的开发语言; java kotlin
+# -i：指定ios的开发语言；objc swift 
+flutter create --org com.example --template=plugin --platforms=android,ios -a kotlin hello
+
+
+flutter create --org com.zaze --template=plugin --platforms=android,ios,web -a kotlin atoolbox
+```
+
+
+
+
+
+## 参考资料
+
+> 部分内容摘自以下资料
+
+[Flutter - Build apps for any screen](https://flutter.dev/)
+
+[Flutter 中文开发者网站 | Flutter —— 为所有屏幕构建精美应用](https://flutter.cn/)
+
+[Flutter中文网 (flutterchina.club)](https://flutterchina.club/)
+
+[第二版序 | 《Flutter实战·第二版》 (flutterchina.club)](https://book.flutterchina.club/)

@@ -12,41 +12,54 @@ date: 2020-07-17 15:42
 
 [MySQL Installer for Windows](https://dev.mysql.com/downloads/installer/)
 
-Develop
+Developer defalut
 
 execute
+
+
 
 ### 环境配置
 
 用户变量的PATH中添加以下内容:
 
-```
+```shell
 C:\Program Files\MySQL\MySQL Shell 8.0\bin
 ```
 
 系统变量Path中添加以下内容:
 
-```
+```shell
 C:\Program Files\MySQL\MySQL Server 8.0\bin
 ```
 
 ## 常用命令
 
-```bash
-显示数据库 : show databases; 
-显示数据表 : show tables; 
-显示表结构 : describe 表名; 
-创建库: create database 库名; 
-删除库: drop database 库名; 
-使用库: use 库名; 
-创建表：create table 表名 (字段设定列表); 
-删除表：drop table 表名; 
-修改表：alter table t1 rename t2 
-查询表：select * from 表名; 
-清空表：delete from 表名; 
+```shell
+# 显示数据库
+show databases; 
+# 显示数据表 
+show tables; 
+# 显示表结构 : 
+describe 表名;
+# 创建库: 
+create database 库名; 
+# 删除库: 
+drop database 库名; 
+# 使用库: 
+use 库名; 
+# 创建表：
+create table 表名 (字段设定列表); 
+# 删除表：
+drop table 表名; 
+# 修改表：
+alter table t1 rename t2 
+# 查询表：
+select * from 表名; 
+# 清空表：
+delete from 表名; 
 ```
 
-```bash
+```shell
 创建授权
 grant select on 数据库.* to 用户名@登录主机 identified by \"密码\" 
 删除授权
@@ -62,8 +75,8 @@ revoke select,insert,update,delete om *.* from test2@localhost;
 | -u   | 用户名               |
 | -p   | 表示需要使用密码登录 |
 
-```bash
-mysql -h主机地址 -u用户名 －p
+```shell
+mysql -u root -p
 ```
 
 ![](image/MySQL/1647444035572.png)
@@ -77,7 +90,7 @@ exit
 ### 修改密码
 
 ```bash
-mysqladmin -u用户名 -p旧密码 password 新密码 
+mysqladmin -u 用户名 -p 旧密码 password 新密码 
 ```
 
 ### 数据库表修改
@@ -105,3 +118,25 @@ mysqladmin -u用户名 -p旧密码 password 新密码
 文本数据导入： load data local infile \"文件名\" into table 表名; 
 数据导入导出：mysql\bin\mysqlimport database tables.txt
 ```
+
+
+
+数据插入
+
+格式
+
+```sql
+INSERT INTO table_name (column1, column2, column3, ...) VALUES (value1, value2, value3, ...);
+```
+
+```sqlite
+INSERT INTO showcase(id, create_time,img_url,info,tags,title,update_time,url) VALUES(0,1667563332562,null,'info','Game','明日方舟',1667563332562,'https://ak.hypergryph.com/');
+
+INSERT INTO showcase(id, create_time,img_url,info,tags,title,update_time,url) VALUES(3,1667563332562,null,'333','Game','明日方舟',1667563332562,'https://ak.hypergryph.com/');
+
+```
+
+```sqlite
+SELECT * FROM showcase WHERE info='info' and (tags, title) in (select tags,title FROM showcase);
+```
+

@@ -1,6 +1,6 @@
 # Android任务调度
 
-## 一、Handler
+## Handler
 
 > 常用的任务调度方式，贯穿整个Android的消息机制
 

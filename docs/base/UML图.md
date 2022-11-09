@@ -8,4 +8,22 @@
 
 继承(Inheritance)，实现(realization)，依赖(dependency)，组合（Composition), 聚合（Aggregation), 关联 （Association)
 
+|                 |                 |      |
+| --------------- | --------------- | ---- |
+| static          | `_` （下划线）  |      |
+| abstract        | 斜体            |      |
+|                 |                 |      |
+| package-private | `～`            |      |
+| private         | `-`             |      |
+| public          | `+`             |      |
+| protected       | `#`             |      |
+|                 |                 |      |
+| 接口            | `<<Interface>>` |      |
+| 抽象类          | `<<abstract>>`  |      |
+| 匿名类          | `<<anonymous>>` |      |
+
+
+
+
+
 ## 时序图

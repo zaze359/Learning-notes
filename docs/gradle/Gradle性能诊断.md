@@ -42,7 +42,9 @@ gradlew --profile --recompile-scripts --offline --rerun-tasks assembleDebug
 
 ## Gradle一些优化配置
 
-#### 创建一个本地的Gradle环境，节约开发设备的内存
+### 使用本地的Gradle环境
+
+> 创建一个本地的Gradle环境，节约开发设备的内存
 
 * 每一个版本的Gradle都会对应一个Daemon进程，使用同一个版本的进程可以节约配置
 * 即使使用同一个版本的Gradle, 也会因为VM配置不同而启动多个Daemon进程。

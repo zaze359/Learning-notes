@@ -94,21 +94,95 @@ GPU线程将这些数据进行图层合成，随后交给Skia引擎加工成GPU�
 
 #### 绘制流程
 
-1.  根据`Widget树`生成一个`Element树`。
+1.  根据 Widget 树生成一个 Element 树。
 
-2.  根据`Element树`生成`Render树`（包含真正的布局和渲染逻辑）。
+2.  创建相应的`RenderObject`并关联到`Element.renderObject`上，生成`Render树`（包含真正的布局和渲染逻辑）。
 
 3.  根据`Render树`生成`Layer树`。
 
 4.  最终显示在屏幕上。
 
-![](https://guphit.github.io/assets/img/2-2.59d95f72.png)
+```dart
+Container( // 一个容器 widget
+  color: Colors.blue, // 设置容器背景色
+  child: Row( // 可以将子widget沿水平方向排列
+    children: [
+      Image.network('https://www.example.com/1.png'), // 显示图片的 widget
+      const Text('A'),
+    ],
+  ),
+);
 
-```mermaid
-graph LR
-E[Element] -->|A| E
-    W --> |B| E[Element]
+/// Container 设置了 color 会创建一个ColorBox
+///if (color != null)
+///  current = ColoredBox(color: color!, child: current);
 ```
+
+Image 内部会通过 RawImage 来渲染图片、Text 内部会通过 RichText 来渲染文本。
+
+![](./Flutter%E6%A0%B8%E5%BF%83%E5%8E%9F%E7%90%86.assets/2-2.59d95f72.png)
+
+
+
+从`runApp()`开始跟踪代码，可知RenderObject 的创建与更新、渲染树的插入工作都是在 `RenderObjectElement.mout()`方法中完成的。
+
+```dart
+abstract class RenderObjectElement extends Element {
+  RenderObjectElement(RenderObjectWidget super.widget);
+  @override
+  RenderObject get renderObject {
+    assert(_renderObject != null, '$runtimeType unmounted');
+    return _renderObject!;
+  }
+
+  @override
+  void mount(Element? parent, Object? newSlot) {
+    super.mount(parent, newSlot);
+    /// 创建了RenderObject
+    _renderObject = (widget as RenderObjectWidget).createRenderObject(this);
+	// 添加到渲染树中
+    attachRenderObject(newSlot);
+    _dirty = false;
+  }
+
+  @override
+  void update(covariant RenderObjectWidget newWidget) {
+    super.update(newWidget);
+    _performRebuild(); // calls widget.updateRenderObject()
+  }
+    
+  @pragma('vm:prefer-inline')
+  void _performRebuild() {
+    (widget as RenderObjectWidget).updateRenderObject(this, renderObject);
+    _dirty = false;
+  }
+}
+
+```
+
+如果Widget的配置数据发生了变化，那么持有该Widget的Element会被标记为`_dirty`。在下一个绘制周期，Flutter会触发Element树的更新，并使用最新的Widget数据更新自身以及关联的 RenderObject 对象。
+
+然后进入Layout和Paint流程。而真正的绘制和布局过程，则完全交由 RenderObject 完成。
+
+布局和绘制完成后，交由Skia处理后续流程。
+
+在 VSync 信号同步时直接从渲染树合成 Bitmap，然后提交给 GPU
+
+
+
+
+
+
+
+### Element生命周期
+
+![Element的生命周期](./Flutter%E6%A0%B8%E5%BF%83%E5%8E%9F%E7%90%86.assets/Element%E7%9A%84%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F.png)
+
+### RenderObject
+
+Flutter 采用深度优先机制遍历渲染对象树，**确定树中各个对象的位置和尺寸**，并把它们**绘制**到不同的图层上。绘制完毕后，**合成**和**渲染**的工作则交给 Skia 搞定。
+
+其中布局和绘制是由 RenderObject 完成的。
 
 ### BuildContext
 
@@ -145,3 +219,10 @@ class StatefulElement extends ComponentElement {
 abstract class Element extends DiagnosticableTree implements BuildContext {}
 ```
 
+
+
+## 参考资料
+
+> 部分内容摘自以下资料
+
+[第二版序 | 《Flutter实战·第二版》 (flutterchina.club)](https://book.flutterchina.club/)

@@ -4,6 +4,12 @@ date: 2020-07-01 17:05
 ---
 # VS-Code配置
 
+
+
+[Visual Studio Code - Code Editing. Redefined](https://code.visualstudio.com/)
+
+
+
 ## 1. C/C++编译环境配置
 
 ### 1.1 Windows安装C编译器
@@ -50,6 +56,8 @@ date: 2020-07-01 17:05
 
 初始化
 
+* Spring Initializr Java Support
+
 - DevTools（代码修改热更新，无需重启）
 - Web（集成tomcat、SpringMVC）
 - Lombok（智能生成setter、getter、toString等接口，无需手动生成，代码更简介）
@@ -66,32 +74,6 @@ npm init
 //
 npm i webpack vue vue-loader
 
-```
-
-
-
-## 4. Java执行环境
-
-下载OpenJDK
-
-[Java Platform, Standard Edition 13 Reference Implementations](https://jdk.java.net/java-se-ri/13)
-
-新建系统变量`JAVA_HOME`
-
-```shell
-D:\openjdk\jdk-13
-```
-
-添加环境变量`path`
-
-```shell
-%JAVA_HOME%\bin
-```
-
-验证：
-
-```shell
-java -version
 ```
 
 
@@ -144,8 +126,6 @@ kotlinc -version
 ```
 
 ### 5.4 重启VS Code
-
-
 
 
 

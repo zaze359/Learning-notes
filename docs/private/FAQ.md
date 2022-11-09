@@ -8,7 +8,7 @@
 
 ## Android相关
 
-### Console控制台乱码
+### Android Studio Console控制台乱码
 
 `Help->Edit Custom VM Options`添加以下内容：
 
@@ -176,21 +176,103 @@ aaptOptions.useNewCruncher=false
 
 > 还是自己根据原图编辑.9比较靠谱
 
+
+
+### java.lang.UnsupportedClassVersionError
+
+保证项目中的JDK和jvm版本一致,此处需要设置为 Java 11
+
+```shell
+com/android/tools/idea/gradle/run/OutputBuildAction has been compiled by a more recent version of the Java Runtime (class file version 55.0), this version of the Java Runtime only recognizes class file versions up to 52.0
+
+```
+
+![image-20220217182447922](./FAQ.assets/image-20220217182447922.png)
+
+
+
 ---
 
 ### Android Studio如何下载ndk16、低版本cmake等
 
-对应问题有：
+相关报错：
 
-`Invalid revision: 3.22.1-g37088a8-dirty`。
+```shell
+Invalid revision: 3.22.1-g37088a8-dirty
+```
 
-处理方式：
+直接下载NDK：
+
+[最新版本NDK](http://developer.android.com/ndk/downloads/)
+
+[NDK 修订历史记录  | Android NDK  | Android Developers](https://developer.android.com/ndk/downloads/revision_history)
+
+[旧版本NDK](https://github.com/android/ndk/wiki/Unsupported-Downloads)
+
+AndroidStudio下载方式：
 
 勾选`Show Package Details`即可下载旧版本的ndk、cmake。
 
 将高版本的cmake卸载。
 
 ![image-20221009210404431](./FAQ.assets/image-20221009210404431.png)
+
+配置`local.properties`：
+
+```properties
+sdk.dir=C\:\\Users\\35963\\AppData\\Local\\Android\\Sdk
+# windows中下载的版本在Sdk\ndk 目录下
+ndk.dir=C\:\\Users\\35963\\AppData\\Local\\Android\\Sdk\\ndk\\16.1.4479499
+```
+
+
+
+### 旧版本项目运行直接报错
+
+gradle版本：4.6-all等版本
+
+相关错误信息：
+
+```tex
+vc-complex-type.2.4.d: 发现了以元素 ‘base-extension‘ 开头的无效内容。此处不应含有子元素
+```
+
+升级gradle版本即可(过新的版本需要改动较多):
+
+> gradle-wrapper.properties
+
+```properties
+distributionUrl=https\://services.gradle.org/distributions/gradle-6.7.1-bin.zip
+```
+
+> build.gradle
+
+```groovy
+classpath "com.android.tools.build:gradle:4.2.1"
+```
+
+
+
+## Git
+
+### OpenSSL相关报错
+
+```tex
+ OpenSSL SSL_read: Connection was aborted, errno 10053
+```
+
+关闭验证
+
+```shell
+git config http.sslVerify "false"
+# 全局
+git config --global http.sslVerify "false"
+
+# 内容过大时，需要设置缓冲区大小。
+git config --global http.postBuffer 524288000
+```
+
+
 
 
 

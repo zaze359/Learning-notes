@@ -12,3 +12,8 @@
 | B    |                  | 简单的程序跳转，跳转到到目标标号                             |
 | BL   |                  | 带链接程序跳转，也就是要带返回地址                           |
 
+## 学习资料
+
+[Writing ARM Assembly (Part 1) | Azeria Labs (azeria-labs.com)](https://azeria-labs.com/writing-arm-assembly-part-1/)
+
+[VisUAL - A highly visual ARM emulator (salmanarif.bitbucket.io)](https://salmanarif.bitbucket.io/visual/index.html)

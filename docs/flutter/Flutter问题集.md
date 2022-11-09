@@ -284,7 +284,7 @@ Widget build(BuildContext context) {
 
 #### 1. 使用流式布局
 
-考虑使用`Wrap`或者`Flow`。超出屏幕部分会自动折叠，不会出现布局的溢出报错
+考虑使用`Wrap`或者`Flow`。超出屏幕边界部分会自动折叠，不会出现布局的溢出报错
 
 #### 2. 指定宽度
 
@@ -331,3 +331,12 @@ Row(
         )
 ```
 
+## 常见的异常
+
+### Incorrect use of ParentDataWidget
+
+* 可能是由于`Expended`、`Flexible`等组件使用不当：**Expanded、Flexible只在Row、Column等组件内，不在其他组件内使用**。
+
+### RenderCustomMultiChildLayoutBox object was given an infinite size during layout.
+
+子布局无限大小问题，检查代码是否存在`Scaffold`嵌套。

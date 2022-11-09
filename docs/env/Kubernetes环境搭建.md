@@ -50,9 +50,11 @@ sudo apt install -y git vim curl jq
 ## 配置远程登录
 
 ```shell
-sudo apt install -y openssh-server
-## 查看虚拟机ip地址
+
+# 查看虚拟机ip地址
 ip addr
+# 可选
+sudo apt install -y openssh-server
 ```
 
 测试ssh连接：
@@ -71,33 +73,86 @@ ssh 用户名@xxx.xxx.xxx
 >
 > minikube管理Kubernetes集群环境。
 
-下载：
+[minikube start | minikube (k8s.io)](https://minikube.sigs.k8s.io/docs/start/)
+
+### 下载安装
+
+> 选择对应设备的硬件架构
 
 ```shell
-curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+# 查看架构
+uname -a 
 ```
-
-安装：
 
 ```shell
-sudo install minikube /usr/local/bin/
+# Intel x86_64(amd64后缀)
+curl -Lo minikube curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+# 安装
+sudo install minikube-linux-amd64 /usr/local/bin/minikube
+
+# Apple M1 : arm64
+curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-darwin-arm64
+# 安装
+sudo install minikube-darwin-arm64 /usr/local/bin/minikube
 ```
 
-检测：
+### 检测
 
 ```shell
 minikube version
+# 查看集群状态
+minikube status
+minikube node list
 ```
 
-安装`kebectl`操作Kubernetes：
+### 启动
+
+```shell
+minikube start
+# 指定版本
+minikube start --kubernetes-version=v1.23.3
+# 使用国内镜像
+minikube start --image-mirror-country='cn'
+```
+
+## kubectl
+
+> 类似docker, 也是一个命令行工具。
+>
+> 和Kubernetes后台服务通信，转发命令来操作Kubernetes
+
+### 安装
 
 ```shell
 minikube kubectl
 ```
 
-启动minikube：
+### 测试
 
+> 需要启动minikube
+
+```shell
+minikube kubectl -- version
 ```
-minikube start --kubernetes-version=v1.23.3
+
+### 设置别名
+
+```shell
+# 设置别名
+alias kubectl="minikube kubectl --"
+# 开启kubectl的自动补全功能
+source <(kubectl completion bash)
+```
+
+创建nginx
+
+```shell
+kubectl run ngx --image=nginx:alpine
+```
+
+查看结果（pod 类似穿了马甲的容器）
+
+```shell
+kubectl get pod
 ```
 

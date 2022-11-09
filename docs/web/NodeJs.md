@@ -53,7 +53,14 @@ brew install nvm
   nvm ls
   ```
 
-  
+- 项目依赖下载
+
+```shell
+# 下载项目所需依赖
+npm install
+```
+
+
 
 ## node-sass对于node版本
 

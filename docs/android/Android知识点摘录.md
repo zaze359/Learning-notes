@@ -1,5 +1,19 @@
 # Android知识点摘录
 
+## 常用链接
+
+[Android 开发者  | Android Developers (google.cn)](https://developer.android.google.cn/?hl=zh-cn)
+
+[查看版本变更：Android Releases | Android Developers (google.cn](https://developer.android.google.cn/about/versions)
+
+[开发者指南  | Android 开发者  | Android Developers (google.cn)](https://developer.android.google.cn/guide)
+
+[Android Jetpack 开发资源 - Android 开发者  | Android Developers (google.cn)](https://developer.android.google.cn/jetpack?hl=zh-cn)
+
+[Android 开源项目  | Android Open Source Project](https://source.android.com/)
+
+
+
 
 ## 自定义View相关
 
@@ -106,60 +120,6 @@ if (!scroller.isFinished) {
 
 ## 一些view控件等使用
 
-### BottomNavigationBar(导航栏)
-
-#### 1. 依赖
-
-```groovy
-compile 'com.ashokvarma.android:bottom-navigation-bar:1.4.1'
-```
-
-#### 2. Mode
-
-| 类型             | 说明                                                                                                         |
-| :------------- | :--------------------------------------------------------------------------------------------------------- |
-| MODE\_DEFAUL   | Item <=3 就会使用MODE\_FIXED模式，否则使用MODE\_SHIFTING模式                                                            |
-| MODE\_FIXED    | 固定大小;未选中的Item会显示文字，没有切换动画;宽度=总宽度/action个数;最大宽度: 168dp;最小宽度: 80dp;Padding：6dp（8dp）、10dp、12dp;字体大小：12sp、14sp |
-| MODE\_SHIFTING | 不固定大小;有切换动画;选中的会显示文字,未选中的Item不会显示文字                                                                        |
-
-#### 3. Background Style
-
-*   修改背景色
-
-```java
-bottomNavigationBar.setMode(BottomNavigationBar.MODE_FIXED);
-bottomNavigationBar.setBackgroundStyle(BottomNavigationBar.BACKGROUND_STYLE_STATIC);
-bottomNavigationBar.setBarBackgroundColor(R.color.black);
-```
-
-*   BACKGROUND\_STYLE\_DEFAULT
-
-```java
-MODE_FIXED : BACKGROUND_STYLE_STATIC
-MODE_SHIFTING : BACKGROUND_STYLE_RIPPLE
-```
-
-*   BACKGROUND\_STYLE\_STATIC
-
-```java
-- 点击的时候没有水波纹效果
-- 背景色默认是白色 : setBarBackgroundColor() 修改背景色
-```
-
-*   BACKGROUND\_STYLE\_RIPPLE
-
-```java
-- 点击的时候有水波纹效果
-- 背景色 : setActiveColorResource()
-```
-
-#### 4. Badge
-
-    一般用作消息提醒
-    BottomNavigationItem 添加 Badge
-
-***
-
 ### RecyclerView(列表、表格)
 
 #### 1. LayoutManager
@@ -209,103 +169,7 @@ onDrawOver(Canvas c, RecyclerView parent, State state)
 
 ***
 
-## 生命周期
 
-[Activity生命周期图](https://www.cnblogs.com/mukekeheart/p/5662747.html)
-
-### Lifecycle
-
-*   用于感知LifecycleOwner的生命周期
-
-*   Fragment实现了这个接口
-
-*   Activity并没有 是在他的子类 SupportActivity中实现
-
-```java
-public interface IPresenter extends DefaultLifecycleObserver {
-}
-
-public class MainActivity extends AppCompatActivity {
-    IPresenter mPresenter;
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        // ....
-        mPresenter = new Presenter();
-        getLifecycle().addObserver(mPresenter);
-    }
-}
-```
-
-### LiveData
-
-*   能够感知实现了LifecycleOwner接口的组件生命周期
-
-*   可以监听数据变化进行实时更新
-
-```java
-public class MainActivity extends AppCompatActivity {
-    private MutableLiveData<String> mLiveData;
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        // ....
-        mLiveData = new MutableLiveData<>();
-        // 转入LifecycleOwner 监听生命周期
-        mLiveData.observer(this, new Observer<String>() {
-            @Override
-            public void onChanged(@Nullable String s) {
-                // 数据发生变化
-            }
-        });
-    }
-    
-    private void a() {
-        // 更新数据
-        // post 走的 消息机制 = handler.post({setValue()})
-        mLiveData.postValue("post");
-        mLiveData.setValue("set");
-    }
-}
-```
-
-```java
-public class MyLiveData extends LiveData<String> {
-    // ....
-    @Override
-    protected void onActive() {
-        super.onActive();
-        // 接收到状态变更检测到存在active状态observer
-    }
-
-    @Override
-    protected void onInactive() {
-        super.onInactive();
-        // 接收到状态变更检测到不存在active状态observer
-    }
-}
-
-```
-
-
-***
-
-## GC(垃圾回收)
-
-```txt
-# Concurrent----后台回收内存，不暂停用户线程
-# Alloc----当app要申请内存，而堆又快满了的时候，会阻塞用户线程
-
-Explicit----调用Systemt.gc()等方法的时候触发，一般不建议使用
-
-NativeAlloc----当native内存有压力的时候触发
-
-Name
-Concurrent mark sweep----全部对象的检测回收
-Concurrent partial mark sweep----部分的检测回收
-Concurrent sticky mark sweep----仅检测上次回收后创
-建的对象，速度快，卡顿少，比较频繁
-
-```
 
 
 ## 屏幕方向
@@ -340,26 +204,6 @@ setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED)
 ```
 
 
-
-## 强,软,弱,虚引用
-
-*   StrongReference(强引用)
-
-    如果一个对象是强引用, 即使OOM也不会被回收
-    当没有任何对象指向它时 会被GC回收
-
-*   SoftReference(软引用)
-
-    若一个对象仅具有软引用, 则当内存不足时会被gc回收
-    用于内存敏感的高速缓存
-
-*   WeakReference(弱引用)
-
-    则当gc扫描时发现只具有弱引用的对象, 则会被回收
-
-*   PhantomReference(虚引用)
-
-    若一个对象仅具有虚引用,则在任何时候都可能被垃圾回收器回收
 
 ## 字体
 
@@ -418,3 +262,4 @@ Android为了确保应用程序中关键代码的正确执行，提供了Wake Lo
 * `Resources.arsc`是一个资源索引表，在运行时通过id找到具体对应的资源文件。
 
 `AssetManager`在初始化时将`Resources.arsc`加载进了内存，应用运行时通过将资源id传给Resources类，Resources将id传给`AssetManager`,然后调用jni中的android_util_AssetManager.cpp文件，在资源索引表查找文件的路径，从而加载对应的资源。
+
