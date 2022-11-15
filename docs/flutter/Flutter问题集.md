@@ -22,6 +22,12 @@ Waiting for another flutter command to release the startup lock...
 
 ### 问题处理
 
+结束已运行的dart进程 
+
+![image-20221109182620137](Flutter问题集.assets/image-20221109182620137.png)
+
+
+
 找到Flutter的按照目录：
 
 ```bash
@@ -29,7 +35,7 @@ Waiting for another flutter command to release the startup lock...
 /usr/local/Caskroom/flutter/2.10.5/flutter/
 ```
 
-删除`./bin/cache/lockfilelockfile`这个文件：
+删除`./bin/cache/lockfile`这个文件：
 
 ```bash
 /usr/local/Caskroom/flutter/2.10.5/flutter/bin/cache/lockfile

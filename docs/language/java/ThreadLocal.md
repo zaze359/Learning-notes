@@ -12,7 +12,7 @@
 >
 > 它实际时为了``方便每个线程处理自己的状态``而引入的一个机制。
 >
-> 每一个Thread对象中都有一个成员变量``ThreadLocalMap``，map的``key``就是``ThreadLocal实例``, 且为一个弱引用，``value``则是ThreadLocal<?>``范型类型的某个值``，是强引用关系。
+> 每一个Thread对象中都有一个成员变量``ThreadLocalMap``，map的``key``就是``ThreadLocal实例``, 且为一个弱引用，``value``则是 `ThreadLocal<?>`  范型类型的某个值，是强引用关系。
 >
 > 所以ThreadLocal对象实际是起到了一个``索引的作用``。
 
