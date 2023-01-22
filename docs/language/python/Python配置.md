@@ -15,7 +15,7 @@ sudo pacman -S wget git python3
 
 
 
-### 在Windows上安装Python
+### Windows上安装Python
 
 [下载python Download Python | Python.org](https://www.python.org/downloads/)
 
@@ -25,8 +25,36 @@ sudo pacman -S wget git python3
 
 ![image-20220913083226129](./Python%E9%85%8D%E7%BD%AE.assets/image-20220913083226129.png)
 
+
+
+### MAC上安装python
+
+```shell
+brew search python3
+brew install python3
+```
+
+
+
 ## 版本管理
 
 ### Miniconda
 
 [Miniconda — conda documentation](https://docs.conda.io/en/latest/miniconda.html#windows-installers)
+
+
+
+## 常用配置
+
+语法提示
+
+```shell
+pip3 install -U flake8
+```
+
+代码格式化
+
+```shell
+pip3 install -U autopep8
+```
+

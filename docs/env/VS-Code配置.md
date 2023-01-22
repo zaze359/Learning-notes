@@ -4,9 +4,11 @@ date: 2020-07-01 17:05
 ---
 # VS-Code配置
 
-
-
 [Visual Studio Code - Code Editing. Redefined](https://code.visualstudio.com/)
+
+* vscode-icons：界面图标
+
+
 
 
 
@@ -78,7 +80,7 @@ npm i webpack vue vue-loader
 
 
 
-## 5. kotlin执行环境
+## 5. kotlin配置
 
 > 依赖Java环境，首先配置Java。
 
@@ -126,6 +128,51 @@ kotlinc -version
 ```
 
 ### 5.4 重启VS Code
+
+
+
+## 6. python配置
+
+### 安装插件
+
+* python
+* Code Runner
+* autopep8：格式化用
+* Python Extension Pack：python 扩展
+* Python Environment Manager：版本管理
+* Flake8: 支持 flake8
+
+### 语法提示
+
+```shell
+pip3 install flake8
+```
+
+> settings.json
+
+```json
+"python.linting.flake8Enabled": true
+
+// 配置三方库路径
+"python.autoComplete.extraPaths": [
+  "/Users/zhaozhen/Library/Python/3.9/lib/python/site-packages"
+],
+"python.analysis.extraPaths": [
+  "/Users/zhaozhen/Library/Python/3.9/lib/python/site-packages"
+]
+```
+
+### 指定python版本
+
+![image-20230120225048935](VS-Code配置.assets/image-20230120225048935.png)
+
+> settings.json
+
+```json
+"code-runner.executorMap": {
+  "python": "python3"
+},
+```
 
 
 

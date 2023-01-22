@@ -197,18 +197,16 @@ private fun initNavigationBar() {
 
 ## NavHostFragment
 
-
-
-> 需要注意的是Fragment直接导航跳转时Fragment将会重新创建,app上的表现可能为跳转卡顿，重复请求等。主要是Google官方实现方式为 new and replace。
+> 需要注意的是Fragment直接导航跳转时Fragment将会重新创建, app上的表现可能为跳转卡顿，重复请求等。主要是Google官方实现方式为 `new and replace`。
 >
-> 网上有重新FragmentNavigator，改为hide() 和 show()的方式。不过此方式将会导致同一个页面永远只有一个实例，无法重复创建。比如 AFragment-> BFragment#1 -> BFragment#2 -> BFragment#3， 页面上展示的内容不同, 此场景下BFragment#3无法导航回BFragment#2, 而是直接直接回到了AFragment。
+> 网上有重写FragmentNavigator，改为hide() 和 show()的方式。不过此方式将会导致同一个页面永远只有一个实例，无法重复创建。比如 `AFragment -> BFragment#1 -> BFragment#2 -> BFragment#3`， 页面上展示的内容不同, 此场景下BFragment#3无法导航回BFragment#2, 而是直接直接回到了AFragment。
 >
 > 考虑使用viewModel + LiveData or Flow等方式将数据和视图分离，且需优化Fragment中渲染时间。
 
 相关代码：
 
 ```java
-# FragmentNavigator
+// FragmentNavigator.navigate()
 public NavDestination navigate(xxxxxx){
 	...
     // 新建一个Fragment

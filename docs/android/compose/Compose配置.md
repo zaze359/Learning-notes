@@ -1,40 +1,12 @@
-# Compose
-
-[Jetpack Compose 界面应用开发工具包 - Android 开发者  | Android Developers (google.cn)](https://developer.android.google.cn/jetpack/compose)
-
-[Jetpack Compose  | Android Developers (google.cn)](https://developer.android.google.cn/jetpack/compose/interop)
-
-- Compose 编程思想
-
-  https://developer.android.google.cn/jetpack/compose/mental-model
-
-- GitHub repo 模板
-
-  https://github.com/android/android-dev-challenge-compose
-
-- Compose 中的布局
-
-  https://developer.android.google.cn/jetpack/compose/layout
-
-- Compose 文档: 列表
-
-  https://youtu.be/BhqPpUYJYeQ
-
-- Compose pathway
-
-  https://developer.android.google.cn/courses/pathways/compose
-
-- 提交作品
-
-  https://developer.android.google.cn/dev-challenge#the-latest-challenge
-
-
-
-## 为项目配置Compose
+# Compose配置
 
 [将 Jetpack Compose 添加到应用中  | Android Developers (google.cn)](https://developer.android.google.cn/jetpack/compose/interop/adding)
 
-### 配置Android Gradle插件版本
+[快速入门  | Jetpack Compose  | Android Developers](https://developer.android.com/jetpack/compose/setup)
+
+[Jetpack Compose 基础知识  | Android Developers](https://developer.android.com/codelabs/jetpack-compose-basics?continue=https%3A%2F%2Fdeveloper.android.com%2Fcourses%2Fpathways%2Fcompose%23codelab-https%3A%2F%2Fdeveloper.android.com%2Fcodelabs%2Fjetpack-compose-basics#0)
+
+## 配置Android Gradle插件版本
 
 配置``root/build.gradle``
 
@@ -48,14 +20,14 @@ buildscript {
 }
 ```
 
-### 配置Kotlin版本
+## 配置Kotlin版本
 
-配置``root/build.gradle``
+配置``app/build.gradle``
 
 ```groovy
 buildscript {
 		ext {
-        kotlin_version = '1.7.10'
+        kotlin_version = '1.7.20'
     }
     ...
     dependencies {
@@ -73,7 +45,7 @@ plugins {
 }
 ```
 
-### Gradle参数配置
+## Gradle参数配置
 
 最低 API 级别设置为 21 或更高级别，并且开启 Jetpack Compose
 
@@ -95,17 +67,18 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
+  
     kotlinOptions {
         jvmTarget = "1.8"
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion '1.3.0'
+        kotlinCompilerExtensionVersion '1.3.2'
     }
 }
 ```
 
-### 添加依赖项
+## 添加依赖项
 
 > 使用 `activity-compose` 依赖项时，`androidx.activity` 也必须位于 1.3.0 版中。
 
@@ -128,21 +101,17 @@ dependencies {
 
 
 
-### 其他配置
+## 其他配置
 
-#### 需要Java 11
+### 需要Java 11
 
 
 
-![image-20220428133332778](Compose资料.assets/image-20220428133332778.png)
+![image-20220428133332778](Compose配置.assets/image-20220428133332778.png)
 
-#### Gradle
+### Gradle
 
 ```
 compileSdkVersion = 31
 minSdkVersion = 21
-
 ```
-
-
-

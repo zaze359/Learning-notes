@@ -1036,12 +1036,22 @@ MultiProvider(
   
 - Consumer包裹获取，并控制UI刷新粒度
 
-  ```
+  ```dart
+  Consumer<_BookSearchMode>(
+    builder: (c, mode, _) {
+      print("mode : ${mode.books}");
+      return BookListPage(
+        mode.books,
+        simple: false,
+        onTap: (book) {
+          AppRoutes.startBookDetailPage(context, book);
+        },
+      );
+    },
+  )
   ```
   
   
-
-
 
 Provider内部原理梳理：
 

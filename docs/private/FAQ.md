@@ -1,9 +1,5 @@
 # FAQ
 
-## MacBook相关问题
-
-[如何重置 Mac 的 SMC - Apple 支持 (中国)](https://support.apple.com/zh-cn/HT201295)
-
 
 
 ## Android相关
@@ -18,17 +14,6 @@
 
 
 
-### 编译时提示 `编码GBK的不可映射字符`
-
-> 需要`build.gradle`
-
-```groovy
-tasks.withType(JavaCompile) {
-    options.addStringOption('Xdoclint:none', '-quiet')
-    options.encoding = "UTF-8"
-}
-```
-
 ### JavaDoc导出编码错误
 
 > Tools -> Generate JavaDoc
@@ -40,7 +25,20 @@ tasks.withType(JavaCompile) {
 
 
 
-### Gradle升级7.0.2之后发生报错,需要使用java11
+### Gradle编译报错：编码GBK的不可映射字符
+
+> 需要`build.gradle`
+
+```groovy
+tasks.withType(JavaCompile) {
+    options.addStringOption('Xdoclint:none', '-quiet')
+    options.encoding = "UTF-8"
+}
+```
+
+### 
+
+### Gradle升级7.0.2之后发生报错：需要使用java11
 
 > 可以选择Android Studio内置的，也可使用自己下载jdk11
 
@@ -94,7 +92,7 @@ AAPT: error: resource drawable/default_background (aka com.xxxx:drawable/xxxx.xm
 
 ---
 
-### Gradle权限问题
+### Gradle权限：permission denied:
 
 > permission denied: ./gradlew
 
@@ -102,11 +100,11 @@ AAPT: error: resource drawable/default_background (aka com.xxxx:drawable/xxxx.xm
  chmod +x gradlew
 ```
 
+### 依赖库版本冲突
 
+添加一下配置统一版本。
 
-### 依赖库发生冲突
-
-```
+```groovy
 android {
 configurations.all {
     resolutionStrategy.force "com.android.support:appcompat-v7:$rootProject.supportLibraryVersion"
@@ -118,18 +116,42 @@ configurations.all {
 }
 ```
 
----
-
 ### SNAPSHOT更新问题
 
-```
+```groovy
 configurations.all {
     resolutionStrategy.cacheChangingModulesFor 1, 'seconds'
     resolutionStrategy.cacheDynamicVersionsFor 1, 'seconds'
 }
 ```
 
----
+### 旧版本gradle项目运行直接报错
+
+gradle版本：4.6-all等版本
+
+相关错误信息：
+
+```tex
+vc-complex-type.2.4.d: 发现了以元素 ‘base-extension‘ 开头的无效内容。此处不应含有子元素
+```
+
+升级gradle版本即可(过新的版本需要改动较多):
+
+> gradle-wrapper.properties
+
+```properties
+distributionUrl=https\://services.gradle.org/distributions/gradle-6.7.1-bin.zip
+```
+
+> build.gradle
+
+```groovy
+classpath "com.android.tools.build:gradle:4.2.1"
+```
+
+
+
+
 
 ### ClassNotFoundException
 
@@ -145,6 +167,8 @@ protected void attachBaseContext(Context base) {
     MultiDex.install(this);
 }
 ```
+
+
 
 ### Maven仓库无法更新错误
 
@@ -227,37 +251,68 @@ ndk.dir=C\:\\Users\\35963\\AppData\\Local\\Android\\Sdk\\ndk\\16.1.4479499
 
 
 
-### 旧版本项目运行直接报错
+### Gradle升级问题：dependencyResolutionManagement
 
-gradle版本：4.6-all等版本
+定义 `dependencyResolutionManagement` 后出现 ``gradle Build was configured to prefer settings repositories over project repositories but reposi...`` 报错。
 
-相关错误信息：
+方式一：将 dependencyResolutionManagement 注释去除。
 
-```tex
-vc-complex-type.2.4.d: 发现了以元素 ‘base-extension‘ 开头的无效内容。此处不应含有子元素
+```kotlin
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        maven {
+            isAllowInsecureProtocol = true
+            url = uri("http://localhost:8081/repository/maven-public")
+        }
+        maven { url = uri("https://maven.aliyun.com/repository/public") }
+        maven { url = uri("https://maven.aliyun.com/repository/jcenter") }
+        maven { url = uri("https://maven.aliyun.com/repository/google") }
+        maven { url = uri("https://oss.sonatype.org/content/repositories/snapshots") }
+        maven { url = uri("https://jitpack.io") }
+        google()
+        mavenCentral()
+    }
+}
 ```
 
-升级gradle版本即可(过新的版本需要改动较多):
+方式二：`allprojects` 改为 `subprojects`
 
-> gradle-wrapper.properties
-
-```properties
-distributionUrl=https\://services.gradle.org/distributions/gradle-6.7.1-bin.zip
+```kotlin
+allprojects {
+    repositories {
+        // ....
+    }
+}
 ```
 
-> build.gradle
+改为 subprojects：
 
 ```groovy
-classpath "com.android.tools.build:gradle:4.2.1"
+subprojects {
+    repositories {
+				// ....
+    }
+}
 ```
 
 
 
-## Git
 
-### OpenSSL相关报错
 
-```tex
+
+
+
+
+
+
+
+
+---
+
+## Git：OpenSSL相关报错
+
+```shell
  OpenSSL SSL_read: Connection was aborted, errno 10053
 ```
 
@@ -274,38 +329,15 @@ git config --global http.postBuffer 524288000
 
 
 
-
-
-## 浏览器相关清理
-
-### 清理站点数据
-
-- 进入**开发者工具**(F12)
-- 选择**应用程序**
-- 点击**存储**
-
-![image-20210910151720488](问题处理备份.assets/image-20210910151720488.png)
-
-### DNS清理
-
-```http
-chrome://net-internals/#dns
-edge://net-internals/#dns
-```
-
-![image-20210910151556761](问题处理备份.assets/image-20210910151556761.png)
-
-## markdown
-
-### 强制换页
+## markdown如何强制换页
 
 ```
 <div STYLE="page-break-after: always;"></div>
 ```
 
-## cmd相关
 
-### npm
+
+## npm修改仓库地址
 
 修改仓库地址
 
@@ -313,7 +345,7 @@ edge://net-internals/#dns
 npm config set registry "https://registry.npm.taobao.org"
 ```
 
-### 在此系统上禁止运行脚本
+## CMD在此系统上禁止运行脚本
 
 ```
 PS C:\WINDOWS\system32> docsify
@@ -329,23 +361,14 @@ set-ExecutionPolicy RemoteSigned
 A
 ```
 
-### homebrew
+## homebrew报错：Error: Another active Homebrew update process is already in progress
 
-```
-Error: Another active Homebrew update process is already in progress.
-```
 处理方式:
 ```
 rm -rf /usr/local/var/homebrew/locks
 ```
 
-
-
-## SQL
-
-```bash
-unrecognized token: "xxxx"
-```
+## SQL：unrecognized token: "xxxx"
 
 字符串字段使用时注意增加 单引号。
 
@@ -353,15 +376,35 @@ unrecognized token: "xxxx"
 SELECT * FROM books WHERE url='$url'
 ```
 
-
-
-
-
 ## python3软连接方式处理python无法运行的问题
 
 ```shell
 sudo ln -s /usr/local/bin/python3 python
 ```
+
+
+
+## Python：SyntaxError: Non-ASCII character
+
+> python默认编码为ASCII码。在文件开头声明编码即可。
+
+```python
+# coding=UTF-8
+```
+
+```python
+# -*- coding: UTF-8 -*-
+```
+
+> 使用python3, Python3.X 默认使用 utf-8编码
+
+```python
+#!/usr/bin/python3
+```
+
+
+
+
 
 ## CocoaPods错误
 
@@ -396,3 +439,33 @@ Failed to attach the network LUN (VERR_INTNET_FLT_IF_NOT_FOUND).
 找到对应虚拟网络**禁用再启用**即可
 
 ![image-20221010005144902](./FAQ.assets/image-20221010005144902.png)
+
+
+
+## 浏览器相关清理
+
+### 清理站点数据
+
+- 进入**开发者工具**(F12)
+- 选择**应用程序**
+- 点击**存储**
+
+![image-20210910151720488](问题处理备份.assets/image-20210910151720488.png)
+
+### DNS清理
+
+```http
+chrome://net-internals/#dns
+edge://net-internals/#dns
+```
+
+![image-20210910151556761](问题处理备份.assets/image-20210910151556761.png)
+
+
+
+## MacBook相关问题
+
+[如何重置 Mac 的 SMC - Apple 支持 (中国)](https://support.apple.com/zh-cn/HT201295)
+
+
+

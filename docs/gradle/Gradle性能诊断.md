@@ -49,7 +49,15 @@ gradlew --profile --recompile-scripts --offline --rerun-tasks assembleDebug
 * 每一个版本的Gradle都会对应一个Daemon进程，使用同一个版本的进程可以节约配置
 * 即使使用同一个版本的Gradle, 也会因为VM配置不同而启动多个Daemon进程。
 
-官方下载地址：[Gradle Distributions](https://services.gradle.org/distributions/)，一般选择新的下载即可。gradle版本跨度太大时需要注意适配。
+#### mac安装
+
+```shell
+brew install gradle
+```
+
+#### window安装
+
+下载地址：[Gradle Distributions](https://services.gradle.org/distributions/)，一般选择新的下载即可。gradle版本跨度太大时需要注意适配。
 
 > Android Studio配置使用本地Gradle
 
@@ -67,9 +75,10 @@ windows 配置环境变量:
 
 
 
-验证是否配置成功：
+#### 验证是否配置成功
 
 ```shell
 gradle --version
+gradle -v
 ```
 

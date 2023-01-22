@@ -7,16 +7,16 @@
 | CPU                      | 擅长逻辑运算                         | 控制器复杂，算术逻辑单元ALU（Arithmetic Logic Unit）较少，   |
 | GPU                      | 擅长大量的数学运算，适合图形渲染     | 控制器较简单，但是包含大量ALU。                              |
 | diaplay                  | 显示设备                             | 从缓冲区读取数据并显示。                                     |
-|                          |                                      |                                                              |
+| -                        |                                      |                                                              |
 | OpenGL                   | 底层图形库，是操作GPU的API           | 定义了一个跨编程语言、跨平台的编程接口规格的专业的图形程序接口。适用于3D/2D。 |
 | OpenGL ES（GLES）        | OpenGL 的嵌入式版                    | OpenGL 的API子集。功耗更低                                   |
 | EGL                      | EGL是渲染API和原生窗口系统之间的接口 | 作为OpenGL和原生窗口系统之间的桥梁。                         |
 | HWC（Hardware Composer） | 硬件合成器                           | 硬件合成器，是控制器系统的硬件抽象，减轻GPU的负载。          |
-|                          |                                      |                                                              |
-| Texture                  | 纹理                                 | 纹理是应用于 Surface 的图像，改变它的颜色、光泽或其外观的任何其他部分。 |
+| -                        |                                      |                                                              |
+| Texture                  | 纹理                                 | 纹理是应用于 Surface 的**图像或照片**，可以改变它的颜色、光泽或其外观的任何其他部分。 |
 | Shader                   | 着色器                               | 一种通过即时演算 生成贴图的程序。                            |
 | Material                 | 材质                                 | 本质是一组供渲染器读取的数据集。包含贴图纹理、shader等       |
-|                          |                                      |                                                              |
+| -                        |                                      |                                                              |
 | Skia                     | 软件绘制引擎                         | CPU绘制2D图形，skia也可调用OpenGL实现3D效果。                |
 | Surface                  | 图像流生产方                         | 进行绘制和渲染的地方。                                       |
 | Graphic Buffer           | 装载栅格化的绘制内容                 | Android 4.1 之前使用的是 双缓冲机制；Android 4.1之后使用的是 三缓冲机制。 |

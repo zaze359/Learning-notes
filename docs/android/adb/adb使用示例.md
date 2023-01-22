@@ -8,24 +8,24 @@
 >
 > 此处仅记录部分常用指令:
 
-| 指令                                      | 备注                                               |
-| ----------------------------------------- | -------------------------------------------------- |
-| adb nodaemon server                       | 查看adb                                            |
-|                                           |                                                    |
-| adb kill-server                           | 关闭adb server                                     |
-| adb start-server                          | 启动adb server                                     |
-| adb devices -l                            | 查看当前连接设备。 -l 显示更多信息                 |
-| adb -s [serial number] shell              | 以shell方式连接到指定 serial number 的设备         |
-| adb tcpip [PORT]                          | 设置Android设备监听adb的端口                       |
-| adb connect HOST[:PORT]                   | connect to a device via TCP/IP [default port=5555] |
-| adb disconnect [HOST[:PORT]]              | 断开连接, 不指定时全部关闭                         |
-|                                           |                                                    |
-| adb install [-lrtsdg] [--instant] PACKAGE | 安装应用。 本地测试包指定 -t                       |
-| adb uninstall [-k] PACKAGE                | 卸载应用。 -k 保留数据                             |
-|                                           |                                                    |
-| adb reboot recovery                       | 重启并进入recovery mode                            |
-| adb reboot-bootloader                     | 重启并进入bootloader                               |
-|                                           |                                                    |
+| 指令                                          | 备注                                               |
+| --------------------------------------------- | -------------------------------------------------- |
+| ``adb nodaemon server``                       | 查看adb                                            |
+| -                                             |                                                    |
+| ``adb kill-server``                           | 关闭adb server                                     |
+| ``adb start-server``                          | 启动adb server                                     |
+| ``adb devices -l``                            | 查看当前连接设备。 -l 显示更多信息                 |
+| ``adb -s [serial number] shell``              | 以shell方式连接到指定 serial number 的设备         |
+| ``adb tcpip [PORT]``                          | 设置Android设备监听adb的端口                       |
+| ``adb connect HOST[:PORT]``                   | connect to a device via TCP/IP [default port=5555] |
+| ``adb disconnect [HOST[:PORT]]``              | 断开连接, 不指定时全部关闭                         |
+| -                                             |                                                    |
+| ``adb install [-lrtsdg] [--instant] PACKAGE`` | 安装应用。 本地测试包指定 -t                       |
+| ``adb uninstall [-k] PACKAGE``                | 卸载应用。 -k 保留数据                             |
+| -                                             |                                                    |
+| ``adb reboot recovery``                       | 重启并进入recovery mode                            |
+| ``adb reboot-bootloader``                     | 重启并进入bootloader                               |
+| -                                             |                                                    |
 
 ## 通过命令操作设备
 

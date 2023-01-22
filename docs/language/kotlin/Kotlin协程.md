@@ -2,30 +2,37 @@
 
 > 源码常出看到 expect 和 actual 修饰词，他们表示修饰的对象是跨平台的。他们一一对应同名。
 >
-> expect 相当于接口。actual 是真实的实现。
-
-
+> expect 相当于接口。actual 是真实的实现。源码需要在对应平台的依赖库中查看。
 
 ## 温习总结用
 
-在学习Kotlin协程和写这篇学习总结的过程中，对于协程的概念一直停留在字面概念上。对里面的一些概念也是似懂非懂（协程为什么协作的？挂起信息？continuation怎么理解? 为什么执行结果会作为下次执行的入参？等）突然感觉对协程有了一些理解。所以把我对 协程的理解先阐述在前面，方便后续温习时快速回忆。
+> 在学习Kotlin协程和写这篇学习总结的过程中，对于协程的概念一直停留在字面概念上。对里面的一些概念也是似懂非懂（协作的？挂起信息？continuation怎么理解? 为什么执行结果会作为下次执行的入参？等）。经过一段时间的学习感觉对协程有了一些理解。所以我把对 协程的理解先阐述在前面，方便后续温习时快速回忆。
 
-在协程中，程序挂起的地方叫做挂起点，我对挂起点的理解是，**协程基于挂起点将 一个完整的函数一分为二，分为上下两部分，上部分就是我们已经执行的，下部分就是我们保存的挂起点信息**。
+**协程的挂起**：当我们调用一个挂起函数且会被挂起时，可以类似理解为协程基于挂起点将 一个完整的函数一分为二，分为上下两部分，上部分就是我们已经执行完成的，下部分就是我们过会需要恢复继续执行的部分。紧接着上部分调度执行的另一个函数我称为中间部分（它可能也是个挂起函数）。如果需要参数则传入对应的参数，不需要时传入 `Unit`。而下部分则被挂起，暂时不执行。
 
-Kotlin 中会将 挂起点信息 保存到一个 Continuation 实例中。我们可以通过 它来 恢复协程，也就是继续执行 下部分函数。
+**协程的恢复**：为了能够接着恢复之前挂起的下部分，在 Kotlin 协程中会将挂起点的信息下部分保存到一个 Continuation 实例中，并会将这个实例返回给我们，这样我们就可以通过它来恢复协程，也就是继续执行 下部分函数。执行下部分时可能需要中间部分的执行结果（没有返回值时是 `Unit` ），这也就是为什么 在恢复协程（`continuation.resumeWith(value)`）时，会将执行协程体（ `invokeSuspend()`） 的结果作为下一个协程体执行所需参数的原因。
 
-而为了能够接着继续执行下部分，必然是需要使用到上部分的执行结果的。这也就是为什么 在恢复协程（`resumeWith()`）时，会将执行协程体（ `invokeSuspend()`） 的结果作为参数传递给下一个协程的原因。同时也是为什么仅异步才会挂起的原因，因为同步时就相当于拼一起，直接执行完毕了。
+**协程的非阻塞**：原因是由于默认的挂起方式将会切换到其他线程。
 
-> **基于以上观点，我理解协程 就是将我们声明的实际函数 在需要挂起的地方拆分成更多的子函数（一个个的 `Continuation`就是为了能处理这些子函数 ），再通过一定的方式进行组合调用的这样一个协作过程。而这个组合协同的方式就是指协程的调度。也就理解了为什么说协程之间是相互作用的。**
+ **Continuation**：可以类比我们平时使用的 Callback, `resumeWith()` 是回调函数，可以将结果回调给我们，同时下部分代码相当于在这个回调中执行，也就是 CPS 变换。
+
+上中下三个部分之间存在参数传递，使用返回值等，协程之间是相互协作的关系。
+
+![挂起:恢复](Kotlin协程.assets/挂起:恢复.png)
+
+> **基于以上的观点，我理解协程 就是将我们声明的实际函数 在需要挂起的地方拆分成更多的子函数（一个个的 `Continuation`就是为了能处理这些子函数 ），再通过一定的方式进行组合调用的这样一个协作过程。而这个组合协同的方式就是指协程的调度。也就理解了为什么说协程之间是相互作用的。**
 
 
 
-* **协程实际是一个个 `Continuation` 组成**：我们操作的协程体都是 `Continuation` 的接口实例， 一般为 `SafeContinuation`。它包含一个 `CorutineContext` 上下文来保存信息，和 一个  `resumeWith()` 函数来处理操作。
-* **协程是通过 CPS变换 来控制异步调用流程**：将 挂起点信息 保存在 Continuation 对象中，通过传递 Continuation 来控制异步调用流程。就是指恢复和挂起操作不在同一个函数栈中（比如线程切换）的场景下，保存到 Continuation 中 等待后续 调用恢复。
+* **协程是基于线程的封装，是运行在线程上的，可以认为是一种异步任务的管理框架**。
 
-* **协程的启动/恢复相当于是开启了一个无限循环，从而一直获得调度权**：`resumeWith()` 内部 是一个死循环，循环内通过 `invokeSuspend()` 执行协程体。不退出/挂起 的情况下，会将返回值 `outcome` 会作为下次循环 执行协程体 的入参 param。
-* **协程的挂起/退出相当于退出内部的循环，从而交出调度权**：在 挂起 或者 结束 时会退出循环。结束时调用回调 ` completion.resumeWith(outcome)`，将结果返回。
-* **对称协程的调度方式的实现则是通过统一调度中心的方式**：由一个`特权协程`来统一 启动其他协程。其他协程会在结束前将 调度权还给 特权协程，特权协程再去 启动需要调度的协程，从而将调度权转移给了对应的协程。结束时通过 注册的回调接口进行回调。
+* **协程运行在线程中，相当于 一个个Task**：一个线程中可以运行成千上万的协程，且协程可以通过挂起/恢复在不同线程中切换。
+* **协程的启动/恢复 相当于是开启了一个无限循环，从而一直获得调度权**：`resumeWith()` 内部 是一个死循环，循环内通过 `invokeSuspend()` 执行协程体。不退出/挂起 的情况下，会将返回值 `outcome` 会作为下次循环 执行协程体 的入参 param。
+* **协程的挂起/退出 相当于退出内部的循环，从而交出调度权**：在 挂起 或者 结束 时会退出循环。结束时调用回调 ` completion.resumeWith(outcome)`，将结果返回。
+* **协程中的入参和返回值**：`resume(value)` 中的参数 value ，实际是最近挂起处（`suspendCoroutine()`） 接收的返回值。不需要返回值时是 `Unit` 。
+* **协程实际是一个个 `Continuation` 组成**：我们操作的协程体都是 `Continuation` 的接口实例， 一般为 `SafeContinuation`。它包含一个 `CorutineContext` 上下文来保存信息，和 一个  `resumeWith()` 函数来处理操作并返回结果。
+* **协程是通过 CPS 变换来实现挂起和恢复**：将 挂起点信息 保存在 Continuation 对象中，通过传递 Continuation 来控制异步调用流程。将同步调用的挂起函数转换成了异步代码（Callback）。
+* **对称协程的调度方式是通过统一的调度中心来实现的**：由一个`特权协程`来统一 启动其他协程。其他协程会在结束前将 调度权还给 特权协程，特权协程再去启动需要调度的协程，从而将调度权转移给了对应的协程。结束时通过注册的回调接口进行回调。
 * **我们平时使用的大多都是复合协程**：复合协程是基于 简单协程（类似`createCoroutine()`方式创建） 的扩展和封装，方便我们的使用。比如常用的  `launch {}` 就是复合协程的构造器。
 
 ## 什么是协程
@@ -54,18 +61,21 @@ Kotlin 中会将 挂起点信息 保存到一个 Continuation 实例中。我们
 
 #### Kotlin协程的一些概念
 
+> Kotlin协程是独立于标准库的一套框架。
+>
+> 协程的本质是基于线程的封装，是运行在线程上的。可以认为是一种异步任务的管理框架。
+
 * 协程体：协程中需要执行的操作。是一个被 suspend 修饰的 lambda表达式： `(suspend () -> T)` 。其实是一个 `Continuation` 。
 * 协程的控制实例：`Continuation`（续体）
 * 协程的状态：`COROUTINE_SUSPENDED` , `UNDECIDED` , `RESUMED` 
 * 挂起函数：`suspend`修饰的函数， 只能在挂起函数和协程体内调用。 挂起函数不一定挂起。
 * 挂起点：程序需要调度的地方，即**真正被挂起**的位置。只有异步才需要挂起。
 
+### 线程和协程对比
 
+> 协程是基于线程的封装，是运行在线程上的。可以认为是一种异步任务的管理框架。
 
-
-### 线程和协程的区别
-
-* 线程：一旦开始执行，那么直到任务结束都就不会暂停。在Java虚拟机中，线程会直接映射为内核线程，而内核线程的**调度是由操作系统控制，通常是按时间片划分的抢占式调度**，。
+* 线程：一旦开始执行，那么直到任务结束都就不会暂停。在Java虚拟机中，线程会直接映射为内核线程，而内核线程的**调度是由操作系统控制，通常是按时间片划分的抢占式调度**。
 * 协程：协程可以挂起暂停，稍后再恢复。调度流程是程序通过挂起和恢复自己控制的，也就是由开发者决定，并不会交给系统。**协程之间是相互协作的**。
 
 ### 异步程序对比
@@ -390,6 +400,30 @@ CreateCoroutine: Coroutine End: Success(1)
 
 ![Kotlin协程类图](./Kotlin%E5%8D%8F%E7%A8%8B.assets/Kotlin%E5%8D%8F%E7%A8%8B%E7%B1%BB%E5%9B%BE.png)
 
+## 协程的调试配置
+
+设置 VM 参数，这样我们 通过 `Thread.currentThread().name` 打印时，会显示协程信息。
+
+```shell
+-Dkotlinx.coroutines.debug
+```
+
+![image-20221124002152518](Kotlin协程.assets/image-20221124002152518.png)
+
+
+
+Debug配置，方便断点调试。
+
+![image-20221124003252170](Kotlin协程.assets/image-20221124003252170.png)
+
+调试窗口默认的最右边有协程相关信息。
+
+![image-20221124003550809](Kotlin协程.assets/image-20221124003550809.png)
+
+
+
+
+
 ## 协程启动流程分析
 
 > 此分析流程 基于上面的 `CreateCoroutine` 代码范例，我们通过添加断点的方式跟踪协程的启动过程，从而 加深对理解 Kotlin 协程的理解。
@@ -425,7 +459,7 @@ public fun <R, T> (suspend R.() -> T).createCoroutine(
 
 ```
 
-* 协程体【`(suspend () -> T)`】：是协程的执行体。它是一个 suspend Lambda 表达式。最终会被编译器处理成匿名内部类。
+* 协程体【`(suspend () -> T)`】：是协程的执行体。它是一个 suspend Lambda 表达式，没有入参，返回类型为范型 T。它最终会被编译器处理成匿名内部类, `createCoroutine` 是它的扩展函数。
 * 参数【`completion: Continuation<T>`】：协程的完成回调，会在协程执行完成后调用。
 * 返回值【`Continuation<Unit>`】：用于触发协程的启动，内部保存了协程执行所需的上下文。
 
@@ -466,17 +500,32 @@ internal actual constructor(
     private val delegate: Continuation<T>,
     initialResult: Any?
 ) : Continuation<T>, CoroutineStackFrame {
+  
+  	// 默认为UNDECIDED, createCoroutine 时传入的是COROUTINE_SUSPENDED
     @PublishedApi
     internal actual constructor(delegate: Continuation<T>) : this(delegate, UNDECIDED)
 
     public actual override val context: CoroutineContext
         get() = delegate.context
 
+  	// 存放的是 协程的当前状态 或者 最终结果。
+  	@Volatile
+    private var result: Any? = initialResult
+  
+  	private companion object {
+      
+      	// 修改的是 SafeContinuation.result 字段
+        @Suppress("UNCHECKED_CAST")
+        private val RESULT = AtomicReferenceFieldUpdater.newUpdater<SafeContinuation<*>, Any?>(
+            SafeContinuation::class.java, Any::class.java as Class<Any?>, "result"
+        )
+    }
+  
     // 只有 挂起的协程才需要恢复。
   	// 创建协程时，初始化为 COROUTINE_SUSPENDED
     public actual override fun resumeWith(result: Result<T>) {
         while (true) { // lock-free loop
-            val cur = this.result // atomic read
+            val cur = this.result // atomic read， 这个是自身持有的result
             when {
               	// 未定状态，直接更新 resule 数据, 调用 getOrThrow() 将直接获得结果。
                 cur === UNDECIDED -> if (RESULT.compareAndSet(this, UNDECIDED, result.value)) return
@@ -499,8 +548,12 @@ internal actual constructor(
         if (result === UNDECIDED) {
           	// 
             if (RESULT.compareAndSet(this, UNDECIDED, COROUTINE_SUSPENDED)) return COROUTINE_SUSPENDED
+          	// 比较更新时 发生了变化，直接重新读取结果。
             result = this.result // reread volatile var
         }
+				// 执行中：挂起
+      	// 异常： 抛出
+      	// 结果数据：直接返回
         return when {
             result === RESUMED -> COROUTINE_SUSPENDED // already called continuation, indicate COROUTINE_SUSPENDED upstream
             result is Result.Failure -> throw result.exception
@@ -515,8 +568,9 @@ internal actual constructor(
 >
 > `SafeContinuation` 实际是一个代理, 内部的 `delegate`才是 `Continuation` 的本体，我们启动协程时实际调用的是 `delegate.resumeWith()` 
 >
-> * 若是 COROUTINE_SUSPENDED 状态，则将状态 更新为RESUMED 并调用 resumeWith 执行协程。
-> * 若为 UNDECIDED 状态，则直接更新数据 到 RESULT，  之后调用 getOrThrow() 将直接获得结果。
+> * `resumeWith()` 中 若`this.result` 是 COROUTINE_SUSPENDED 状态，则将状态 更新为RESUMED 并调用 resumeWith 执行协程。
+> * `resumeWith()` 中 若 `this.result` 为 UNDECIDED 状态，则直接更新数据 到 result 中。
+> * `getOrThrow()` 中 当状态为 `RESUME` 时 将会变更为 `COROUTINE_SUSPENDED` 挂起状态，为失败时 则直接抛出对应异常，若已获取到结果则直接返回结果。
 
 新的问题： `delegate` 是什么？
 
@@ -620,7 +674,7 @@ internal abstract class ContinuationImpl(
 
 #### resume()
 
-我们通过调用 `Continuation.resume(value)` 来启动/恢复协程，参数 value 是作为最近一个挂起点的返回值， 即**调用 `resume(value)` 后，之前的 挂起点 会收到 `value` 这个返回值**。
+我们通过调用 `Continuation.resume(value)` 来启动/恢复协程，参数 `value` 是作为最近一个挂起点的返回值， 即调用 `resume(value)` 后，之前的挂起处会收到 `value` 这个返回值。
 
 ```kotlin
 @SinceKotlin("1.3")
@@ -657,7 +711,7 @@ internal abstract class BaseContinuationImpl(
         var current = this
         var param = result
         while (true) {
-          	// 获取挂起点，需要从哪里恢复
+          	// 恢复，更新为 RUNNING 状态
             probeCoroutineResumed(current)
             with(current) {
                 val completion = completion!! 
@@ -692,6 +746,12 @@ internal abstract class BaseContinuationImpl(
 }
 ```
 
+````kotlin
+internal fun probeCoroutineResumed(frame: Continuation<*>) = updateState(frame, RUNNING)
+````
+
+
+
 通过断点走一下流程：
 
 * `resumeWith` 内部会调用 `invokeSuspend()` 会启动/恢复协程。此处打印 `In Coroutine 1` 。
@@ -721,10 +781,14 @@ invokeSUpend() 的具体实现 在编译器生成的 匿名内部类中，我们
 
 ### 函数的挂起
 
-协程的挂起就是 程序执行流程发生异步调用时，当前调用流程的执行状态进入等待状态。
+协程的挂起发生在程序执行流程发生异步调用时，当前调用流程的执行状态进入等待状态。
 
-* 被 `suspend` 关键字修饰的函数叫做 挂起函数。
-* 挂起函数不一定会挂起，只是支持挂起的能力。
+#### 挂起函数
+
+> 挂起函数的本质其实是 Callback。
+
+* 被 `suspend` 关键字修饰的函数叫做 挂起函数，同时也改变了函数类型（CPS变换）。
+* 挂起函数不一定会挂起，只是支持挂起的能力。当`resume()` 和 挂起调用 不在同一个函数栈中时才会挂起（例如线程切换、事件循环等）。
 * 挂起函数可以调用任意函数，但只能在 协程体 或者 其他挂起函数内 被调用。普通函数不能调用挂起函数。
 
 > `@RestrictsSuspension`  注解修饰 Scope 后，协程体内只能调用内部自身的 挂起函数，不能调用外部的挂起函数。
@@ -736,9 +800,9 @@ invokeSUpend() 的具体实现 在编译器生成的 匿名内部类中，我们
 
 #### 挂起点
 
-协程内挂起函数的调用称为挂起点。 
+协程内挂起函数调用的地方称为挂起点。 
 
-在我理解中，挂起点相当于将 一个函数基于这个点 一分为二，上部分就是我们已经执行的，下部分就是我们保存的挂起点信息。
+在我理解中，挂起点相当于将 一个函数基于这个点 一分为二，上部分就是我们已经执行的，下部分恢复后需要继续执行的信息，保存的挂起点的信息就是为了定位。
 
 #### 协程的状态
 
@@ -754,9 +818,15 @@ invokeSUpend() 的具体实现 在编译器生成的 匿名内部类中，我们
 internal enum class CoroutineSingletons { COROUTINE_SUSPENDED, UNDECIDED, RESUMED }
 ```
 
+#### CPS 变换
 
+> Continuation-Passing-Style Transformation 
 
-#### suspendCoroutine
+Kotlin 挂起函数的挂起和恢复，就是通过 CPS 变换实现的。将挂起点信息保存在 Continuation 对象中，通过传递 Continuation 来控制异步调用流程。
+
+Kotlin 编译器将 suspend  翻译成 Continuation，而 Continuation 可以类比我们平时使用的 Callback, `resumeWith()` 是回调函数，可以将结果回调给我们，同时下部分代码相当于在这个回调中执行。从而将同步调用的挂起函数转换成了异步代码（Callback）
+
+#### suspendCoroutine（挂起函数）
 
 `suspendCoroutine()` 是 Kotlin 提供的拥有挂起能力的函数。若发生 异步调用则会挂起当前协程。当在 `block` 内部调用了 `safe.resume()` 将不会挂起，此时将直接返回结果。 `SafeContinuation` 保证了 仅异步是挂起。
 
@@ -788,29 +858,23 @@ public suspend inline fun <T> suspendCoroutineUninterceptedOrReturn(crossinline 
 
 
 
-#### CPS 变换
-
-> Continuation-Passing-Style Transformation
-
-Kotlin 将 挂起点信息 保存在 Continuation 对象中，通过传递 Continuation 来控制异步调用流程。
-
-
-
 ### 协程的上下文
 
 主要承载资源获取、配置管理等工作，是执行环境相关的通用数据资源的统一管理者。
 
 * 协程上下文的结构类似 `List`、`Map`， 内部存储为一个左向链表，节点一般为 `CombinedContext`。
 * 可以通过 `+` 进行 Element 的合并。
+* 可以通过设置不同的 Context 来指定 不同的工作线程。如 `Dispatcher.IO` 等
 
-常见的有 `EmptyCoroutineContext`、`Job`、`Dispatcher`等。
+常见的上下文有 `EmptyCoroutineContext`、`Job`、`Dispatcher`、`ContinuationInterceptor` 、`CoroutineName` 等。
 
 #### CoroutineContext（协程上下文）
 
-* `CoroutineContext` 接口 是一个以 Key 为索引的 **数据集合**。
-* Element 是数据元素，且内部只会存放自己的数据。
+`CoroutineContext` 接口是一个以 `Key` 为索引的 **数据集合**，Element 是数据元素，且内部只会存放自己的数据。为了方便API设计，Element 也实现了 CoroutineContext 接口。所以它即 可以是集合，也可以是元素。
 
-* 为了方便API设计，Element 也实现了 CoroutineContext 接口。所以它即 可以是集合，也可以是元素。
+> 将 CoroutineContext 当作是和 Map 一样的数据结构理解即可，
+>
+> Key 一般
 
 ```kotlin
 @SinceKotlin("1.3")
@@ -991,7 +1055,7 @@ internal abstract class ContinuationImpl(
 
 * 协程的返回值：泛型声明参数。若需要返回值，也会存在泛型参数声明返回值。
 * 协程的状态机：在协程的创建、启动、完成过程中，处理协程的状态流转。
-* 协程的作用域：`xxScope`形式的接口，约束挂起函数的调用位置。
+* 协程的作用域：`xxScope`形式的接口，用于扩展功能和约束挂起函数的调用位置。
 
 
 
@@ -1152,7 +1216,9 @@ private class SequenceBuilderIterator<T> : SequenceScope<T>(), Iterator<T>, Cont
 
 #### 协程的作用域
 
->  协程体内只能调用内部自身的 挂起函数，不能调用外部的挂起函数。
+>  它的作用是用于约束挂起函数的调用位置和扩展协程体功能。
+>
+>  `@RestrictsSuspension` 限制协程体内只能调用内部自身的 挂起函数，不能调用外部的挂起函数。
 
 ```kotlin
 @RestrictsSuspension
@@ -1173,13 +1239,20 @@ public abstract class SequenceScope<in T> internal constructor() {
 
 ```
 
-### 
+
 
 ## Kotlin协程框架
 
 ### Job（协程的描述类）
 
-> 官方提供的协程的描述类，功能相当于线程中的Thread。可以操作协程。
+> 官方提供的协程的描述类，功能相当于线程中的Thread。
+
+调用 `launch()` 后会返回给我们一个 Job 对象。
+
+* 操作协程实现复杂的功能
+
+* 检测协程的生命周期状态。
+* 结构化并发：一个 Job 可以拥有多个 ChildJob，可以通过控制父协程来控制一堆子协程。
 
 ```kotlin
 public interface Job : CoroutineContext.Element {
@@ -1235,13 +1308,342 @@ public typealias CompletionHandler = (cause: Throwable?) -> Unit
 | `key`                  | 用于将Job 存入它的协程上下文中。                           |                                                              |
 | `invokeOnCompletion()` | 协程结束回调。存在三种情况。                               | 1. `null`：协程正常结束。<br />2. `CancellationException`：协程被取消，这个异常需要特殊处理，和 普通的异常区分开。<br />3. 其他异常：发生了错误，需要处理异常。 |
 
-### CoroutineState（协程的状态）
+### Deferred
+
+继承自 Job，调用 `async` 时的返回值，可以通过 `deferred.await()` 等待并获取结果，和 `join()`的区别是可以获取到返回结果。
 
 
 
-### 协程的调度器
+### launch()
 
-协程的调度器也基于拦截器实现的。Kotlin 官方协程框架的默认实现方式是使用的线程调度。
+调用后将创建并启动协程，仅返回一个 `Job` 对象用以控制协程和感知协程的状态，不会将执行结果返回给我们。
+
+### async()
+
+基本和 `launch()` 相同，不同点在于 返回的是一个 `Deferred` 对象，可以获取到结果。
+
+### runBlocking()
+
+**会将调用线程阻塞，直到协程结束。**
+
+内部维护了一个事件循环，最后会调用 `joinBlocking()`，函数内部开启了一个循环。所以能阻塞调用线程。内部所有Job执行完毕后，协程退出，也会退出循环，从而不再阻塞。
+
+```kotlin
+public fun <T> runBlocking(context: CoroutineContext = EmptyCoroutineContext, block: suspend CoroutineScope.() -> T): T {
+    contract {
+        callsInPlace(block, InvocationKind.EXACTLY_ONCE)
+    }
+    val currentThread = Thread.currentThread()
+    val contextInterceptor = context[ContinuationInterceptor]
+    val eventLoop: EventLoop?
+    val newContext: CoroutineContext
+    if (contextInterceptor == null) {
+        // create or use private event loop if no dispatcher is specified
+        eventLoop = ThreadLocalEventLoop.eventLoop
+        newContext = GlobalScope.newCoroutineContext(context + eventLoop)
+    } else {
+        // See if context's interceptor is an event loop that we shall use (to support TestContext)
+        // or take an existing thread-local event loop if present to avoid blocking it (but don't create one)
+        eventLoop = (contextInterceptor as? EventLoop)?.takeIf { it.shouldBeProcessedFromContext() }
+            ?: ThreadLocalEventLoop.currentOrNull()
+        newContext = GlobalScope.newCoroutineContext(context)
+    }
+    val coroutine = BlockingCoroutine<T>(newContext, currentThread, eventLoop)
+    coroutine.start(CoroutineStart.DEFAULT, coroutine, block)
+    return coroutine.joinBlocking()
+}
+```
+
+//
+
+```kotlin
+private class BlockingCoroutine<T>(
+    parentContext: CoroutineContext,
+    private val blockedThread: Thread,
+    private val eventLoop: EventLoop?
+) : AbstractCoroutine<T>(parentContext, true) {
+    override val isScopedCoroutine: Boolean get() = true
+
+    override fun afterCompletion(state: Any?) {
+        // wake up blocked thread
+        if (Thread.currentThread() != blockedThread)
+            LockSupport.unpark(blockedThread)
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    fun joinBlocking(): T {
+        registerTimeLoopThread()
+        try {
+            eventLoop?.incrementUseCount()
+            try {
+                while (true) {
+                    @Suppress("DEPRECATION")
+                    if (Thread.interrupted()) throw InterruptedException().also { cancelCoroutine(it) }
+                    val parkNanos = eventLoop?.processNextEvent() ?: Long.MAX_VALUE
+                    // note: process next even may loose unpark flag, so check if completed before parking
+                    if (isCompleted) break
+                    parkNanos(this, parkNanos)
+                }
+            } finally { // paranoia
+                eventLoop?.decrementUseCount()
+            }
+        } finally { // paranoia
+            unregisterTimeLoopThread()
+        }
+        // now return result
+        val state = this.state.unboxState()
+        (state as? CompletedExceptionally)?.let { throw it.cause }
+        return state as T
+    }
+}
+```
+
+
+
+
+
+### CoroutineStart
+
+```kotlin
+public enum class CoroutineStart {
+    DEFAULT,
+    LAZY,
+    @ExperimentalCoroutinesApi // Since 1.0.0, no ETA on stability
+    ATOMIC,
+    @ExperimentalCoroutinesApi  // Since 1.0.0, no ETA on stability
+    UNDISPATCHED;
+
+  	// 根据对应类型 启动协程
+    @InternalCoroutinesApi
+    public operator fun <T> invoke(block: suspend () -> T, completion: Continuation<T>): Unit =
+        when (this) {
+            DEFAULT -> block.startCoroutineCancellable(completion)
+            ATOMIC -> block.startCoroutine(completion)
+            UNDISPATCHED -> block.startCoroutineUndispatched(completion)
+            LAZY -> Unit // will start lazily
+        }
+
+		// 根据对应类型 启动协程
+    @InternalCoroutinesApi
+    public operator fun <R, T> invoke(block: suspend R.() -> T, receiver: R, completion: Continuation<T>): Unit =
+        when (this) {
+            DEFAULT -> block.startCoroutineCancellable(receiver, completion)
+            ATOMIC -> block.startCoroutine(receiver, completion)
+            UNDISPATCHED -> block.startCoroutineUndispatched(receiver, completion)
+            LAZY -> Unit // will start lazily
+        }
+
+    @InternalCoroutinesApi
+    public val isLazy: Boolean get() = this === LAZY
+}
+
+```
+
+
+
+### CoroutineState：协程的状态
+
+### CoroutineScope：协程的作用域
+
+>  它的作用是用于约束挂起函数的调用位置和扩展协程体功能。
+
+Kotlin 中的 `CoroutineScope` 是一个接口，内部有一个 `coroutineContext` 。它更多的功能都是通过扩展函数的方式提供的，我们能够通过扩展的函数对协程进行控制。
+
+从源码可以看出 `CoroutineScope` 仅是对 `CoroutineContext` 的封装，核心功能还是由 `CoroutineContext` 实现的。
+
+```kotlin
+public interface CoroutineScope {
+    public val coroutineContext: CoroutineContext
+}
+
+// 扩展的 launch 函数
+public fun CoroutineScope.launch(
+    context: CoroutineContext = EmptyCoroutineContext,
+    start: CoroutineStart = CoroutineStart.DEFAULT,
+    block: suspend CoroutineScope.() -> Unit
+): Job {
+    val newContext = newCoroutineContext(context)
+    val coroutine = if (start.isLazy)
+        LazyStandaloneCoroutine(newContext, block) else
+        StandaloneCoroutine(newContext, active = true)
+    coroutine.start(start, coroutine, block)
+    return coroutine
+}
+
+// 扩展的 async 函数
+public fun <T> CoroutineScope.async(
+    context: CoroutineContext = EmptyCoroutineContext,
+    start: CoroutineStart = CoroutineStart.DEFAULT,
+    block: suspend CoroutineScope.() -> T
+): Deferred<T> {
+    val newContext = newCoroutineContext(context)
+    val coroutine = if (start.isLazy)
+        LazyDeferredCoroutine(newContext, block) else
+        DeferredCoroutine<T>(newContext, active = true)
+    coroutine.start(start, coroutine, block)
+    return coroutine
+}
+
+....
+```
+
+
+
+
+
+### Dispatchers：协程的调度器
+
+Kotlin 协程的调度器是实质就是一个拦截器。官方协程框架的默认调度方式实现方式是基于线程池的实现的。
+
+|                        |                        |                                        |
+| ---------------------- | ---------------------- | -------------------------------------- |
+| Dispatchers.Main       | UI 主线程              | 用于UI编程中，例如 Android、Swift。    |
+| Dispatchers.Unconfined | 任意线程               |                                        |
+| Dispatchers.Default    | CPU 密集型任务的线程池 | 最小2线程，一般和 CPU 核心数保持一致。 |
+| Dispatchers.IO         | IO 密集型任务的线程池  | 线程数量较多。                         |
+
+> Dispatchers
+>
+> 是一个 单例，内部的成员 Default、Main等 都是 `CoroutineDispatcher` 类型，`CoroutineDispatcher` 实际是一个 `CoroutineContext`。
+
+```kotlin
+public actual object Dispatchers {
+    @JvmStatic
+    public actual val Default: CoroutineDispatcher = createDefaultDispatcher()
+    @JvmStatic
+    public actual val Main: MainCoroutineDispatcher get() = MainDispatcherLoader.dispatcher
+    @JvmStatic
+    public actual val Unconfined: CoroutineDispatcher = kotlinx.coroutines.Unconfined
+    @JvmStatic
+    public val IO: CoroutineDispatcher = DefaultScheduler.IO
+}
+
+```
+
+#### Dispatchers.Default
+
+> 当 Dispatchers.Default 线程富余时，可能会被 Dispatchers.IO 复用。
+
+```kotlin
+internal object DefaultScheduler : ExperimentalCoroutineDispatcher() {
+    val IO: CoroutineDispatcher = LimitingDispatcher(
+        this,
+        systemProp(IO_PARALLELISM_PROPERTY_NAME, 64.coerceAtLeast(AVAILABLE_PROCESSORS)),
+        "Dispatchers.IO",
+        TASK_PROBABLY_BLOCKING
+    )
+
+    override fun close() {
+        throw UnsupportedOperationException("$DEFAULT_DISPATCHER_NAME cannot be closed")
+    }
+
+    override fun toString(): String = DEFAULT_DISPATCHER_NAME
+
+    @InternalCoroutinesApi
+    @Suppress("UNUSED")
+    public fun toDebugString(): String = super.toString()
+}
+
+```
+
+```kotlin
+@InternalCoroutinesApi
+public open class ExperimentalCoroutineDispatcher(
+    private val corePoolSize: Int,
+    private val maxPoolSize: Int,
+    private val idleWorkerKeepAliveNs: Long,
+    private val schedulerName: String = "CoroutineScheduler"
+) : ExecutorCoroutineDispatcher() {
+    public constructor(
+        corePoolSize: Int = CORE_POOL_SIZE,
+        maxPoolSize: Int = MAX_POOL_SIZE,
+        schedulerName: String = DEFAULT_SCHEDULER_NAME
+    ) : this(corePoolSize, maxPoolSize, IDLE_WORKER_KEEP_ALIVE_NS, schedulerName)
+
+    @Deprecated(message = "Binary compatibility for Ktor 1.0-beta", level = DeprecationLevel.HIDDEN)
+    public constructor(
+        corePoolSize: Int = CORE_POOL_SIZE,
+        maxPoolSize: Int = MAX_POOL_SIZE
+    ) : this(corePoolSize, maxPoolSize, IDLE_WORKER_KEEP_ALIVE_NS)
+
+    override val executor: Executor
+        get() = coroutineScheduler
+
+    private var coroutineScheduler = createScheduler()
+
+    override fun dispatch(context: CoroutineContext, block: Runnable): Unit =
+        try {
+            coroutineScheduler.dispatch(block)
+        } catch (e: RejectedExecutionException) {
+            DefaultExecutor.dispatch(context, block)
+        }
+
+    override fun dispatchYield(context: CoroutineContext, block: Runnable): Unit =
+        try {
+            coroutineScheduler.dispatch(block, tailDispatch = true)
+        } catch (e: RejectedExecutionException) {
+            DefaultExecutor.dispatchYield(context, block)
+        }
+
+    public fun limited(parallelism: Int): CoroutineDispatcher {
+        require(parallelism > 0) { "Expected positive parallelism level, but have $parallelism" }
+        require(parallelism <= corePoolSize) { "Expected parallelism level lesser than core pool size ($corePoolSize), but have $parallelism" }
+        return LimitingDispatcher(this, parallelism, null, TASK_NON_BLOCKING)
+    }
+
+    internal fun dispatchWithContext(block: Runnable, context: TaskContext, tailDispatch: Boolean) {
+        try {
+            coroutineScheduler.dispatch(block, context, tailDispatch)
+        } catch (e: RejectedExecutionException) {
+            DefaultExecutor.enqueue(coroutineScheduler.createTask(block, context))
+        }
+    }
+
+    private fun createScheduler() = CoroutineScheduler(corePoolSize, maxPoolSize, idleWorkerKeepAliveNs, schedulerName)
+}
+```
+
+> ExecutorCoroutineDispatcher
+
+```kotlin
+public abstract class ExecutorCoroutineDispatcher: CoroutineDispatcher(), Closeable {
+    /** @suppress */
+    @ExperimentalStdlibApi
+    public companion object Key : AbstractCoroutineContextKey<CoroutineDispatcher, ExecutorCoroutineDispatcher>(
+        CoroutineDispatcher,
+        { it as? ExecutorCoroutineDispatcher })
+    public abstract val executor: Executor
+    public abstract override fun close()
+}
+
+```
+
+> CoroutineDispatcher
+
+```kotlin
+public abstract class CoroutineDispatcher :
+    AbstractCoroutineContextElement(ContinuationInterceptor), ContinuationInterceptor {
+    /** @suppress */
+    @ExperimentalStdlibApi
+    public companion object Key : AbstractCoroutineContextKey<ContinuationInterceptor, CoroutineDispatcher>(
+        ContinuationInterceptor,
+        { it as? CoroutineDispatcher })
+
+    public abstract fun dispatch(context: CoroutineContext, block: Runnable)
+
+    @InternalCoroutinesApi
+    public open fun dispatchYield(context: CoroutineContext, block: Runnable): Unit = dispatch(context, block)
+
+}
+
+
+```
+
+
+
+
+
+
 
 ## 参考资料
 
