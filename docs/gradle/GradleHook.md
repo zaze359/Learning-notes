@@ -1,6 +1,6 @@
 ## Gradle Hook
 
-![img](GradleHook.assets/428ff3d7635e4dc8b16fbdca8e60e9d6~tplv-k3u1fbpfcp-zoom-in-crop-mark:3024:0:0:0.awebp)
+![img](./GradleHook.assets/428ff3d7635e4dc8b16fbdca8e60e9d6_tplv-k3u1fbpfcp-zoom-in-crop-mark_3024_0_0_0.awebp)
 
 | Hook点            | 说明                                                         |
 | ----------------- | ------------------------------------------------------------ |
