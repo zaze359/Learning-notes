@@ -32,13 +32,13 @@ sudo yum-config-manager \
 ### 2、启动服务
 
 ```shell
-#启动docker服务
+# 启动docker服务
 sudo service docker start
 
 # 重启
 sudo systemctl restart docker
 
-# 开启启动
+# 开机启动
 sudo systemctl enable docker
 ```
 
@@ -51,11 +51,11 @@ sudo systemctl enable docker
 ```shell
 # 查看用户组
 cat /etc/group | grep docker
-# 创建docker用户组
-sudo groupadd docker
+# 不存在则 创建 docker 用户组
+# sudo groupadd docker
+
 # 添加到用户组
-sudo usermod -aG docker ${USER}
-#
+# sudo usermod -aG docker ${USER}
 sudo usermod -aG docker z
 ```
 
@@ -79,15 +79,20 @@ sudo chmod a+rw /var/run/docker.sock
 docker version
 ```
 
-### 5. 镜像配置
+## Docker镜像地址配置
 
-`/etc/docker/daemon.json`
+* 打开`/etc/docker/daemon.json`。
+
+  ```shell
+  sudo vi /etc/docker/daemon.json
+  ```
+
+* 配置完后重启docker服务。
 
 ```shell
 {
-"registry-mirrors": ["https://docker.mirrors.ustc.edu.cn/","https://hub-mirror.c.163.com","https://registry.docker-cn.com"],
-"insecure-registries": ["10.0.0.12:5000"]
+"registry-mirrors": ["https://docker.mirrors.ustc.edu.cn/","https://hub-mirror.c.163.com","https://registry.docker-cn.com"]
 }
+# ,"insecure-registries": ["10.0.0.12:5000"]
 ```
 
-配置完后重启docker服务

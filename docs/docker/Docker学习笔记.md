@@ -19,17 +19,17 @@ docker pull xxx
 
 ## 容器操作命令清单
 
-| 操作命令       | 作用                       |                                           |
-| -------------- | -------------------------- | ----------------------------------------- |
-| docker ps      | 查询容器                   |                                           |
-| docker run     | 从镜像启动容器             |                                           |
-| docker exec    | 在**容器内**执行另一个程序 |                                           |
-| docker stop    | 强制停止关闭容器           |                                           |
-| docker start   | 启动已停止的容器           |                                           |
-| docker restart | 重启容器                   |                                           |
-| docker rm      | 彻底删除容器               | 删除所有容器：docker rm `docker ps -a -q` |
-| docker attach  | 附着容器                   |                                           |
-| docker logs    | 容器日志相关               |                                           |
+| 操作命令       | 作用                       |                                             |
+| -------------- | -------------------------- | ------------------------------------------- |
+| docker ps      | 查询容器                   |                                             |
+| docker run     | 从镜像启动容器             |                                             |
+| docker exec    | 在**容器内**执行另一个程序 |                                             |
+| docker stop    | 强制停止关闭容器           |                                             |
+| docker start   | 启动已停止的容器           |                                             |
+| docker restart | 重启容器                   |                                             |
+| docker rm      | 彻底删除容器               | 删除所有容器：docker rm \`docker ps -a -q\` |
+| docker attach  | 附着容器                   |                                             |
+| docker logs    | 容器日志相关               |                                             |
 
 ### docker ps（查询容器）
 
@@ -49,6 +49,7 @@ docker ps -n x
 | -it      | 开启一个交互式操作的 Shell |      |
 | -d       | 后台运行                   |      |
 | --name   | 为容器起名                 |      |
+| -p       | 指定端口映射               |      |
 
 ```shell
 docker run --name zaze_ubuntu -i -t ubuntu /bin/bash
@@ -203,14 +204,14 @@ docker run -d -p 8080:80 --rm nginx:alpine
 
 ### 镜像操作命令清单
 
-| 操作命令        | 作用               |      |
-| --------------- | ------------------ | ---- |
-| docker pull xxx | 拉取镜像           |      |
-| docker images   | 列出本地已有镜像   |      |
-| docker rmi      | 删除镜像           |      |
-| docker build    | 创建镜像           |      |
-| docker history  | 回放镜像的构建过程 |      |
-| docker search   | 查找镜像           |      |
+| 操作命令        | 作用               |                                 |
+| --------------- | ------------------ | ------------------------------- |
+| docker pull xxx | 拉取镜像           |                                 |
+| docker images   | 列出本地已有镜像   |                                 |
+| docker rmi      | 删除镜像           | docker rmi \`docker images -q\` |
+| docker build    | 创建镜像           |                                 |
+| docker history  | 回放镜像的构建过程 |                                 |
+| docker search   | 查找镜像           |                                 |
 
 ### 镜像创建
 

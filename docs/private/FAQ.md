@@ -361,6 +361,30 @@ set-ExecutionPolicy RemoteSigned
 A
 ```
 
+
+
+## 处理端口占用
+
+1. 查询端口占用的进程
+
+   ```shell
+   # 查询占用80端口的进程：LISTENING
+   netstat -anp |grep 80
+   # windows
+   netstat -anp |findstr :80
+   ```
+
+2. 结束进程
+
+   ```shell
+   kill -9 pid
+   # 任务管理器中关闭
+   ```
+
+   
+
+
+
 ## homebrew报错：Error: Another active Homebrew update process is already in progress
 
 处理方式:
@@ -446,6 +470,8 @@ Failed to attach the network LUN (VERR_INTNET_FLT_IF_NOT_FOUND).
 
 ### 清理站点数据
 
+> 可以在网络中选择 **Disable cache 禁用缓存**。
+
 - 进入**开发者工具**(F12)
 - 选择**应用程序**
 - 点击**存储**
@@ -469,3 +495,12 @@ edge://net-internals/#dns
 
 
 
+## 浏览器如何友好的查看JSON
+
+启用 JSON 查看器，以edge为例。
+
+1. 地址栏输入：`edge://flags`。
+2. 搜索 JSON Viewer。
+3. 启动后重启浏览器。
+
+![image-20230216150214257](./FAQ.assets/image-20230216150214257.png)

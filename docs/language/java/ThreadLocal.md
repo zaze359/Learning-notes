@@ -2,19 +2,21 @@
 
 # ThreadLocal
 
-## 相关类UML图
+## 概述
+
+线程局部变量(ThreadLocal)，它是**为了方便每个线程处理自己的状态而引入的一个机制**。
+
+* 每一个Thread对象中都有一个成员变量``ThreadLocalMap``。
+  * **key**：就是ThreadLocal实例，且为一个弱引用。
+  * **value**：是 `ThreadLocal<?>`  范型类型的某个值，是强引用关系。
+
+* ThreadLocal对象实际是**起到了一个索引的作用**。
+
+## UML
 
 ![ThreadLocal](ThreadLocal.assets/ThreadLocal.png)
 
-## 概述
-
->  线程局部变量(ThreadLocal)
->
-> 它实际时为了``方便每个线程处理自己的状态``而引入的一个机制。
->
-> 每一个Thread对象中都有一个成员变量``ThreadLocalMap``，map的``key``就是``ThreadLocal实例``, 且为一个弱引用，``value``则是 `ThreadLocal<?>`  范型类型的某个值，是强引用关系。
->
-> 所以ThreadLocal对象实际是起到了一个``索引的作用``。
+## 源码
 
 ```java
 public class ThreadLocal<T> {

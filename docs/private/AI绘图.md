@@ -37,6 +37,8 @@ git clone git@github.com:AUTOMATIC1111/stable-diffusion-webui.git
 
 ### 下载`model.ckpt`
 
+模型决定的就是生成图片的画风，它是基础
+
 [Dependencies · AUTOMATIC1111/stable-diffusion-webui Wiki (github.com)](https://github.com/AUTOMATIC1111/stable-diffusion-webui/wiki/Dependencies)
 
 ```tex
@@ -47,7 +49,7 @@ magnet:?xt=urn:btih:3a4a612d75ed088ea542acac52f9f45987488d1c&dn=sd-v1-4.ckpt&tr=
 
 ### pip镜像设置
 
-> 遇到无法下载是可以使用镜像
+> 遇到无法下载是时修改使用国内镜像
 
 ```shell
 # 清华镜像
@@ -74,7 +76,6 @@ pip install -i http://pypi.douban.com/simple --trusted-host  pypi.douban.com -r 
 > 编辑webui-user 添加COMMANDLINE_ARGS`
 
 ```shell
-
 # major speed increase for select cards
 --xformers
 ```
@@ -101,19 +102,18 @@ TORCH_COMMAND='pip install torch torchvision --extra-index-url https://download.
 python launch.py --precision full --no-half
 ```
 
-临时使用镜像安装。
-
-
+---
 
 ## windows环境配置
 
 ```shell
 # 进入到项目中
 cd stable-diffusion-webui
-//
+#
 python3 -m venv venv
 # 激活环境
 .\venv\Scripts\Activate.ps1
+# 更新
 python -m pip install --upgrade pip wheel
 
 # 启动
@@ -126,6 +126,26 @@ pip3 install gfpgan clip
 ```
 
 
+
+## 模型
+
+常见的模型文件格式：
+
+* pytorch 格式：`.ckpt`、`.pt`、`pth`。存在一定安全风险。
+* safetensors 格式：`.safetensors`。
+
+模型一般可以分为两大类。
+
+* 大模型：是一种标准模型, 需要的训练量很大。自带了TextEncoder、U-Net、VAE等模型。
+* 小模型：在大模型的基础上进行调整来实现想要的效果，成本低。如Textual inversion、Hypernetwork、LoRA等
+
+| 模型                | 目录                                              | 大小  |
+| ------------------- | ------------------------------------------------- | ----- |
+| CheckPoint 基础模型 | `\stable-diffusion-webui\models\Stable-diffusion` | GB    |
+| embedding           | `\stable-diffusion-webui\embeddings`              | KB    |
+| Hypernetwork        | `\stable-diffusion-webui\models\hypernetworks`    | MB~GB |
+| LoRA                | `\stable-diffusion-webui\models\lora`             | MB    |
+| VUE                 | `\stable-diffusion-webui\models\VUE`              | MB    |
 
 
 
@@ -193,9 +213,9 @@ pip3 install gfpgan clip
 
 > 生成的模型在项目目录下，例如： `D:\GitRepository\stable-diffusion-webui\embeddings\test.pt`。
 
-* Name：需要英文。同txt2img时我们输入的魔法词条。
-* Initialization text：特征值。
-* Number of vectors per token：所占的特征数。推荐3 ~ 15。
+* **Name**：需要英文。同txt2img时我们输入的魔法词条。
+* **Initialization text**：特征值。
+* **Number of vectors per token**：所占的特征数。推荐3 ~ 15。
 
 ![image-20221030143703357](./AI%E7%BB%98%E5%9B%BE.assets/image-20221030143703357.png)
 
@@ -234,11 +254,11 @@ commandline_args = os.environ.get('COMMANDLINE_ARGS', "")
 commandline_args = os.environ.get('COMMANDLINE_ARGS', "--skip-torch-cuda-test")
 ```
 
-### deepdanbooru安装问题
+### deepdanbooru等依赖安装问题
 
 我安装deepdanbooru 时碰到 `Installing deepdanboor` 一直卡住的问题，最后保存 timeout 或者 git openssl问题。
 
-> git openssl：主要是内部使用了 https clone项目。
+> git openssl：主要是由于内部使用了 https clone项目。
 
 我在`stable-diffusion-webui`项目下的`repositories`目录中 `clone deepdanbooru`。
 
@@ -250,7 +270,7 @@ git clone git@github.com:KichangKim/DeepDanbooru.git deepdanbooru
 >
 > tensorflow timeout：是由于在国外下载太慢了。可以通过设置镜像解决
 
-```
+```shell
 cd D:\GitRepository\stable-diffusion-webui\repositories\deepdanbooru
 pip install -i http://pypi.douban.com/simple --trusted-host  pypi.douban.com -r requirements.txt
 ```

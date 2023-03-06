@@ -1,27 +1,79 @@
 # Android面试题
 
-## SharedPreference如何支持进程
+## 基础问题
+
+### SharedPreference
+
+* 如何支持进程?
+* 
+
+## 框架相关
+
+### 1. MVC、MVP、MVVM、MVI
+
+相关问题：
+
+* 谈谈对MVC、MVP、MVVM、MVI的理解？
+* 它们各自的优缺点是什么？
+* 它们内部的依赖关系是怎么样的？
+* 各个层在 Android 开发中的对应关系？
+
+参考资料：
+
+[Android客户端框架](../android/Android客户端框架.md)
 
 
+
+---
+
+## JetPack
+
+### 1. ViewModel
+
+相关问题：
+
+- ViewModel 的作用是什么？
+- ViewModel 是如何保持数据的呢？
+- ViewModel 是怎么做到在 Activity 销毁重建新实例之后还能保持不变的呢？
+
+参考资料：
+
+* [ViewModel](../android/ViewModel.md)
+
+* [Android界面状态保存和恢复](../android/Android界面状态保存和恢复.md)
 
 ## 网络流量统计怎么做？
 
 
 
-## 屏幕刷新相关
+## 图形架构
+
+
+
+
+
+
+
+### View的绘制流程
+
+#### invalidate和requestLayout的区别
+
+
 
 ### Android中说的每16ms刷新屏幕是什么？
+
+[Android图形架构](../android/Android的图形架构.md)
 
 * 是指Android设备屏幕会以固定每16ms一次的频率从Buffer中获取帧数据进行画面更新。
 * 屏幕刷新的同时发送一个VSync信号，通知系统屏幕进行刷新，应用接收到后会开始绘制下一帧的数据。
 
 * 如何我们的App界面没有必要刷新（没有动画，没有用户操作），则不会收到VSync信号。所以CPU也不会计算下一帧数据，即不会执行view的onMeasure、onDraw、onLayout。不过屏幕显示的画面依然是在一帧帧刷新的，只是显示的画面是同一帧的而已。
 
-
-
-## View绘制相关
+---
 
 ### 谈谈垂直同步和三重缓冲
+
+[Android图形架构](../android/Android图形架构.md)
 
 三重缓冲和垂直同步是Android4.1的黄油计划中引入的，有效的改善了画面撕裂，同时不造成很大的画面延迟。
 
@@ -34,15 +86,7 @@
 
 那时CPU何时处理UI绘制的时间是不确定的。可能CPU/GPU仅需要5ms就能处理完的帧数据，却因为是在VSYNC周期末尾执行导致要到下一个周期才能处理完，产生掉帧。Android4.1之后引入VSYNC用于协调UI绘制，处理这种高帧率下依然出现掉帧的情况。不过如果仅仅引入VSYNC协调UI绘制，在低帧率的场景下依然存在严重的掉帧现象，即当CPU + GPU处理时间大于一帧时，需要多等一个周期屏幕才显示，且期间CPU/GPU空闲，为了优化这种低帧率下的场景。引入了三重缓冲，使得VSYNC到来时即使GPU仍在处理，CPU也不会去GPU不再争抢同一个Buffer，而是使用新增Buffer去处理数据。
 
-
-
-### View的绘制流程
-
-### invalidate和requestLayout的区别
-
-## Kotlin相关
-
-### 协程相关
+### 
 
 
 

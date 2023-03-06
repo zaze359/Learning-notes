@@ -66,7 +66,7 @@ date: 2020-08-12 09:38
 >
 > Android 12新增了 `singleInstancePerTask`变为5种，之前的版本只有前四种。
 
-**`standard` ：标准模式（默认为此模式）**
+**standard ：标准模式（默认为此模式）**
 
 在启动该 Activity 的任务中创建 Activity 的新实例。
 
@@ -74,7 +74,7 @@ date: 2020-08-12 09:38
 * Activity 可以多次实例化。
 * 每个task中都可以存在多个相同Activity的实例。
 
-**`singleTop`：栈顶复用**
+**singleTop：栈顶复用**
 
 若当前`task`的顶部已存在所需的Activity实例，将会复用这个实例并调用`onNewIntent()`方法。若所需的Activity实例不在堆栈顶部，则也会创建一个新的实例。即仅位于顶部时和`standard`存在差异。
 
@@ -82,7 +82,7 @@ date: 2020-08-12 09:38
 * Activity 可以多次实例化。
 * 每个task中都可以存在多个相同Activity的实例。
 
-**`singleTask`：栈内复用**
+**singleTask：栈内复用**
 
 系统默认会创建新的`task`（存在相同亲和性的任务时就不创建了），并将新建的Activity作为`task`的`root activity`，此Activity 实例有且仅有一个，若其他task中存在则复用存在实例，不存在则是新建一个实例。需要注意的是复用这个Activity时，原先堆栈中位于其上方的Activity都将出栈。
 
@@ -90,7 +90,7 @@ date: 2020-08-12 09:38
 * Activity 实例有且仅有一个，存在则复用。
 * 复用时，原先堆栈中位于其上方的Activity都将出栈。
 
-**`singleInstance`：单实例（且独占一个栈）**
+**singleInstance：单实例（且独占一个栈）**
 
 > 测试时发现 使用startActivityForResult()启动一个 singleInstance的Activity，并不会在一个单独的栈中。未找到原因不知道是否是bug。
 >
@@ -104,7 +104,7 @@ date: 2020-08-12 09:38
 * task中仅有该Activity。
 * 启动的任何 Activity 都会在其他的task中。
 
-**`singleInstancePerTask`**
+**singleInstancePerTask**
 
 > Android 12 新增，
 

@@ -2,7 +2,7 @@
 title: MySQL
 date: 2020-07-17 15:42
 ---
-# MySQL
+# MySQL学习笔记
 
 参考文档: [MySQL 教程 | 菜鸟教程 (runoob.com)](https://www.runoob.com/mysql/mysql-tutorial.html)
 
@@ -12,9 +12,9 @@ date: 2020-07-17 15:42
 
 [MySQL Installer for Windows](https://dev.mysql.com/downloads/installer/)
 
-Developer defalut
+`Developer defalut`
 
-execute
+`execute`
 
 
 
@@ -35,6 +35,9 @@ C:\Program Files\MySQL\MySQL Server 8.0\bin
 ## 常用命令
 
 ```shell
+# 数据库连接
+mysql -u root -p
+
 # 显示数据库
 show databases; 
 # 显示数据表 

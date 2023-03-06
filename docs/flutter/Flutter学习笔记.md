@@ -14,7 +14,7 @@
 
 ### 1.2 框架结构
 
-![Flutter框架结构](https://guphit.github.io/assets/img/1-1.82c25693.png)
+![Flutter框架结构](./Flutter%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.assets/1-1.82c25693.png)
 
 Framework层：
 
@@ -1149,25 +1149,6 @@ appBar: AppBar(
         toolbarHeight: 0,
       ),
 ```
-
-## 五、package和插件
-
-[Flutter Packages 的开发和提交 - Flutter 中文文档 - Flutter 中文开发者网站 - Flutter](https://flutter.cn/docs/development/packages-and-plugins/developing-packages#step-1-create-the-package-1)
-
-## 开发原生插件类型的 packages
-
-```shell
-# -org： 指定包名，用于android 和 ios
-# --platforms：指定平台
-# -a：指定android的开发语言; java kotlin
-# -i：指定ios的开发语言；objc swift 
-flutter create --org com.example --template=plugin --platforms=android,ios -a kotlin hello
-
-
-flutter create --org com.zaze --template=plugin --platforms=android,ios,web -a kotlin atoolbox
-```
-
-
 
 
 

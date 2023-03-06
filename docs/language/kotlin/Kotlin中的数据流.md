@@ -137,7 +137,7 @@ fun main() = runBlocking {
 
 > 官方推荐在页面中使用`repeatOnLifecycle(Lifecycle.State.xxx)`来更新界面。
 >
-> 因为使用 `launch` 或 `launchIn` 扩展函数从界面直接收集数据流。即使 View 不可见，这些函数也会处理事件。此行为可能会导致应用崩溃。 
+> 因为使用 `launch` 或 `launchIn` 扩展函数从界面直接收集数据流。即使 View 不可见，这些函数也会处理事件。可能会导致应用崩溃。 
 >
 > `launchWhenResumed()`等扩展函数在新的源码中已经备注会引起资源浪费的问题，后续将会废弃。
 

@@ -6,7 +6,7 @@ date: 2020-04-16 13:43
 
 # Android逆向工程
 ---
-## 1. 资源文档
+## 资源文档
 
 > [Google Source](https://android.googlesource.com/ )
 >
@@ -20,9 +20,9 @@ date: 2020-04-16 13:43
 
 
 
-## 2. [源码下载及编译](../aosp/AOSP下载及编译)
+##  [源码下载及编译](../aosp/AOSP下载及编译)
 
-## 3. 问题处理
+## 问题处理
 
 问题1
 
@@ -42,9 +42,9 @@ make: *** [run_soong_ui] Error 1
 Fix : export LC_ALL=C
 ```
 
-## 4. 模拟器
+## 模拟器
 
-模拟器连接
+### 模拟器连接
 
 ```shell
 # 查询进程号
@@ -59,16 +59,17 @@ adb -s <serial number> shell
 adb nodaemon server 查看adb
 ```
 
-可读写运行模拟器
+### 打开可读写模拟器
 
 ```shell
-显示模拟器列表
+# 显示模拟器列表
 emulator -list-avds
-打开队员模拟器
+# 打开对应模拟器
 emulator -avd Pixel_2_API_29 -writable-system
 ```
 
 ```shell
+# 以 production builds 生成的模拟器无法root
 adb root
 adb remount
 ```
@@ -76,20 +77,20 @@ adb remount
 发生错误
 
 ```shell
-PANIC: Missing emulator engine program for 'x86' CPU.
+# PANIC: Missing emulator engine program for 'x86' CPU.
 
-默认使用../Android/sdk/tools/下的emulator 脚本
-使用../Android/sdk/emulator/下的emulator 脚本
+# 默认使用../Android/sdk/tools/下的emulator 脚本
+# 使用../Android/sdk/emulator/下的emulator 脚本
 ```
 
 
 ----------
 
 
-## 6. 反编译Apk文件
+## 反编译Apk文件
 
 
-### 6.2. java文件编译和反编译
+### 1. java文件编译和反编译
 ```java
 public class Hello {
 	public int foo(int a, int b) {
@@ -159,7 +160,7 @@ public class Hello {
 }
 ```
 
-### 6.3. dex文件生成和反汇编
+### 2. dex文件生成和反汇编
 
 .class生产dex文件
 
@@ -185,7 +186,7 @@ java -jar baksmali.jar -x classes.odex -d framework
 java -jar ddx.jar -d ddxut Hello.dex
 ```
 
-### 6.4. 反编译apk命令
+### 3. 反编译apk命令
 
 加载框架
 
@@ -232,7 +233,7 @@ build:该命令用于编译修改好的文件，一般用法为:
 apktool b <dir>
 ```
 
-### 6.5. 签名
+### 4. 签名
 
 [APK手动签名参考文档](../publish/APK手动签名参考.md)
 
@@ -257,9 +258,9 @@ java -jar AXMLPrinter2.jar AndroidManifest.xml > AndroidManifest.txt
 
 ------------
 
-## 7. Android可执行文件
+## Android可执行文件
 
-### 7.1 Android 程序生成步骤
+### 1. Android 程序生成步骤
 
 ![image_1dr2t0g351rs61vloir31f4tl509.png-133.1kB][4]
 

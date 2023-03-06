@@ -6,25 +6,41 @@
 
 [常用操作记录](./docs/private/常用操作记录.md)
 
-[算法导论笔记](./docs/private/算法导论笔记.md)
-
 [正则表达式](./docs/base/正则表达式.md)
-
-[Android知识点摘录](./docs/android/Android知识点摘录.md)
 
 [MMD-3D学习小抄本](https://www.yuque.com/koujiakoubengyuewei/mmd)
 
 [Material Design：里面有在各种语言下的M3 API导航](https://m3.material.io/)
 
+[VS Code 开发配置记录](./docs/env/VS-Code配置.md)
+
+
+
 ---
 
 # 环境配置
 
-[VS-Code配置](./docs/env/VS-Code配置.md)
+[Docsify 环境配置](./docs/env/Docsify环境配置.md)
+
+---
+
+[GCC配置](./docs/env/GCC配置.md)
+
+[Java环境配置](./docs/env/Java环境配置.md)
+
+---
+
+[Maven环境配置](./docs/build/maven/Maven环境配置.md)
+
+[Gradle本地环境配置](./docs/build/gradle/Gradle本地环境.md)
+
+---
 
 [Tomcat配置](./docs/env/Tomcat配置.md)
 
-[Docsify环境配置](./docs/env/Docsify环境配置.md)
+[Mysql配置](./doc/web/MySQL.md)
+
+---
 
 [Docker配置](./docs/docker/Docker配置.md)
 
@@ -40,7 +56,13 @@
 
 ---
 
-# 开发语言
+[HTTP协议](./docs/network/HTTP协议.md)
+
+[HTTP性能优化](./docs/network/HTTP性能优化.md)
+
+---
+
+# 语言学习
 
 ## Java
 
@@ -52,7 +74,11 @@
 
 [JVM内存模型](./docs/language/java/JVM内存模型.md)
 
-[线程局部变量(ThreadLocal)](./docs/language/ThreadLocal.md)
+[线程局部变量(ThreadLocal)](./docs/language/java/ThreadLocal.md)
+
+> 源码分析
+
+[HashMap](./docs/source-code/HashMap.md)
 
 ---
 
@@ -114,7 +140,21 @@
 
 [Android界面状态的保存和恢复](./docs/android/Android界面状态保存和恢复.md)
 
-[Android的图像架构](./docs/android/view/Android的图像架构.md)
+[Android的图形架构](./docs/android/Android的图形架构.md)
+
+[Android之依赖注入-Hilt](./docs/android/Android之依赖注入.md)
+
+---
+
+## Jetpack
+
+[ViewModel](./docs/android/jetpack/ViewModel.md)
+
+[AndroidX](./docs/android/jetpack/AndroidX.md)
+
+[Compose项目配置](./docs/android/compose/Compose配置.md)
+
+[Compose基础](./docs/android/compose/Compose基础.md)
 
 ---
 
@@ -132,7 +172,7 @@
 
 > 三方库
 
-[弹幕库-bilibiliDanmaku集成](./docs/android/danmaku/bilibiliDanmaku集成)
+[弹幕库-bilibiliDanmaku集成](./docs/android/libs/bilibiliDanmaku集成)
 
 ---
 
@@ -160,14 +200,6 @@
 
 ---
 
-## Compose
-
-[Compose项目配置](./docs/android/compose/Compose配置.md)
-
-[Compose基础](./docs/android/compose/Compose基础.md)
-
----
-
 ## 调试工具
 
 > ADB相关
@@ -186,23 +218,23 @@
 
 [AOSP目录结构表](./docs/android/aosp/AOSP目录结构表.md)
 
-> Android消息机制分析
+> Android的启动流程
 
-[Android消息机制之Java篇](./docs/android/消息机制/Android消息机制之Java篇.md)
+[Android系统启动流程分析](./docs/android/system/Android系统启动流程.md)
 
-[Android消息机制之Native篇](./docs/android/消息机制/Android消息机制之Native篇.md)
+[Android应用启动流程分析](./docs/android/system/Android应用启动流程.md)
 
-[Binder篇](./docs/android/消息机制/Binder篇.md)
+> Android的消息机制
+
+[Android消息机制之Java篇](./docs/android/system/Android消息机制之Java篇.md)
+
+[Android消息机制之Native篇](./docs/android/system/Android消息机制之Native篇.md)
+
+[从AIDL开始分析Binder](./docs/android/system/从AIDL开始分析Binder.md)
+
+[Binder篇](./docs/android/system/Binder篇.md)
 
 > Android渲染流程
-
-
-
----
-
-## 系统分析
-
-[Android的图像架构](./docs/Android/view/Android的图像架构.md)
 
 ---
 
@@ -218,7 +250,31 @@
 
 ---
 
-# Gradle
+# Linux
+
+[Linux常用命令](./docs/linux/Linux常用命令)
+
+[Linux快捷键摘录](./docs/linux/Linux快捷键摘录.md)
+
+[ssh远程连接Linux](./docs/linux/ssh远程连接Linux.md)
+
+
+
+
+
+<!--[Docker](./docs/docker/Docker学习笔记.md)-->
+
+<!--[Kubernetes](./docs/kubernetes/Kubernetes学习笔记.md) -->
+
+---
+
+
+
+# 项目构建工具
+
+## Gradle
+
+[Gradle本地环境配置](./docs/build/gradle/Gradle本地环境.md)
 
 [Gradle学习笔记](./docs/gradle/Gradle学习笔记.md)
 
@@ -228,32 +284,36 @@
 
 [Gradle性能诊断](./docs/gradle/Gradle性能诊断.md)
 
----
+## Maven
 
-# Linux
+[Maven环境配置](./docs/build/maven/Maven环境配置.md)
 
-[Linux常用命令](./docs/linux/Linux常用命令)
-
-[Linux快捷键摘录](./docs/linux/Linux快捷键摘录.md)
-
-[ssh远程连接Linux](./docs/linux/使用ssh建立远程连接)
+[Maven私有仓库搭建](./docs/build/maven/Maven私有仓库搭建.md)
 
 ---
 
-# 其他
+# 版本控制工具
 
-## 版本控制工具
+## Git
 
 [Git常用命令](./docs/version-control/git常用命令.md)
 
 [Git 工作流](./docs/version-control/git工作流)
 
-[Maven仓库配置](./docs/version-control/Maven仓库配置)
 
----
 
-## 科学魔法
+# 其他
 
 [Shadowsocks](./docs/科学魔法/Shadowsocks)
 
 [Just My Socks + ClashX](./docs/科学魔法/JMS和Clash.md)
+
+## 面试
+
+[Java相关面试题](./docs/面试题/Java相关面试题.md)
+
+[Android相关面试题](./docs/面试题/Android面试题.md)
+
+[Flutter相关面试题](./docs/面试题/Flutter相关面试题.md)
+
+[数据结构与算法相关面试题](./docs/面试题/数据结构与算法相关面试题.md)

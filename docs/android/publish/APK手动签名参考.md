@@ -10,21 +10,23 @@
 >
 > alias:android
 
-```bash
+```shell
 keytool -genkey -v -keystore android.keystore -alias android -keyalg RSA -validity 20000 -keystore android_demo.keystore
 ```
+![image-20230211145911053](./APK%E6%89%8B%E5%8A%A8%E7%AD%BE%E5%90%8D%E5%8F%82%E8%80%83.assets/image-20230211145911053.png)
+
 ### 2. apk进行签名
 
 #### ~~2.1. jarsigner(v1签名)~~
 
-```
+```shell
 jarsigner -verbose -digestalg SHA1 -sigalg MD5withRSA -keystore android_zaze.keystore -storepass 123456 -signedjar your_signed.apk source.apk android
 ```
 
 #### 2.2. apksigner(✨推荐)
 以下以v1,v2方式对应用进行签名:
 
-```
+```shell
 apksigner sign -verbose --ks android_demo.keystore --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled false --ks-key-alias android --ks-pass pass:123456 --key-pass pass:123456 --out /Users/zhaozhen/Downloads/signed.apk source.apk
 ```
 
@@ -34,7 +36,7 @@ apksigner sign -verbose --ks android_demo.keystore --v1-signing-enabled true --v
 
 对apksigner进行了简单的封装, 执行签名操作。
 
-```bash
+```shell
 #!/bin/bash
 
 #signedApk=${4#*/}
@@ -64,7 +66,7 @@ echo "-------------------- sign $signedApkName end"
 
 需要执行签名的apk的配置文件, 内部调用了signer.sh。
 
-```bash
+```shell
 ##!/bin/bash
 
 mkdir /Users/zhaozhen/Downloads/signed/
@@ -82,7 +84,7 @@ open /Users/zhaozhen/Downloads/signed/
 
 #### 查看keystore文件
 
-```
+```shell
 keytool -list -v -keystore android_zaze.keystore
 ```
 
@@ -90,7 +92,7 @@ keytool -list -v -keystore android_zaze.keystore
 
 RSA文件可通过解压apk文件后在META-INF中获取
 
-```
+```shell
 keytool -printcert -file CERT.RSA
 ```
 
@@ -98,7 +100,7 @@ keytool -printcert -file CERT.RSA
 
 #### 查看apk签名信息
 
-```bash
+```shell
 /Users/zhaozhen/Library/Android/sdk/build-tools/29.0.2/apksigner verify -v xxx.apk
 # 签名信息
 apksigner verify --print-certs xxx.apk
@@ -111,18 +113,18 @@ apksigner verify --min-sdk-version
 
 #### other
 
-```
--f : 输出文件覆盖源文件
--v : 详细的输出log
--p : outfile.zip should use the same page alignment for all shared object files within infile.zip
--c : 检查当前APK是否已经执行过Align优化。另外上面的数字4是代表按照4字节（32位）边界对齐。
+```shell
+# -f : 输出文件覆盖源文件
+# -v : 详细的输出log
+# -p : outfile.zip should use the same page alignment for all shared object files within infile.zip
+# -c : 检查当前APK是否已经执行过Align优化。另外上面的数字4是代表按照4字节（32位）边界对齐。
 java -jar apksigner.jar sign    //执行签名操作
---ks ***                        //签名证书路径
---ks-key-alias ***              //生成jks/keystore时指定的alias
---ks-pass pass:***              //KeyStore密码
---key-pass pass:***             //签署者的密码，即生成jks时指定alias对应的密码
---out output.apk                //输出路径
-input.apk                       //被签名的apk
+# --ks ***                        //签名证书路径
+# --ks-key-alias ***              //生成jks/keystore时指定的alias
+# --ks-pass pass:***              //KeyStore密码
+# --key-pass pass:***             //签署者的密码，即生成jks时指定alias对应的密码
+# --out output.apk                //输出路径
+# input.apk                       //被签名的apk
 
 apksigner sign -verbose --ks android_zaze.keystore --ks-key-alias android --out app-release-signed.apk app-release_protected.apk 
 

@@ -2,7 +2,9 @@
 
 ## 为什么要保存界面状态？
 
-在Android使用过程中，如果我们常常会用到横竖屏的切换，而有些应用由于没有做好状态的保存和恢复的流程，在切换后我们之前的操作页面重新创建，我们之前输入的内容消失了，需要重新操作。还有就是我们常常将一个应用放到了后台，然后去打开使用其他应用，过会切回来时，发现之前的应用被杀死了需要重新打开，之前所有的操作都消失了。凡此种种情况在用户体验方面是极差的。
+在Android使用过程中，如果我们常常会遇到横竖屏的切换，而有些应用由于没有做好状态的保存和恢复的流程，在发生切换后页面被重新创建，导致我们之前输入的内容消失了，所有的操作都需要重新来一遍。
+
+还有就是我们常常将一个应用放到了后台，然后去打开使用其他应用，过会切回来时，发现之前的应用被杀死了需要重新打开，之前所有的操作都消失了。凡此种种情况在用户体验方面是极差的。
 
 ## 什么情况下界面状态会丢失？
 
@@ -63,15 +65,15 @@ Activity状态丢失的场景主要有以下两个：
 
 ### 使用`onSaveInstanceState()`保存简单数据
 
-> 保存简单轻量的数据时使用， 因为它是使用Bundle存储数据的，会产生序列化/反序列化的性能损耗。
->
-> 当用户显式关闭 Activity 时，或者在其他情况下调用 `finish()` 时，系统不会调用 `onSaveInstanceState()`。
->
+保存简单轻量的数据时使用， 因为它是使用Bundle存储数据的，会产生序列化/反序列化的性能损耗。
+
+当用户显式关闭 Activity 时，或者在其他情况下调用 `finish()` 时，系统不会调用 `onSaveInstanceState()`。
+
 > 何时被调用？
 >
 > If called, this method will occur after onStop() for applications targeting platforms starting with Build.VERSION_CODES.P.  For applications targeting earlier platform versions this method will occur before onStop() and there are no guarantees about whether it will occur before or after onPause().
 >
-> 在Android P(9.0)之后是在`onStop()`之后调用。Android 9.0 之前则是在`onStop()`之前，但不保证在`onPause()`之前还是之后。
+> **在Android P(9.0)之后是在`onStop()`之后调用。Android 9.0 之前则是在`onStop()`之前，但不保证在`onPause()`之前还是之后。**
 
 ```kotlin
 override fun onSaveInstanceState(outState: Bundle?) {

@@ -20,15 +20,15 @@
 
 
 
-| 回调                                  | 调用时机                                                     | Activity状态                                     | 生命周期感知型组件事件 | 说明                                                         |
-| ------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------ | ---------------------- | ------------------------------------------------------------ |
-| `onCreate(Bundle savedInstanceState)` | **Activity创建时触发**                                       | Created：**不可见**                              |                        | 可以在此方法中做一些初始化操作。如：调用`setContentView()`设置页面布局或`databinding`绑定视图、成员变量的初始化、`ViewModel`的关联等。紧接着调用`onStart()` |
-| `onStart()`                           | `onCreate()`调用后被调用。`onRestart()`后也会被调用          | Started：**可见**                                | ON_START               | 调用使 Activity 对用户可见，紧接着调用`onResume()`。<br />一般于`onStop()`对应。 |
-| `onRestart()`                         | 从`ON_STOP`状态恢复为`ON_START`过程中会先调用此方法然后紧接着调用`onStart`。 |                                                  |                        |                                                              |
-| `onResume`                            | `onStart()`调用后会调用；从Paused状态变为Resumed状态时也会调用 | Resumed：**可见可交互**                          | ON_RESUME              | Activity处于前台可见且获取到焦点。<br />一般和`onPause()`对应。 |
-| `onPause()`                           | 半透明 Activity或者外部弹窗打开时。多窗口切换。触发`onStop()`之前会先调用`onPause()` | **部分可见**。在多窗口时Activity还是全部可见的。 | ON_PAUSE               | Activity部分可见时调用，比如触发了外部弹窗。可以在此时暂停一些非必要的操作和释放一些资源。比如停止相机的预览。但是不能做耗时操作，会影响跳转页面的显示。 |
-| `onStop()`                            | Activity完全不可见时调用。例如跳转到新的界面，退到后台等。   | **完全不可见**                                   | ON_STOP                | Activity完全不可见时会调用。此时可以释放一些无用资源。例如暂停动画等。也可以此时持久化一些数据（但不太推荐这么做）。 |
-| `onDestory()`                         | 调用了`finish()`或者被进程被kill等原因导致Activity销毁时会调用 | **不可见且被销毁**                               | ON_DESTORY             | 会此时应当释放所有资源。                                     |
+| 回调                                  | 调用时机                                                     | Activity状态                                     | Lifecycle事件 | 说明                                                         |
+| ------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------ | ------------- | ------------------------------------------------------------ |
+| `onCreate(Bundle savedInstanceState)` | **Activity创建时触发**                                       | Created：**不可见**                              |               | 可以在此方法中做一些初始化操作。如：调用`setContentView()`设置页面布局或`databinding`绑定视图、成员变量的初始化、`ViewModel`的关联等。紧接着调用`onStart()` |
+| `onStart()`                           | `onCreate()`调用后被调用。`onRestart()`后也会被调用          | Started：**可见**                                | ON_START      | 调用使 Activity 对用户可见，紧接着调用`onResume()`。<br />一般于`onStop()`对应。 |
+| `onRestart()`                         | 从`ON_STOP`状态恢复为`ON_START`过程中会先调用此方法然后紧接着调用`onStart`。 |                                                  |               |                                                              |
+| `onResume`                            | `onStart()`调用后会调用；从Paused状态变为Resumed状态时也会调用 | Resumed：**可见可交互**                          | ON_RESUME     | Activity处于前台可见且获取到焦点。<br />一般和`onPause()`对应。 |
+| `onPause()`                           | 半透明 Activity或者外部弹窗打开时。多窗口切换。触发`onStop()`之前会先调用`onPause()` | **部分可见**。在多窗口时Activity还是全部可见的。 | ON_PAUSE      | Activity部分可见时调用，比如触发了外部弹窗。可以在此时暂停一些非必要的操作和释放一些资源。比如停止相机的预览。但是不能做耗时操作，会影响跳转页面的显示。 |
+| `onStop()`                            | Activity完全不可见时调用。例如跳转到新的界面，退到后台等。   | **完全不可见**                                   | ON_STOP       | Activity完全不可见时会调用。此时可以释放一些无用资源。例如暂停动画等。也可以此时持久化一些数据（但不太推荐这么做）。 |
+| `onDestory()`                         | 调用了`finish()`或者被进程被kill等原因导致Activity销毁时会调用 | **不可见且被销毁**                               | ON_DESTORY    | 会此时应当释放所有资源。                                     |
 
 ### Activity状态的变化场景分析
 
@@ -189,23 +189,35 @@ MainActivity onStop
 
 ### Lifecycle
 
+*   用于存储有关组件（如 activity 或 fragment）的生命周期状态的信息，并允许其他对象观察此状态。
+*   定义了Events和Steates来表示生命周期变化事件以及当前的生命周期状态。
 *   用于感知LifecycleOwner的生命周期
+*    `Fragment` 和 `SupportActivity` 中实现Lifecycle。Activity并没有实现。
 
-*   Fragment实现了这个接口
+![image-20230228131329406](./Android%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F.assets/image-20230228131329406.png)
 
-*   Activity并没有 是在他的子类 SupportActivity中实现
+使用方式
 
 ```java
-public interface IPresenter extends DefaultLifecycleObserver {
+// 继承 DefaultLifecycleObserver 来监控组件的生命周期状态
+class MyObserver : DefaultLifecycleObserver {
+    override fun onResume(owner: LifecycleOwner) {
+        connect()
+    }
+
+    override fun onPause(owner: LifecycleOwner) {
+        disconnect()
+    }
 }
 
 public class MainActivity extends AppCompatActivity {
-    IPresenter mPresenter;
+    MyObserver myObserver;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         // ....
-        mPresenter = new Presenter();
-        getLifecycle().addObserver(mPresenter);
+        myObserver = new MyObserver();
+        // 注册监听
+        getLifecycle().addObserver(myObserver);
     }
 }
 ```
@@ -262,7 +274,7 @@ public class MyLiveData extends LiveData<String> {
 
 
 
-### `ViewModelScope`
+### ViewModelScope
 
 >  `ViewModel` 和 `kotlin协程` 结合使用。协程生命周期和`ViewModel`绑定。
 >
@@ -278,7 +290,7 @@ class MyViewModel: ViewModel() {
 }
 ```
 
-### `LifecycleScope`
+### LifecycleScope
 
 > `Activity/Fragment`结合 `kotlin协程`使用。协程生命周期和`Activity/Fragment`绑定。
 >

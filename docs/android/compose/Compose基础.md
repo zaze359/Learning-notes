@@ -239,8 +239,8 @@ Compose 中的状态提升是一种将状态移至可组合项的调用方以使
 
 Jetpack Compose 中的常规状态提升模式是将状态变量替换为两个参数：
 
-- **`value: T`**：要显示的当前值
-- **`onValueChange: (T) -> Unit`**：请求更改值的事件，其中 `T` 是建议的新值。函数名可以根据具体场景调整。
+- `value: T`：要显示的当前值
+- `onValueChange: (T) -> Unit`：请求更改值的事件，其中 `T` 是建议的新值。函数名可以根据具体场景调整。
 
 以这种方式提升的状态具有一些重要的属性：
 
@@ -271,7 +271,7 @@ Jetpack Compose 中的常规状态提升模式是将状态变量替换为两个�
 > 建议使用 `CompositionLocal` 的情况为：
 >
 > * 可能**会被任何（而非少数几个）后代使用**。
-> * **`CompositionLocal` 应具有合适的默认值**。
+> * `CompositionLocal` 应**具有合适的默认值**。
 >
 > 其他场景应优先使用 显示参数传递给所需可组合项 或者 控制反转（父级通过逻辑处理组合项）的方式。
 
@@ -459,9 +459,14 @@ internal fun createCompositionCoroutineScope(
 
 #### DisposableEffect
 
-需要清理的效应。在需要进行绑定/解绑这类监听操作时使用。提供了 `onDispose` 来取消注册。
+提供了 `onDispose` 来供我们执行清理操作，触发时机如下：
+
+* key 发生变化。
+* 可组合项退出组合。
 
 ```kotlin
+
+// LocalLifecycleOwner.current 表示当前Composable的生命周期
 @Composable
 fun HomeScreen(
     lifecycleOwner: LifecycleOwner = LocalLifecycleOwner.current,
@@ -477,7 +482,7 @@ fun HomeScreen(
                 currentOnStop()
             }
         }
-				// 绑定
+        // 绑定
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { // 解绑
             lifecycleOwner.lifecycle.removeObserver(observer)
@@ -497,8 +502,6 @@ LiveData<T>.observeAsState()
 StateFlow<T>.collectAsState()
 
 ```
-
-
 
 
 
@@ -1152,7 +1155,7 @@ class SquashedOval : Shape {
 
 ## 参考资料
 
-[Jetpack Compose  | Android Developers](https://developer.android.com/courses/pathways/compose)
+[Jetpack Compose  | Android 开发者  | Android Developers (google.cn)](https://developer.android.google.cn/courses/pathways/compose?hl=zh-cn)
 
 [Jetpack Compose 界面应用开发工具包 - Android 开发者  | Android Developers (google.cn)](https://developer.android.google.cn/jetpack/compose)
 
@@ -1165,6 +1168,3 @@ class SquashedOval : Shape {
 [Compose 中的布局](https://developer.android.google.cn/jetpack/compose/layout)
 
 [Compose 文档: 列表](https://youtu.be/BhqPpUYJYeQ)
-
-[Compose pathway](https://developer.android.google.cn/courses/pathways/compose)
-
