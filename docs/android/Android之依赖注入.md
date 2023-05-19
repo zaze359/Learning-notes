@@ -124,12 +124,14 @@ class ExampleApplication : Application() { ... }
 
 在 `Application` 类中设置了 Hilt 且有了应用级组件后，Hilt 可以为带有 `@AndroidEntryPoint` 注解的其他 Android 类提供依赖项。
 
-`@AndroidEntryPoint` 会为项目中的每个 Android 类生成一个单独的 Hilt 组件。这些组件可以从它们各自的父类接收依赖项。
+`@AndroidEntryPoint` 会为项目中的每个 Android 类生成一个单独的 Hilt 组件。
 
 ```kotlin
 @AndroidEntryPoint
 class ExampleActivity : AppCompatActivity() { ... }
 ```
+
+
 
 ### 字段注入
 
@@ -398,6 +400,8 @@ class ExampleServiceImpl @Inject constructor(
 
 
 
+
+
 ## Hilt 和Jetpack集成
 
 [将 Hilt 和其他 Jetpack 库一起使用  | Android 开发者  | Android Developers (google.cn)](https://developer.android.google.cn/training/dependency-injection/hilt-jetpack?hl=zh-cn#kotlin)
@@ -416,6 +420,8 @@ dependencies {
   annotationProcessor 'androidx.hilt:hilt-compiler:1.0.0-alpha01'
 }
 ```
+
+此处使用构造函数注入的方式，声明如何创建 ExampleViewModel 实例。`@HiltViewModel`的作用时表明这个ViewModel需要使用 HiltViewModelFactory 来处理，而不是默认的。
 
 ```kotlin
 @HiltViewModel
@@ -446,15 +452,147 @@ dependencies {
 }
 ```
 
-使用 `hiltViewModel()` 构建 ViewModel
-
-> 此函数调用后 会生成 `HiltViewModelFactory` 处理 hilt 逻辑 ，并保存在 `ComponentActivity.mDefaultFactory` 中 ，
->
-> 从而在同一个 activity 中，即使后续调用的是 `viewModel()`， 能正常构建。
+使用 `hiltViewModel()` 构建 ViewModel。
 
 ```kotlin
 val homeViewModel: HomeViewModel = hiltViewModel()
 ```
 
+`hiltViewModel()`函数调用后 会创建一个 `HiltViewModelFactory` 实例来处理 hilt 相关的逻辑 。
 
+```kotlin
+@Composable
+inline fun <reified VM : ViewModel> hiltViewModel(
+    viewModelStoreOwner: ViewModelStoreOwner = checkNotNull(LocalViewModelStoreOwner.current) {
+        "No ViewModelStoreOwner was provided via LocalViewModelStoreOwner"
+    }
+): VM {
+    val factory = createHiltViewModelFactory(viewModelStoreOwner)
+    return viewModel(viewModelStoreOwner, factory = factory)
+}
+```
+
+## 原理分析
+
+```kotlin
+@AndroidEntryPoint
+class MainActivity : AbsActivity() {
+    // ...
+}
+```
+
+使用 `@AndroidEntryPoint` 时会 生成一个Hilt 组件，Gradle插件 会通过字节码转换**设为 MainActivity 的父类**。
+
+* 重写了 `getDefaultViewModelProviderFactory()`，将默认实现替换成了Hilt自己的。
+
+```java
+package com.zaze.demo.compose;
+// 会生成一个Hilt类作为 MainActivity的父类，扩展了一些hilt相关的功能
+public abstract class Hilt_ComposeActivity extends AbsActivity implements GeneratedComponentManagerHolder {
+  private volatile ActivityComponentManager componentManager;
+
+  private final Object componentManagerLock = new Object();
+
+  private boolean injected = false;
+
+  Hilt_ComposeActivity() {
+    super();
+    _initHiltInternal();
+  }
+
+  private void _initHiltInternal() {
+    addOnContextAvailableListener(new OnContextAvailableListener() {
+      @Override
+      public void onContextAvailable(Context context) {
+        inject();
+      }
+    });
+  }
+
+  // 创建一个组件 
+  @Override
+  public final Object generatedComponent() {
+    return this.componentManager().generatedComponent();
+  }
+
+  protected ActivityComponentManager createComponentManager() {
+    return new ActivityComponentManager(this);
+  }
+
+  @Override
+  public final ActivityComponentManager componentManager() {
+    if (componentManager == null) {
+      synchronized (componentManagerLock) {
+        if (componentManager == null) {
+          componentManager = createComponentManager();
+        }
+      }
+    }
+    return componentManager;
+  }
+
+  protected void inject() {
+    if (!injected) {
+      injected = true;
+      ((ComposeActivity_GeneratedInjector) this.generatedComponent()).injectComposeActivity(UnsafeCasts.<ComposeActivity>unsafeCast(this));
+    }
+  }
+
+  // 重写了 getDefaultViewModelProviderFactory()
+  @Override
+  public ViewModelProvider.Factory getDefaultViewModelProviderFactory() {
+    return DefaultViewModelFactories.getActivityFactory(this, super.getDefaultViewModelProviderFactory());
+  }
+}
+```
+
+在这里自定义ViewModel的创建，内部生成了 `HiltViewModelFactory`。
+
+HiltViewModelFactory最终会从 hilt组件中获取ViewModel。
+
+```java
+public final class DefaultViewModelFactories {  
+    // 从
+	public static ViewModelProvider.Factory getActivityFactory(ComponentActivity activity,
+      ViewModelProvider.Factory delegateFactory) {
+    return EntryPoints.get(activity, ActivityEntryPoint.class)
+        .getHiltInternalFactoryFactory()
+        .fromActivity(activity, delegateFactory);
+  }
+}
+```
+
+```java
+public HiltViewModelFactory {
+	public HiltViewModelFactory(@NonNull SavedStateRegistryOwner owner, @Nullable Bundle defaultArgs, @NonNull Set<String> hiltViewModelKeys, @NonNull ViewModelProvider.Factory delegateFactory, @NonNull final ViewModelComponentBuilder viewModelComponentBuilder) {
+        this.hiltViewModelKeys = hiltViewModelKeys;
+        this.delegateFactory = delegateFactory;
+        // 最终调用这里创建ViewModel
+        this.hiltViewModelFactory = new AbstractSavedStateViewModelFactory() {
+            @NonNull
+            protected <T extends ViewModel> T create(@NonNull String key, @NonNull Class<T> modelClass, @NonNull SavedStateHandle handle) {
+                // 会从 HiltViewModel 组件中获取ViewModel
+                ViewModelComponent component = viewModelComponentBuilder.savedStateHandle(handle).build();
+                Provider<? extends ViewModel> provider = (Provider)((ViewModelFactoriesEntryPoint)EntryPoints.get(component, ViewModelFactoriesEntryPoint.class)).getHiltViewModelMap().get(modelClass.getName());
+                if (provider == null) {
+                    throw new IllegalStateException("Expected the @HiltViewModel-annotated class '" + modelClass.getName() + "' to be available in the multi-binding of @HiltViewModelMap but none was found.");
+                } else {
+                    return (ViewModel)provider.get();
+                }
+            }
+        };
+    }
+    
+    public <T extends ViewModel> T create(@NonNull Class<T> modelClass, @NonNull CreationExtras extras) {
+        // hiltViewModelKeys 中保存了 使用 @HiltViewModel注释的ViewModel。
+        if (hiltViewModelKeys.contains(modelClass.getName())) {
+            // 处理 HiltViewModel
+            return hiltViewModelFactory.create(modelClass, extras);
+        } else {
+            // 按照正常的ViewModel逻辑处理，
+            return delegateFactory.create(modelClass, extras);
+        }
+	}
+}
+```
 

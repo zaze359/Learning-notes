@@ -121,7 +121,7 @@ Column(
 
 ### 1.3 功能组件
 
-#### 文本(Text)
+#### Text：文本
 
 ```dart
 const Text(
@@ -136,9 +136,13 @@ const Text(
 
 #### SingleChildScrollView
 
-> 类似Android的`ScrollView`，只有一个子组件。
->
-> 不支持基于Sliver的延迟加载模型，性能差。
+类似Android的 ScrollView ，只有一个子组件。
+
+* 不支持基于Sliver的延迟加载模型，性能差。适用于数量较少时使用。
+
+#### CustomScrollView
+
+
 
 #### ListView
 
@@ -158,7 +162,7 @@ const Text(
 
 
 
-#### Image（图片）
+#### Image：图片
 
 **Image**
 
@@ -183,6 +187,21 @@ FadeInImage.assetNetwork(
 ```
 
 **CachedNetworkImage(三方)**
+
+```dart
+ CachedNetworkImage(
+        imageUrl: url,
+        fit: BoxFit.cover,
+        placeholder: (context, url) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+        errorWidget: (context, url, error) => const Icon(Icons.error));
+  }
+```
+
+
+
+
 
 
 
@@ -229,7 +248,7 @@ Visibility(
 )
 ```
 
-#### Divider（分割线）
+#### Divider：分割线
 
 - Divider：水平分割线
 - VerticalDivider：垂直分割线
@@ -244,11 +263,11 @@ Visibility(
 
 #### IntrinsicHeight/IntrinsicWidth
 
-> 将子widget的高度/宽度调整为其本身实际高度/宽度
->
-> 当Row无固定高度，子组件将不会自动占满，Column同理。
->
-> 此时可以使用IntrinsicHeight 来时子组件占满。
+它们的作用是将子widget的高度/宽度调整为其本身实际高度/宽度
+
+当Row无固定高度，子组件将不会自动占满，Column同理。
+
+此时可以使用IntrinsicHeight 组件包裹，使得子组件占满。
 
 ```dart
 IntrinsicHeight(
@@ -260,16 +279,84 @@ IntrinsicHeight(
 
 #### AppBar
 
+|                           |                  |                                        |
+| ------------------------- | ---------------- | -------------------------------------- |
+| automaticallyImplyLeading | 是否自动提示导航 | 默认true, 设为false可去除默认的leading |
+| toolbarHeight             | 设置 toolbar高度 |                                        |
+
 #### SliverAppBar
 
-|                           |                                                              |                                        |
-| ------------------------- | ------------------------------------------------------------ | -------------------------------------- |
-| automaticallyImplyLeading | 是否自动提示导航                                             | 默认true, 设为false可去除默认的leading |
-| expandedHeight            | 展开时的高度                                                 |                                        |
-| collapsedHeight           | 收缩时的高度                                                 |                                        |
-| floating                  | 是否漂浮在上方                                               |                                        |
-| snap                      | true, 只要下滑就会展开显示，false只有滑倒边界时才会显示隐藏部分 | 和floating = true 时使用，不可单独使用 |
-| pinned                    | 是否固定在上方                                               | true 会将SliverAppBar固定在上方        |
+用于 Sliver中
+
+|                 |                                                              |                                        |
+| --------------- | ------------------------------------------------------------ | -------------------------------------- |
+| expandedHeight  | 展开时的高度                                                 |                                        |
+| collapsedHeight | 收缩时的高度                                                 |                                        |
+| floating        | 是否漂浮在上方                                               |                                        |
+| snap            | true, 只要下滑就会展开显示，false只有滑倒边界时才会显示隐藏部分 | 和floating = true 时使用，不可单独使用 |
+| pinned          | 是否固定在上方                                               | true 会将SliverAppBar固定在上方        |
+
+#### FittedBox
+
+| 属性 | 说明                               |
+| ---- | ---------------------------------- |
+| fit  | 指定适配方式。`BoxFit.contain`等。 |
+
+#### NestedScrollView
+
+> 处理滑动冲突：滑动冲突时默认子元素生效。
+
+
+
+#### Transform
+
+> `Transform`的变换是在绘制阶段，不是布局阶段， 所以子组件占用的空间大小和位置是固定不变的。
+
+* 平移
+
+  ```dart
+  Transform.translate(...);
+  ```
+
+* 旋转
+
+      Transform.rotate(...);
+
+* 缩放
+
+      Transform.scale(...);
+
+#### RotatedBox
+
+> `RotatedBox`的变换是在layout阶段, 会影响子组件的位置和大小。
+
+#### Clip
+
+| 组件      | 描述                     |
+| --------- | ------------------------ |
+| ClipOval  | 内切圆                   |
+| ClipRRect | 圆角矩形                 |
+| ClipRect  | 将组件布局之外的部分剪裁 |
+| ClipPath  | 按照Path进行自定义剪裁   |
+
+#### CustomClipper
+
+> 自定义裁剪范围
+
+```dart
+class MyClipper extends CustomClipper<Rect> {
+  @override
+  Rect getClip(Size size) {
+    // 裁剪左上角 1/4部分
+    return Rect.fromLTWH(0, 0, size.width / 2, size.height / 2);
+  }
+
+  @override
+  bool shouldReclip(covariant CustomClipper<Rect> oldClipper) {
+    return true;
+  }
+}
+```
 
 
 
@@ -295,7 +382,7 @@ Material 库中提供的UI结构框架。
 
 ***
 
-### 按钮
+### Button：按钮
 
 [Material Components widgets | Flutter 中文文档 | Flutter 中文开发者网站](https://flutter.cn/docs/development/ui/widgets/material#Buttons)
 
@@ -304,6 +391,20 @@ Material 库中提供的UI结构框架。
 > 指定icon
 
 ```dart
+// 直接创建
+ElevatedButton(
+  	onPressed: () => {},
+    style: TextButton.styleFrom(
+        minimumSize: const Size(80, 44),
+        backgroundColor: backgroundColor,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24.0),
+        ),
+    ),
+    child: Text(text, style: const TextStyle(fontSize: 16)),
+)
+
+// 使用 factory
 //  实际返回的是 _ElevatedButtonWithIcon
 ElevatedButton.icon(
   icon: const Icon(Icons.backup),
@@ -369,7 +470,7 @@ TextButton.icon(
 
 ***
 
-### 输入框（TextFiled）
+### TextFiled：输入框
 
 | 属性                 | 类型                   | 描述                                                         |
 | -------------------- | ---------------------- | ------------------------------------------------------------ |
@@ -442,7 +543,7 @@ var tf = TextField(
 
 
 
-### 表单(Form)
+### Form：表单
 
 [构建一个有验证判断的表单 - Flutter 中文文档 - Flutter 中文开发者网站 - Flutter](https://flutter.cn/docs/cookbook/forms/validation)
 
@@ -522,7 +623,7 @@ class MyCustomFormState extends State<MyCustomForm> {
 
 
 
-### 文本选择控件(SelectableText)
+### SelectableText：文本选择控件
 
 ```dart
 SelectableText.rich(
@@ -552,7 +653,7 @@ SelectableText.rich(
 
 ***
 
-### 下拉刷新(RefreshIndicator)
+### RefreshIndicator：下拉刷新
 
 ```dart
 Future<void> _refreshBookshelf() async {
@@ -567,7 +668,7 @@ RefreshIndicator(
 );
 ```
 
-### 进度条
+### Progress：进度条
 
 #### LinearProgressIndicator
 
@@ -583,7 +684,7 @@ RefreshIndicator(
 | backgroundColor | Color?              | 背景色                                  |
 | valueColor      | Animation\<Color?>? | 进度条颜色；可以指定颜色变化的动画效果。                 |
 
-### InkWell（水波纹效果）
+### InkWell：水波纹效果
 
 
 

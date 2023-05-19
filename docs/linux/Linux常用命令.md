@@ -7,6 +7,24 @@
 xdg-open .
 ```
 
+
+
+## 环境变量
+
+```shell
+# 输出环境变量
+printenv
+# 设置环境变量
+setenv
+
+# 查看 path
+export
+export $PATH
+
+```
+
+
+
 ## 用户/用户组管理
 
 * 查看用户
@@ -14,7 +32,7 @@ xdg-open .
   ```shell
   cat /etc/passwd
 
-* 创建用户：z
+* 创建用户：
 
   ```shell
   # 自动建立用户的登入目录
@@ -74,6 +92,8 @@ xdg-open .
 | mount    | 分区挂载             |      |
 | ls       | 列出文件列表         |      |
 | touch    | 创建文件             |      |
+
+
 
 ### touch（创建文件）
 

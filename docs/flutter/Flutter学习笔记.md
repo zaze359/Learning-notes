@@ -48,27 +48,7 @@ export FLUTTER_STORAGE_BASE_URL=https://storage.flutter-io.cn
 
 ### 2.1 Flutter安装与配置
 
-### 配置镜像站点
-
-> 提示信号灯超时时间已到相关问题时，通过使用国内镜像修复。
-
-[Using Flutter in China | Flutter](https://docs.flutter.dev/community/china)
-
-Mac 修改`~/.bash_profile `
-
-```properties
-export PUB_HOSTED_URL=https://pub.flutter-io.cn  
-export FLUTTER_STORAGE_BASE_URL=https://storage.flutter-io.cn
-```
-
-Windows 配置环境变量：
-
-```shell
-# 新建用户变量 PUB_HOSTED_URL
-https://pub.flutter-io.cn
-# 新建用户变量 FLUTTER_STORAGE_BASE_URL
-https://storage.flutter-io.cn
-```
+> 不需要安装 dart了，flutter sdk自带了 dart
 
 #### mac下使用brew安装
 
@@ -138,13 +118,36 @@ flutter doctor
    * 配置Dart SDK Path
 
    *   安装Flutter插件
+   
+   
+      *   安装Dart插件
+   
 
 
-   *   安装Dart插件
 
+#### 配置镜像站点
 
+> 提示信号灯超时时间已到相关问题时，通过使用国内镜像修复。
 
-### 2.3 创建项目
+[Using Flutter in China | Flutter](https://docs.flutter.dev/community/china)
+
+Mac 修改`~/.bash_profile `
+
+```properties
+export PUB_HOSTED_URL=https://pub.flutter-io.cn  
+export FLUTTER_STORAGE_BASE_URL=https://storage.flutter-io.cn
+```
+
+Windows 配置环境变量：
+
+```shell
+# 新建用户变量 PUB_HOSTED_URL
+https://pub.flutter-io.cn
+# 新建用户变量 FLUTTER_STORAGE_BASE_URL
+https://storage.flutter-io.cn
+```
+
+### 2.2 创建项目
 
 使用Android Studio自己创建flutter项目 。
 
@@ -154,7 +157,15 @@ flutter doctor
 git clone git@github.com:flutter/gallery.git
 ```
 
-### 
+### 2.3 编译环境
+
+#### windows项目
+
+如果需要运行windows客户都，需要下载 Visual Studio，社区版本即可。
+
+[免费的开发人员软件和服务 - Visual Studio (microsoft.com)](https://visualstudio.microsoft.com/zh-hans/free-developer-offers/)
+
+![image-20230506103443944](./Flutter%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.assets/image-20230506103443944.png)
 
 ### 2.4 问题记录
 
@@ -499,7 +510,7 @@ class MyApp extends StatelessWidget {
 }
 ```
 
-### 5. Flutter的布局模型
+## 五. Flutter的布局模型
 
 | 组件                            | 类型      | 描述                     |
 | ----------------------------- | ------- | ---------------------- |
@@ -507,9 +518,9 @@ class MyApp extends StatelessWidget {
 | SingleChildRenderObjectWidget | 单子组件基类  | 包含一个子widget。child参数    |
 | MultiChildRenderObjectWidget  | 多子组件基类  | 包含多个子Widget。children参数 |
 
-#### 5.1 布局模型
+### 5.1 布局模型
 
-##### RenderBox盒型布局。
+#### RenderBox盒型布局。
 
 *   组件对应的渲染对象继承自RenderBox类
 
@@ -575,7 +586,7 @@ class BoxTest extends StatelessWidget {
 
 ![image-20220530223842268](Flutter学习笔记.assets/image-20220530223842268.png)
 
-##### Sliver(RenderSliver)
+#### Sliver(RenderSliver)
 
 > 只有当Sliver出现在视图窗口中时才会构建，是一种按需加载的模型。
 
@@ -615,7 +626,7 @@ class BoxTest extends StatelessWidget {
 
 3.  Viewport读取geometry中信息对Sliver进行布局和绘制。
 
-#### 5.2 布局流程
+### 5.2 布局流程
 
 1.  上层组件向下层组件传递约束（constraints）条件。
 
@@ -623,7 +634,7 @@ class BoxTest extends StatelessWidget {
 
 3.  上层组件确定下层组件相对于自身的偏移和确定自身的大小（大多数情况下会根据子组件的大小来确定自身的大小）。
 
-#### 5.3 线性布局
+### 5.3 线性布局
 
 > 布局沿水平方向（Row）：
 >
@@ -637,7 +648,7 @@ class BoxTest extends StatelessWidget {
 >
 > *   纵轴：水平方向
 
-##### 主轴（MainAxisAlignment）
+#### 主轴（MainAxisAlignment）
 
 | 属性           | 说明                                |
 | ------------ | --------------------------------- |
@@ -648,15 +659,15 @@ class BoxTest extends StatelessWidget {
 | spaceAround  | 将空闲空间均匀的放在每个子控件的周围（例如：上下、左右）。     |
 | spaceEvenly  | 将空闲空间均匀分布在整个布局间。                  |
 
-##### 纵轴（CrossAxisAlignment）
+#### 纵轴（CrossAxisAlignment）
 
-#### 5.4 弹性布局
+### 5.4 弹性布局
 
 `Flex`组件指定采用弹性布局,`Expanded`可以按权重占用空间。
 
 *   Flex
 
-#### 5.5 流式布局
+### 5.5 流式布局
 
 > 超出屏幕部分会自动折叠，不会出现布局的溢出报错。
 
@@ -664,13 +675,13 @@ class BoxTest extends StatelessWidget {
 
 *   Flow
 
-#### 5.6 层叠布局
+### 5.6 层叠布局
 
 > 相当于Android的FrameLayout
 
 *   Stack
 
-#### 5.7 布局对齐
+### 5.7 布局对齐
 
 *   Align
 
@@ -706,77 +717,54 @@ class BoxTest extends StatelessWidget {
     )
     ```
 
-### 6. 布局适配
 
-#### FittedBox
 
-> 处理布局溢出等问题。
+## 6. 动画
 
-| 属性  | 说明                        |
-| --- | ------------------------- |
-| fit | 指定适配方式。`BoxFit.contain`等。 |
+### Animation
 
-#### NestedScrollView
+`Animation<T>` 可以通过继承它来实现不同的动画。它用于保存动画的插值和状态，我们可以添加不同的监听器来监听动画。
 
-> 处理滑动冲突：滑动冲突时默认子元素生效。
+* addListener()：帧监听器。每一帧都会回调。
+* addStatusListener()：状态监听器。状态发生变化时回调。例如 开始、结束等。
 
-### 7. 组件变换
 
-#### 7.1 变换
 
-##### Transform
+### CurvedAnimation
 
-> `Transform`的变换是在绘制阶段，不是布局阶段， 所以子组件占用的空间大小和位置是固定不变的。
-
-*   平移
-
-    ```dart
-    Transform.translate(...);
-    ```
-
-*   旋转
-
-        Transform.rotate(...);
-
-*   缩放
-
-        Transform.scale(...);
-
-##### RotatedBox
-
-> `RotatedBox`的变换是在layout阶段, 会影响子组件的位置和大小。
-
-#### 7.2 裁剪
-
-##### Clip
-
-| 组件        | 描述            |
-| --------- | ------------- |
-| ClipOval  | 内切圆           |
-| ClipRRect | 圆角矩形          |
-| ClipRect  | 将组件布局之外的部分剪裁  |
-| ClipPath  | 按照Path进行自定义剪裁 |
-
-##### CustomClipper
-
-> 自定义裁剪范围
+曲线动画，继承自 Animation，包括线性和非线性两种。
 
 ```dart
-class MyClipper extends CustomClipper<Rect> {
-  @override
-  Rect getClip(Size size) {
-    // 裁剪左上角 1/4部分
-    return Rect.fromLTWH(0, 0, size.width / 2, size.height / 2);
-  }
-
-  @override
-  bool shouldReclip(covariant CustomClipper<Rect> oldClipper) {
-    return true;
-  }
-}
+CurvedAnimation curve = CurvedAnimation(parent: controller, curve: Curves.linear);
 ```
 
-### 8. 事件交互
+| Curves曲线 | 动画过程                     |
+| ---------- | ---------------------------- |
+| linear     | 匀速的                       |
+| decelerate | 匀减速                       |
+| ease       | 开始加速，后面减速           |
+| easeIn     | 开始慢，后面快               |
+| easeOut    | 开始快，后面慢               |
+| easeInOut  | 开始慢，然后加速，最后再减速 |
+
+### AnimationController
+
+和ScrollerController等控制类相同，它用来控制动画。
+
+* Tween：指定动画执行期间，数值的变化范围。
+
+  ```dart
+  // 对于缩放 scale，表示从0 缩放到1.
+  Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(
+          parent: controller,
+          curve: Interval(0, 0.3, curve: Curves.fastOutSlowIn),
+      ))
+  ```
+
+  
+
+## 8. 事件交互
 
 - 原始的指针事件（Pointer Event），对应原生开发的Down、Up等事件。
 - 手势识别（Gesture Detector）。
@@ -793,7 +781,7 @@ class MyClipper extends CustomClipper<Rect> {
 >
 > 子组件比父组件先响应事件。
 
-#### 8.1 指针事件
+### 8.1 指针事件
 
 使用`IgnorePointer`和`AbsorbPointer`忽略阻止子树接收`PointerEvent`。
 
@@ -801,7 +789,7 @@ class MyClipper extends CustomClipper<Rect> {
 >
 > 指针事件不会发生冲突。每一个节点都能收到。
 
-#### 8.2 手势识别
+### 8.2 手势识别
 
 `GestureDetector` Widget手势监听:
 
@@ -816,7 +804,7 @@ class MyClipper extends CustomClipper<Rect> {
 | onLongPress | 长按回调 |
 | onPanUpdate | 拖动回调 |
 
-#### 8.3 手势冲突处理
+### 8.3 手势冲突处理
 
 > 利用Linstener处理。
 
@@ -831,7 +819,7 @@ class MyClipper extends CustomClipper<Rect> {
 
 
 
-#### 8.3 ScrollController
+### 8.3 ScrollController
 
 > 滑动监听
 
@@ -855,13 +843,13 @@ _controller.addListener(() {
 _controller.animateTo(0, duration: Duration(milliseconds: 200), curve: Curves.ease);
 ```
 
-### 9. 组件间数据传递
+## 9. 组件间数据传递
 
-#### 属性传值
+### 属性传值
 
 构建组建时直接传递参数即可， 层级比较深时，会很繁琐。
 
-#### InhertedWidget
+### InhertedWidget
 
 >  适用于Widget树中共享数据。
 >
@@ -893,7 +881,7 @@ class _BookContainer extends InheritedWidget {
 
 
 
-#### Notificaiton
+### Notificaiton
 
 > 适用于子Widget状态变更，向上通知的场景。
 >
@@ -901,7 +889,7 @@ class _BookContainer extends InheritedWidget {
 
 
 
-#### EventBus
+### EventBus
 
 > 事件总线: 发布/订阅模式共享数据。和其他平台的事件总线类似。
 >
@@ -965,7 +953,7 @@ bus.fire(Event.next);
 
 
 
-#### Provider
+### Provider
 
 > 基于 InhertedWidget实现的跨组件状态共享方案。所有只需要作为父Widget即可共享。
 >
@@ -1104,9 +1092,9 @@ class ChangeNotifierProvider<T extends ChangeNotifier?>
 
 
 
-### 10. 状态栏和导航栏
+## 10. 状态栏和导航栏
 
-#### 全局状态栏透明
+### 全局状态栏透明
 
 ```dart
 void main() {
@@ -1118,7 +1106,7 @@ void main() {
 }
 ```
 
-#### 全局沉浸式
+### 全局沉浸式
 ```dart
 void main() {
   runApp(const MyApp());
@@ -1127,7 +1115,7 @@ void main() {
 }
 ```
 
-#### 隐藏AppBar仅显示状态栏
+### 隐藏AppBar仅显示状态栏
 ```dart
 return Scaffold(
       appBar: AppBar(
@@ -1140,7 +1128,7 @@ return Scaffold(
     );
 ```
 
-#### 修改状态栏文字颜色
+### 修改状态栏文字颜色
 
 ```dart
 appBar: AppBar(
@@ -1149,6 +1137,199 @@ appBar: AppBar(
         toolbarHeight: 0,
       ),
 ```
+
+
+
+## 混合开发
+
+### Android和Flutter之间的页面跳转
+
+[将 Flutter 集成到现有应用 - Flutter 中文文档 - Flutter 中文开发者网站 - Flutter](https://flutter.cn/docs/development/add-to-app)
+
+Android 跳转到 Flutter 实际就是跳转到一个包含了 FlutterView的Activity。官方提供了多种嵌入FlutterView的方式：
+
+* 使用FlutterActivity。
+* 使用FlutterFragment。
+* 使用FlutterEngine 嵌入 FlutterView
+
+#### 使用FlutterActivity 跳转
+
+```kotlin
+class FlutterViewActivity : AppCompatActivity() {
+	myButton.setOnClickListener {
+      startActivity(
+        FlutterActivity
+          .withNewEngine()
+          // 改为对应的路由即可
+          .initialRoute("/my_route")
+          .build(this)
+      )
+    }
+}
+```
+
+#### Activity嵌入FlutterView
+
+```kotlin
+class FlutterViewActivity : AppCompatActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // 
+        val flutterView = Flutter.createView(this, lifecycle, "flutter_view" )
+        val flutterLayoutParams = FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
+        )
+        addContentView(flutterView, flutterLayoutParams)
+    }
+}
+```
+
+#### 使用FlutterEngine 
+
+```kotlin
+class MainActivity : AppCompatActivity() {
+
+    private lateinit var binding: ActivityMainBinding
+    private lateinit var flutterViewEngine: FlutterViewEngine
+    
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        // 创建 FlutterEngine
+        val engine = FlutterEngine(applicationContext)
+        engine.dartExecutor.executeDartEntrypoint(
+            DartExecutor.DartEntrypoint(
+            FlutterInjector.instance().flutterLoader().findAppBundlePath(),
+            "showCell"))
+		// 创建 FlutterViewEngine
+        flutterViewEngine = FlutterViewEngine(engine)
+		// 关联到当前 Activity
+        flutterViewEngine.attachToActivity(this)
+		//
+        val flutterView = FlutterView(context)	
+        //
+        binding.root.addView(flutterView);
+        //
+		flutterViewEngine.attachFlutterView(flutterView);
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        flutterViewEngine.detachActivity()
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        flutterViewEngine.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        flutterViewEngine.onActivityResult(requestCode, resultCode, data)
+        super.onActivityResult(requestCode, resultCode, data)
+    }
+
+    override fun onUserLeaveHint() {
+        flutterViewEngine.onUserLeaveHint()
+        super.onUserLeaveHint()
+    }
+}
+```
+
+
+
+#### Activity嵌入FlutterFragment
+
+和正常使用 Fragment的方式是一样，需要注意的是 需要将生命周期变化传递给 FlutterFragment。
+
+*  `/` 为初始路由。
+
+```kotlin
+class MyActivity : FragmentActivity() {
+  companion object {
+	// 随便取个名字
+    private const val TAG_FLUTTER_FRAGMENT = "flutter_fragment"
+  }
+
+  private var flutterFragment: FlutterFragment? = null
+
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    // 布局文件，包含ID R.id.fragment_container.
+    setContentView(R.layout.my_activity_layout)
+
+    val fragmentManager: FragmentManager = supportFragmentManager
+
+    flutterFragment = fragmentManager
+      .findFragmentByTag(TAG_FLUTTER_FRAGMENT) as FlutterFragment?
+
+    // 创建并添加 FlutterFragment。和正常使用Fragment一样。
+    if (flutterFragment == null) {
+      var newFlutterFragment = FlutterFragment.createDefault()
+      flutterFragment = newFlutterFragment
+      fragmentManager
+        .beginTransaction()
+        .add(
+          R.id.fragment_container,
+          newFlutterFragment,
+          TAG_FLUTTER_FRAGMENT
+        )
+        .commit()
+    }
+  }
+    
+    @Override
+    public void onPostResume() {
+        super.onPostResume();
+        flutterFragment.onPostResume();
+    }
+
+    @Override
+    protected void onNewIntent(@NonNull Intent intent) {
+        flutterFragment.onNewIntent(intent);
+    }
+
+    @Override
+    public void onBackPressed() {
+        flutterFragment.onBackPressed();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(
+        int requestCode,
+        @NonNull String[] permissions,
+        @NonNull int[] grantResults
+    ) {
+        flutterFragment.onRequestPermissionsResult(
+            requestCode,
+            permissions,
+            grantResults
+        );
+    }
+
+    @Override
+    public void onUserLeaveHint() {
+        flutterFragment.onUserLeaveHint();
+    }
+
+    @Override
+    public void onTrimMemory(int level) {
+        super.onTrimMemory(level);
+        flutterFragment.onTrimMemory(level);
+    }
+}
+
+```
+
+
+
+#### Flutter ->Android
 
 
 

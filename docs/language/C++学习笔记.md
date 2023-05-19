@@ -14,6 +14,9 @@ sudo apt-get install g++
 gcc a.cpp -o a
 # 若编译报错 undefined reference to `std::xxx`
 gcc a.cpp -lstdc++ -o a
+
+# 执行
+./a
 ```
 
 > G++编译命令
@@ -175,45 +178,70 @@ int main() {
 }
 ```
 
-## 指针
+## 指针： *
 
 > 应用尽量使用`智能指针`。
 
 ### 裸指针（naked pointer）
 
-也叫原始指针、指针，它来源于C语言。
+> void* 万能指针,可作为一种轻量化的模板编程，它可以指向任何类型的指针。
+>
+> 它的作用类似泛型擦除，会抹去实例的类型信息，所以使用时需要强制转换类型。。
 
-* 使用`*`定义一个指针，使用时也需要通过 `*` 来取值。
-* 指针是内存地址索引，它指向变量的地址。
+裸指针也叫原始指针、指针，它来源于C语言。
+
+* **指针是一个变量，它拥有自己的内存地址，地址内的值为另一个变量的地址**。
+
+* 使用`*`定义一个指针变量，它指向的是 变量的地址。赋值时需要使用 `&` 取址运算符来获取变量的地址。
+
+  ```cpp
+  int a = 1;
+  // 通过 & 获取a的内存地址。
+  int *p = = &a;
+  printf("a addr: %d\n", &a); // 6422028
+  printf("p: %d\n", p);		// 6422028，指针的值是a的地址
+  printf("p addr: %d\n", &p); // 6422016，指针有自己的地址，里面的值存的是 a的地址。
+  ```
+
+* 指针变量需要通过 `*` 来取值，所以 `*`也叫做**取值运算符**或**间接寻址运算符**。(像a变量，直接访问就能获取到值，就是**直接寻址**)
+
+  ```cpp
+  cout << *p << endl;
+  ```
 
 ```c++
 int a = 1;
-// 指针变量p指向a，值就是a的地址。
-int *p = &a;
-// 此处的*表示取值。输出 1
+// 通过 & 获取a的内存地址。
+int *p = = &a;
+printf("a addr: %d\n", &a); // 6422028
+printf("p: %d\n", p);		// 6422028，指针的值是a的地址
+printf("p addr: %d\n", &p); // 6422016，指针有自己的地址，里面的值存的是 a的地址。
+// 使用 * 来取值。输出 1
 cout << *p << endl;
 ```
 
 ### 智能指针（smart point）
 
-使用**RAII 惯用法（Resource Acquisition Is Initialization）**代理了裸指针。重载`*`、`->`，保证和原始指针使用方式相同。
+智能指针就是为了避免使用裸指针时可能产生的内存泄露问题，它能够自动管理指针，会在离开作用域时**通过析构释放内存**。
 
-它能够自动管理指针，离开作用域时析构释放内存。
+* 使用**RAII 惯用法（Resource Acquisition Is Initialization）**代理了裸指针。实质是对象而并不是指针。
+
+* 重载`*`、`->`运算符，保证和原始指针使用方式相同。
 
 **unique_ptr** 
-
-实质是对象不是指针。
 
 * 不允许共享（拷贝赋值）。
 
 ```c++
-// 需要初始化，未初始化时为空指针。
+// unique_ptr 需要初始化，未初始化时为空指针。
+// 直接创建智能指针，这里初始化为 10
 unique_ptr ptr1(new int(10));
-// 工厂函数创建智能指针
+// 使用工厂函数make_unique 创建智能指针
 auto ptr2 = make_unique<int>(10);
 assert(ptr2 && *ptr2 == 10);
 
-// 使用std::move()转为右值， 此处转移后变为空指针，因为unique_ptr重写了operator。转移权限后会将之前的指针释放
+// 使用std::move()转为右值，并转移控制权，转移后ptr1变为空指针
+// 主要是由于 unique_ptr中重写了operator=, 转移权限后会将之前的指针释放
 auto ptr3 = std::move(ptr1); 
 // ptr1变成了空指针
 assert(!ptr1 && ptr3); 
@@ -221,13 +249,13 @@ assert(!ptr1 && ptr3);
 
 **shared_ptr**
 
-> 不同于`unique_ptr`，它的所有权可以被共享（拷贝赋值），通过**引用计数**实现。
->
-> 引用计数的存储和管理存在一定的性能开销（较小）。
->
-> 无法确定真正的释放时机，释放时会阻塞整个进程或者线程，析构中不要有复杂、阻塞的操作。
+* 不同于`unique_ptr`，它的所有权可以被共享（拷贝赋值），通过**引用计数**实现。
 
-循环引用问题，配合`weak_ptr`使用。
+* 引用计数的存储和管理存在一定的性能开销（较小）。
+
+* 无法确定真正的释放时机，释放时会阻塞整个进程或者线程，析构中不要有复杂、阻塞的操作。
+
+> 循环引用问题，配合`weak_ptr`使用。
 
 ```C++
 auto n1 = make_shared(); // 工厂函数创建智能指针
@@ -244,12 +272,34 @@ if (!n1->next.expired()) { // 检查指针是否有效
 }
 ```
 
-## 引用
+## 引用： &
 
-**引用可以看作是变量的别名**。定义时使用`&`表示引用，且被引用的变量必须初始化。
+### 使用
 
-* 变量和引用 两者的地址相同，数据相同。
-* 传参时传引用可以避免拷贝，同时函数对形参进行修改后会影响实参。
+* 使用`&` 来定义一个引用变量，且被引用的变量必须初始化。
+
+  ```cpp
+  // a必须赋值
+  int a = 1;
+  // 定义引用r，相当于是a别名。
+  int &r = a; 
+  ```
+
+* **引用可以看作是变量的别名**，变量和对应的引用变量**具有相同的地址和数据**。
+
+* 使用引用类型作为形参可以避免拷贝，但是函数对形参的修改会影响实参。
+
+  ```cpp
+  // 可以避免拷贝
+  void modifyByReference(int &num)
+  {
+      num = 3; // 修改num相当于修改 r
+  }
+  //
+  modifyByReference(r);
+  ```
+
+> 完整的测试代码：
 
 ```C++
 #include <iostream>
@@ -257,86 +307,241 @@ if (!n1->next.expired()) { // 检查指针是否有效
 using namespace std;
 
 /**
+ * @brief
+ *
  * @param path 传递的是引用，函数对形参修改后会影响实参
  */
-void modifyByReference(const int &num)
+void modifyByReference(int &num)
 {
     num = 3;
 }
 
+void constReference(const int &num)
+{
+    // num = 3; // const 无法修改
+}
+
+void modifyByRightReference(int &&num)
+{
+    num = 10;
+}
+
 int main()
 {
-    // a是左值，1是右值
+    // ----------------------------------------
+    // a是左值，a必须赋值
+    // 1是右值。
     int a = 1;
-    // 定义引用r，相当于是a别名。
-    // r引用 a 所以r是左值引用
-    int &r = a; 
+    // 左值：b
+    // 右值：a + 1 临时生成的对象
+    int b = a + 1;
 
-    cout << &a << ", " << &r << endl;
-    cout << a << ", " << r << endl; // 输出2，2
-    modifyByReference(r);
-    cout << a << ", " << r << endl; // 输出3，3
+    cout << a << ", " << b << endl; // 输出1, 2
+    cout << "----------------------------------------" << endl;
+    cout << "----------------------------------------" << endl;
+
+    // 定义左值引用：lr，相当于是a别名。
+    int &lr = a;
+    cout << &a << ", " << &lr << endl; // 输出相同地址，例如：0x61fde0, 0x61fde0
+    cout << a << ", " << lr << endl;   // 输出1，1
+
+    // 无法直接赋值右值
+    // int &r = 1。// 编译报错
+    // const 修饰左值引用，支持直接赋值右值
+    const int &clr = 5;
+    cout << &clr << " -> " << clr << endl;
+
+    // 传递左值引用，内部修改会影响外部
+    modifyByReference(lr);
+    // modifyByReference(3); // 编译报错，无法传递右值
+    cout << a << ", " << lr << endl; // 输出3，3
+    // const int &num, const修饰可以传递右值但是无法修改。
+    constReference(3);
+    cout << "----------------------------------------" << endl;
+    cout << "----------------------------------------" << endl;
+
+    // 定义右值引用，能帮助我们能够快速的构建一个引用类型。
+    int &&rr = 9;
+    // int &&rr = a; // 编译报错，右值引用只能指向右值
+    cout << &rr << " -> " << rr << endl;
+
+    // 可以通过 std::move() 将左值转为右值引用，从而实现了右值引用指向左值
+    int &&rra = std::move(a);
+    // int &&rr2 = std::move(lr); // 和上面是等同的
+    cout << &rra << " -> " << rra << ", " << a << endl; // 0x61fde8 -> 3, 3
+    // 直接修改右值引用，a也被修改了
+    rra = 4;
+    cout << rra << ", " << a << endl; // 4, 4
+    // 将a转为右值引用，并作为参数传递
+    modifyByRightReference(std::move(a));
+    // a的值被改变了
+    cout << a << ", " << rra << endl; // 10, 10
+
+    // 可以将 rra 赋值给左值引用，所以 rra 本身是一个左值。
+    // 声明出来的右值引用是一个左值。
+    int &rrl = rra;
+    // int rrl = std::move(a); // 编译报错，作为返回值的右值引用是右值
+    cout << rrl << ", " << rra << endl; // 10, 10
+    cout << "----------------------------------------" << endl;
+    cout << "----------------------------------------" << endl;
+
+    std::string s = "aaaa";
+    // 这里会将原先 s 中的值直接转移到 rrs中
+    std::string rrs = std::move(s);
+    cout << s << ", " << rrs << endl; // , aaaa
+
+    s = "aaaa";
+    // 左值转左值引用
+    std::string &&rrs2 = std::move(s);
+    // 右值转右值引用
+    std::string &&rrs3 = std::move("ssss");
+    cout << s << ", " << rrs2 << ", " << rrs3 << endl; // aaaa, aaaa, ssss
+
+
+    s = "aaaa";
+    // 左值 s，右值 "aaa"
+    // 左值s转为 左值引用
+    std::string &slr = std::forward<std::string &>(s);
+    // 左值s转为了 右值引用
+    std::string &&srr = std::forward<std::string>(s);
+    // std::string &srr = std::forward<std::string>(s);// 编译报错
+    cout << slr << ", " << srr << endl; // aaaa, aaaa
+
+    // 这里需要注意，这里直接将 s中的值转给了 srr2，并且s被置为空
+    std::string srr2 = std::forward<std::string>(s);
+    cout << slr << ", " << srr2 << endl; // , aaaa
 }
 
 ```
 
-> 左值：存在地址（可以通过 & 获取地址）。一般来说是表达式中等号左边部分。
->
-> 右值：不存在地址（无法通过 & 获取地址）。一般来说是表达式中等号右边部分。
+### 左值和右值
+
+* 左值：存在地址（可以通过 `&` 获取地址）。一般来说是表达式中等号左边部分。**变量就是最常见的一种左值**。
+
+* 右值：不存在地址（无法通过 `&` 获取地址）。一般来说是表达式中`=`右边部分。常见的右值有：**常量** 和**表达式的临时变量(例如x + y)**。
+
+```cpp
+// a是左值，a必须赋值
+// 1是右值。
+int a = 1;
+// 左值：b
+// 右值：a + 1 临时生成的对象
+int b = a + 1;
+cout << a << ", " << b << endl; // 输出1, 2
+```
 
 ### 左值引用
 
-最常见的一种，上面的例子就是左值引用，通过`&` 来声明引用。
+通过`&` 来声明左值引用，上面的例子`int &r = a` 中 r 就是左值引用。即一般常见的引用都是左值引用。
 
-* 左值引用一般只能接收左值，不能接收右值。此时作为参数使用十分不方便，必须先定义一个变量，不能直接传值。
-* 使用 const 左值引用，此时即可以接收左值也可以接收右值，但是此时将不能修改值。所以一般作为参数使用时都会加上const。(const常量相当于不能修改的变量，它也是存在地址的)
+**左值引用一般只能接收左值，不能接收右值**。此时作为参数使用十分不方便，必须先定义一个变量，不能直接传值。
+
+* **使用 const 左值引用，此时即可以接收左值也可以接收右值，但是此时将不能修改值**。所以一般作为参数使用时都会加上const。(const常量相当于不能修改的变量，它也是存在地址的)。
 
 ```cpp
-// const 左值引用，能够直接赋值右值
-const int &clr = 5; 
+int a = 1;
+
+
+// 定义左值引用：lr，相当于是a别名。
+int &lr = a;
+cout << &a << ", " << &lr << endl; // 输出相同地址，例如：0x61fde0, 0x61fde0
+cout << a << ", " << lr << endl; // 输出1，1
+
+// 无法直接赋值右值
+// int &r = 1。// 编译报错
+
+// const 修饰左值引用，支持直接赋值右值
+const int &clr = 5;
 cout << &clr << " -> " << clr << endl;
+
+// 传递左值引用，内部修改会影响外部
+modifyByReference(lr);
+// modifyByReference(3); // 编译报错，无法传递右值
+cout << a << ", " << lr << endl; // 输出3，3
+
+// const int &num, const修饰可以传递右值但是无法修改。
+constReference(3);
+
+
 // A a = new A()
 // A() 是右值
 ```
 
 ### 右值引用
 
-使用 `&&` 来声明右值引用。右值引用作为参数时，结合 `std::move()` 可以将左值转为右值，使得函数能支持右值的方式接收参数同时还能够修改原先的左值。例如 上方智能指针的案例中，重新的operator 就接收的是右值引用。
+使用 `&&` 来声明右值引用。右值引用就是为了解决左值引用使用时存在的问题：
 
-* 右值引用只能指向右值。
-* 右值引用即可以是左值，也可以是右值。
+* 一般的左值引用不能接收右值，所以无法直接传值，必须要定义一个变量。
+* 使用 const 修饰左值引用参数时，虽然可以接收右值即直接传值，但是却无法修改了，也存在缺陷。
+
+右值引用作为参数时，即可以减少不必要的拷贝开销和内存开销，同时使得函数即支持右值方式接收参数，也支持修改原先的左值。
+
+例如 上方智能指针的案例中，重写的operator 就接收的是右值引用。
+
+* **右值引用只能指向右值**。
+* **右值引用本身即可以是左值，也可以是右值**。
   * 声明出来的右值引用是一个左值。
-  * `std::move()` 返回值的是 `int &&` 是一个右值，没有被明确声明不存在名字。
+  * 作为返回值的右值引用是右值：`std::move()` 返回值的 `int &&` 是一个右值，它没有被明确声明不存在名字。
 
 ```cpp
-void modifyByRightReference(int &&num)
-{
-    num = 10;
-}
+// 定义右值引用，能帮助我们能够快速的构建一个引用类型。
+int &&rr = 9;
+// int &&rr = a; // 编译报错，右值引用只能指向右值
+cout << &rr << " -> " << rr << endl;
 
-int main() 
-{
-    int a = 1
-    // 右值引用
-    int &&rr = 9;
-    // int &&rr = a; 编译报错
-    // 右值引用是一个左值，它能被取址。
-    cout << &rr << " -> " << rr << endl; // 地址 -> 9
+// 可以通过 std::move() 将左值转为右值引用，从而实现了右值引用指向左值
+int &&rra = std::move(a);
+// int &&rr2 = std::move(lr); // 和上面是等同的
+cout << &rra << " -> " << rra << ", " << a << endl; // 0x61fde8 -> 3, 3
+// 直接修改右值引用，a也被修改了
+rra = 4;
+cout << rra << ", " << a << endl; // 4,4
+// 将a转为右值引用，并作为参数传递
+modifyByRightReference(std::move(a));
+// a的值被改变了
+cout << a << ", " << rra << endl; // 10, 10 
 
-    // 可以通过 std::move() 将左值转为右值，从而实现了右值引用指向左值
-    int &&rr2 = std::move(a);
-    cout << &rr2 << " -> " << rr2 << endl; // 地址 -> 1
-    // 修改会改变a的值
-    rr2 = 4;
-    cout << a << endl; // 4
-    modifyByRightReference(std::move(a));
-    // 修改会改变a的值
-    cout << a << endl;// 10
-}
-
+// 可以将 rra 赋值给左值引用，所以 rra 本身是一个左值。
+// 声明出来的右值引用是一个左值。
+int &rrl = rra;
+// int rrl = std::move(a); // 编译报错，作为返回值的右值引用是右值
+cout << rrl << ", " << rra << endl; // 10, 10
 ```
 
+### std::move()和std::forward()
 
+* `std::move()`：它的作用是无条件的将**左值/右值转为右值引用**。
+* `std::forward<type>()`：它会根据传递的具体类型来进行转换，如果传递的是左值则转为左值引用，若传递的是右值则转为右值引用。（这里的类型指的是 type指定的类型）
+
+> 这里的例子中，使用 std::move() 或者 std::forward() 赋值给 std::string 后，原先的对象会被置为空，并不是由于 move和forward引起的，而是 std::string 重写了 `operator=(basic_string&& __str)` 导致的。这样做可以减少不必要的拷贝开销和内存开销。
+
+```cpp
+ std::string s = "aaaa";
+// 这里会将原先 s 中的值直接转移到 rrs中，并且s被置为空，可以减少不必要的拷贝开销和内存开销
+std::string rrs = std::move(s);
+cout << s << ", " << rrs << endl; // , aaaa
+
+s = "aaaa";
+// 左值转左值引用
+std::string &&rrs2 = std::move(s);
+// 右值转右值引用
+std::string &&rrs3 = std::move("ssss");
+cout << s << ", " << rrs2 << ", " << rrs3 << endl; // aaaa, aaaa, ssss
+
+
+s = "aaaa";
+// 左值 s，右值 "aaa"
+// 左值s转为 左值引用
+std::string &slr = std::forward<std::string &>(s);
+// 左值s转为了 右值引用
+std::string &&srr = std::forward<std::string>(s);
+// std::string &srr = std::forward<std::string>(s);// 编译报错
+cout << slr << ", " << srr << endl; // aaaa, aaaa
+
+// 这里需要注意，这里直接将 s中的值转给了 srr2，并且s被置为空
+std::string srr2 = std::forward<std::string>(s);
+cout << slr << ", " << srr2 << endl; // , aaaa
+```
 
 
 
@@ -465,19 +670,70 @@ int main() {
 * 转移构造函数
 * 转移赋值函数
 
+### 类定义
+
 > `= delete` 表示明确地禁用某个函数形式。
 
 ```C++
-
-class DemoClass final 
+class A final 
 {
 public:
-    DemoClass() = default;  // 明确告诉编译器，使用默认实现
-   ~DemoClass() = default;  // 明确告诉编译器，使用默认实现
-    DemoClass(const DemoClass&) = delete; // 禁止拷贝构造 
-    DemoClass& operator=(const DemoClass&) = delete; // 禁止拷贝赋值
+    A() = default;  // 明确告诉编译器，使用默认实现
+   ~A() = default;  // 明确告诉编译器，使用默认实现
+    A(const A&) = delete; // 禁止拷贝构造 
+    A& operator=(const A&) = delete; // 禁止拷贝赋值
+    
+    // 定义成员变量 num
+    int num = 0;
 };
 ```
+
+### 创建类对象
+
+```c++
+int main()
+{
+    // 显示调用构造函数。由于在函数内部之间创建，所以内存是栈上分配。
+    A a = A();
+    // 隐式调用了 默认构造函数。 和上面的显示调用相同。
+    A aa;
+
+    // 使用 new 创建的是指针，内存分配在堆上。
+    A* aaa = new A();
+
+    return 0;
+}
+```
+
+### 类成员访问
+
+对类的成员变量和函数的访问分两种情况：
+
+* 普通类实例：使用 `.` 访问。
+
+  ```cpp
+  int main() {
+      A a;
+      a.num;
+  }
+  ```
+  
+* 类指针类型：使用 `->`访问。
+
+  ```cpp
+  int main() {
+      A a;
+      A *p = &a;
+      // 访问
+      p->num;
+  }
+  ```
+
+
+### 内嵌类(nested class)
+
+C++的内嵌类和Java内部类类似，不过C++需要有一
+个显式的成员指向外部类对象，而Java则是有一个隐式的成员指向外部对象。
 
 
 
@@ -517,6 +773,123 @@ public:
 
 * unordered_set/unordered_multiset： 集合
 * unordered_map/unordered_multimap：关联数组
+
+
+
+## 泛型
+
+### 模板
+
+C++的模板是泛型编程的一种实现，可以使用 `template` 关键定义模板，实现一套不依赖具体类型的通用代码。
+
+* 函数模板
+
+  ```cpp
+  template <typename T>
+  inline T const& Max (T const& a, T const& b) 
+  { 
+      return a < b ? b:a; 
+  } 
+  ```
+
+* 类模板：`template<typename INTERFACE>` 和`template <class T>`一般是通用的，仅当 T 是一个类且存在子类时应使用 `typename`。
+
+  ```cpp
+  template <class T>
+  class Stack { 
+    private: 
+      vector<T> elems; 
+   
+    public: 
+      void push(T const&);  // 入栈
+      void pop();               // 出栈
+      bool empty() const{       // 如果为空则返回真。
+          return elems.empty(); 
+      } 
+  }; 
+  
+  //
+  template<typename INTERFACE>
+  class BnInterface : public INTERFACE, public BBinder
+  {
+  public:
+      virtual sp<IInterface>      queryLocalInterface(const String16& _descriptor);
+      virtual const String16&     getInterfaceDescriptor() const;
+      typedef INTERFACE BaseInterface;
+  
+  protected:
+      virtual IBinder*            onAsBinder();
+  };
+  
+  ```
+
+  
+
+### 虚函数
+
+虚函数就是 添加了 `virtual` 修饰词的类成员函数。虚函数的作用主要是实现了多态的机制，是一种泛型技术，在用父类指针调用函数时，实际调用的是指针指向的实际类型（子类）的成员函数。
+
+它和普通函数的区别主要有以下几点：
+
+* 使用类的指针调用成员函数时：普通函数由指针类型决定，**而虚函数由指针指向的实际类型决定**。
+
+> 纯虚函数：成员函数的形参后面写上=0，它没有函数体，必须在派生类中定义。等同Java中的抽象函数。
+>
+> **包含一个或多个纯虚函数的类叫做纯虚类，也叫做抽象类**，它只能作为基类，不能实例化。
+
+```cpp
+class ITest
+{
+public:
+// 虚函数
+virtual void test() 
+{
+    cout << "test is called" << endl;
+}
+// 纯虚函数
+virtual void getTest()=0;
+}
+```
+
+
+
+
+
+## Atomic：原子操作
+
+> C++ 11 增加的一些列原子操作相关的类，这里摘录几个。
+
+
+
+* store()：原子写操作。成功返回true。
+* load()：原子读操作。成功返回true
+* exchange()：交换两个值。成功返回true。
+* compare_exchange_weak(expected, desired)：CAS，若当前值满足预期就更新为给定值。即 `if(this == expected)` 则 `this = desired`。weak版比strong版本性能更高，不过Weak版本有时会出现符合条件也返回false的情况。
+* compare_exchange_strong(expected, desired)：基本和weak版一样，不过strong更加严谨。
+
+
+
+
+
+
+
+## 关键字摘录
+
+| 关键字   |                                                              |                                                  |
+| -------- | ------------------------------------------------------------ | ------------------------------------------------ |
+| explicit | 指定构造函数或转换函数为显式, 即**不能用于隐式调用或隐式类型转换**. | **隐式调用**：使用赋值操作符`=` 会调用构造函数。 |
+|          |                                                              |                                                  |
+|          |                                                              |                                                  |
+
+## 符号摘录
+
+| 符号 |                                                      |                                                  |
+| ---- | ---------------------------------------------------- | ------------------------------------------------ |
+| `::` | 域作用符，可以是命名空间、类、结构体等，调用其成员。 | `std::string`，表示std命名空间下的string类。     |
+| `:`  | 在构造函数后表示初始化成员变量。                     | `A::A():a(1)`。构造A的同时赋值成员变量 `a = 1`。 |
+| `.`  | 类或结构体的成员运算符                               | `obj.a = 1 `                                     |
+| `->` | 指针指向成员的运算符                                 | `p->a = 1`                                       |
+| `*`  | **取值运算符**或**间接寻址运算符**。                 |                                                  |
 
 
 

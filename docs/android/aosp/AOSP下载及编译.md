@@ -143,11 +143,44 @@ make -j4
 sudo apt install libncurses5
 ```
 
+一些常用编译命令记录
+
+```shell
+
+source build/envsetup.sh
+# Launcher3应用所在的目录
+cd packages/apps/Launcher3
+# 编译当前目录中的所有模块，不编译依赖模块
+mm
+# 编译当前目录中的所有模块及其依赖项
+mma 
+# 编译 提供的目录中的所有模块及其依赖项
+mmma
+```
+
+
+
+
+
+
+
+## 编译系统
+
+|              |                                                            |      |
+| ------------ | ---------------------------------------------------------- | ---- |
+| `android.bp` | 基于 bp 的语法规则编写的脚本，它定义和描述了一个模块的构建 |      |
+| Blueprint    | 解析 android.bp 文件。                                     |      |
+| Soong        | Blueprint解析后通过 Soong编译成 Ninja                      |      |
+| Ninja        |                                                            |      |
+| -            |                                                            |      |
+| android.mk   |                                                            |      |
+|              |                                                            |      |
+
 
 
 ---
 
-## 3. 记录下载和编译遇到的一些问题
+## 记录下载和编译遇到的一些问题
 
 > 遇事不决先重置一下
 >

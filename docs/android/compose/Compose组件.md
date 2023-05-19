@@ -6,8 +6,6 @@
 
 > material、material2、material3 中的API 会存在一些差异
 
-
-
 ## AppBar
 
 > TopAppBar
@@ -95,9 +93,43 @@ Scaffold(
 
 ## Box（容器）
 
+一个基础的容器，是对Layout的封装。 
+
+提供了`BoxScope` 作用域允许我们进行对组件进行排版。
+
+```kotlin
+@Composable
+inline fun Box(
+    modifier: Modifier = Modifier,
+    contentAlignment: Alignment = Alignment.TopStart,
+    propagateMinConstraints: Boolean = false,
+    content: @Composable BoxScope.() -> Unit // BoxScope 提供了一些拓展功能，align
+) {
+    val measurePolicy = rememberBoxMeasurePolicy(contentAlignment, propagateMinConstraints)
+    Layout(
+        content = { BoxScopeInstance.content() },
+        measurePolicy = measurePolicy,
+        modifier = modifier
+    )
+}
+
+@LayoutScopeMarker
+@Immutable
+interface BoxScope {
+    @Stable
+    fun Modifier.align(alignment: Alignment): Modifier
+    @Stable
+    fun Modifier.matchParentSize(): Modifier
+}
+```
+
+
+
 ## Surface
 
 是对 `Box` 的封装，方便裁剪、设置边框和背景等设置。
+
+> Notes：Surface中并没有像Box那样提供一个Scope，所以Surface并没有提供排版的功能，需要单独在嵌套一层Box来排版。
 
 ```kotlin
 fun Surface(
@@ -136,7 +168,19 @@ fun Surface(
 }
 ```
 
+## Divider（分割线）
 
+```kotlin
+Divider(
+    modifier = Modifier.padding(horizontal = 14.dp), // 设置元素如何放置。padding
+    thickness = 20.dp, // 厚度
+    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f) // 颜色
+)
+```
+
+
+
+---
 
 ## Text（文本）
 
@@ -145,7 +189,7 @@ fun Surface(
 ```kotlin
 fun Text(
     text: String,	// 文本
-    modifier: Modifier = Modifier,		// 设置元素如何放置，padding
+    modifier: Modifier = Modifier,		// 设置布局属性
     color: Color = Color.Unspecified,	// 颜色
     fontSize: TextUnit = TextUnit.Unspecified,	// 字体大小
     fontStyle: FontStyle? = null,								// 斜体、加粗等
@@ -366,7 +410,7 @@ fun AnnotatedClickableText() {
 @Composable
 fun SimpleFilledTextFieldSample() {
     var text by remember { mutableStateOf("Hello") }
-
+    
     TextField(
         value = text,
         onValueChange = { text = it },
@@ -455,16 +499,34 @@ Image(
 )
 ```
 
-### 加载网络图片
-
-* [Coil](https://github.com/coil-kt/coil#jetpack-compose)：由 Kotlin 协程 (Instacart) 提供支持的图片加载库。
-* [Glide](https://bumptech.github.io/glide/int/compose.html)：高效快速的 Android 图片加载库，侧重于提供流畅的滚动体验（适用于 Google）
-
-> ImageBitmap 和 ImageVector
+> painter之外的其他两种参数：ImageBitmap 和 ImageVector
 
 ```kotlin
 val imageBitmap = ImageBitmap.imageResource(R.drawable.dog)
 val imageVector = ImageVector.vectorResource(id = R.drawable.baseline_shopping_cart_24)
+```
+
+### 加载网络图片
+
+可以使用 `rememberAsyncImagePainter()` 加载网络图片
+
+```kotlin
+Image(
+    painter = rememberAsyncImagePainter(
+        model = ImageRequest.Builder(LocalContext.current)
+        .data(url)
+        .size(1920, 1080)
+        .crossfade(true)
+        .build(),
+        onState = { // 加载状态回调
+            ZLog.d(ZTag.TAG, "onState: $it")
+        }
+    ),
+    contentScale = ContentScale.Fit,
+    modifier = Modifier.size(160.dp),
+    contentDescription = ""
+)
+
 ```
 
 ### 图片缩放：ContentScale
@@ -625,7 +687,27 @@ Box(
 ) { /** intentionally empty **/ }
 ```
 
+## Coil图片加载库
 
+[Coil](https://github.com/coil-kt/coil#jetpack-compose)：由 Kotlin 协程 (Instacart) 提供支持的图片加载库。内部也是通过 `rememberAsyncImagePainter()` 来实现
+
+```kotlin
+implementation("io.coil-kt:coil:2.2.2")
+implementation("io.coil-kt:coil-compose:2.2.2")
+implementation("io.coil-kt:coil-svg:2.2.2")
+```
+
+### AsyncImage
+
+### SubcomposeAsyncImage
+
+### Glide图片加载库
+
+[Glide](https://bumptech.github.io/glide/int/compose.html)：高效快速的 Android 图片加载库，侧重于提供流畅的滚动体验（适用于 Google）
+
+
+
+---
 
 ## Icon（图标）
 
@@ -856,6 +938,8 @@ LaunchedEffect(errorMessageText, retryMessageText, snackbarHostState) {
 
 ## Column（列）和Row（行）
 
+所有列表项无论是否可见都会进行组合和布局，所以存在大量列表项时应该使用LazyColumn 和 LazyRow。
+
 * Column：每个子级都将垂直放置的垂直列表
 * Row：每个子级都将水平放置的水平列表
 
@@ -900,9 +984,34 @@ inline fun Column(
     }
 ```
 
-> LazyColumn 和 LazyRow
->
-> 延迟加载的列表，相当于 RecyclerView。但是`LazyColumn` 不会像 `RecyclerView` 一样回收其子元素，而是在滚动时重新组合。
+### 滚动
+
+默认是没有滚动的。
+
+* verticalScroll：垂直滚动
+* horizontalScroll：水平滚动
+
+```kotlin
+@Composable
+fun ScrollBoxes() {
+    Column(
+        modifier = Modifier
+            .background(Color.LightGray)
+            .size(100.dp)
+            .verticalScroll(rememberScrollState()) // rememberScrollState() 获取或更改滚动状态
+    ) {
+        repeat(10) {
+            Text("Item $it", modifier = Modifier.padding(2.dp))
+        }
+    }
+}
+```
+
+
+
+## LazyColumn 和 LazyRow
+
+延迟加载的列表，默认存在滚动效果，相当于 RecyclerView，只会对在组件视口中可见的列表项进行组合和布局。但是`LazyColumn` 不会像 `RecyclerView` 一样回收其子元素，而是在滚动时重新组合。
 
 ```kotlin
 LazyColumn {
@@ -1054,6 +1163,15 @@ fun PhotoGrid(photos: List<Photo>) {
 }
 ```
 
+## StaggeredGrid：瀑布流
+
+* LazyVerticalStaggeredGrid：垂直瀑布流
+* LazyHorizontalStaggeredGrid：水平瀑布流
+
+
+
+
+
 ## Paging（分页）
 
 引入 Paging 库 ``androidx.paging:paging-compose``
@@ -1096,6 +1214,11 @@ Compose 能够高效的处理较深的布局层次结构，一般情况下不需
 - **提高代码的可读性**：为了避免在屏幕上定位元素时嵌套多个 `Column` 和 `Row`。
 - **依赖其他项定位**：相对于其它可组合项来定位可组合项，或根据引导线、屏障线或链来定位可组合项。
 
+使用方式：
+
+* 为可组合项创建引用：`createRefs()` 或 `createRefFor()` 。
+* 提供约束条件：`constrainAs(ref){}`。lambda 中指定具体的约束条件。
+
 ```kotlin
 @Composable
 fun ConstraintLayoutContent() {
@@ -1122,9 +1245,6 @@ fun ConstraintLayoutContent() {
     }
 }
 ```
-
-* 为可组合项创建引用：`createRefs()` 或 `createRefFor()` 。
-* 提供约束条件：`constrainAs(ref){}`。lambda 中指定具体的约束条件。
 
 > 使用 `ConstraintSet` 将约束传递。通过 `layoutId()` 分配引用。可以将约束和布局解偶，方便后续更换约束。
 
@@ -1508,4 +1628,64 @@ fun MyScreen(onNavigate: (Int) -> ()) {
 ```
 
 
+
+## **Accompanist** 
+
+[Accompanist (google.github.io)](https://google.github.io/accompanist/)
+
+[google/accompanist: A collection of extension libraries for Jetpack Compose (github.com)](https://github.com/google/accompanist)
+
+```kotlin
+implementation("com.google.accompanist:accompanist-flowlayout:0.28.0")
+implementation("com.google.accompanist:accompanist-pager:0.28.0")
+implementation("com.google.accompanist:accompanist-permissions:0.28.0")
+implementation("com.google.accompanist:accompanist-swiperefresh:0.28.0")
+implementation("com.google.accompanist:accompanist-systemuicontroller:0.28.0")
+```
+
+
+
+### 权限配置
+
+```kotlin
+implementation("com.google.accompanist:accompanist-permissions:0.28.0")
+```
+
+提供了 PermissionState 来获取权限状态
+
+> 需要注意的是，一开始获取到的shouldShowRationale 是false, 需要调用一下`permissionState.launchPermissionRequest()`，才能获取到真正的状态。
+
+```kotlin
+@OptIn(ExperimentalPermissionsApi::class)
+@Composable
+fun PermissionRequired() {
+    // flag 记录是否已经请求过权限，保证shouldShowRationale能获取到值。
+    val flag = remember {
+        mutableStateOf(0)
+    }
+    val permissionState = rememberPermissionState(
+        permission = permission
+    ) {// 申请权限后回调
+        if (!it) {
+            flag.value++
+        }
+    }
+    when (permissionState.status) {
+        PermissionStatus.Granted -> {
+            // 获取到权限
+        }
+        is PermissionStatus.Denied -> {
+            if (flag.value > 0 && permissionState.status is PermissionStatus.Denied && !permissionState.status.shouldShowRationale) {
+                // 权限被永久拒绝
+
+            } else {
+                // 当前无权限 申请权限
+
+                permissionState.launchPermissionRequest()
+            }
+        }
+    }
+}
+
+```
 

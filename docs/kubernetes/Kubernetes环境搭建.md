@@ -96,7 +96,7 @@ curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-darwin
 sudo install minikube-darwin-arm64 /usr/local/bin/minikube
 ```
 
-### 常用命令
+### 查看状态
 
 ```shell
 minikube version
@@ -124,43 +124,11 @@ minikube start --image-mirror-country='cn'
 > [Drivers | minikube (k8s.io)](https://minikube.sigs.k8s.io/docs/drivers/)
 
 ```shell
-# 指定docker
+# 指定docker 作为驱动启动
 minikube start --driver=docker
 # root下使用
 minikube start --force --driver=docker
 minikube start --force --driver=docker --kubernetes-version=v1.23.3
-```
-
-### 常用命令
-
-```shell
-
-minikube version
-
-# 使用浏览器打开 minikube的Dashboard页面
-minikube dashboard
-
-# 查看集群状态
-minikube status
-# 启动
-minikube start
-# 指定版本
-minikube start --kubernetes-version=v1.23.3
-# 指定docker
-minikube start --force --driver=docker --kubernetes-version=v1.23.3
-# 使用国内镜像
-minikube start --kubernetes-version=v1.23.3 --image-mirror-country='cn'
-# 删除
-minikube delete pod busy-pod
-
-# 查看节点列表
-minikube node list
-# 查看插件列表
-minikube addons list
-
-# ssh 方式进入minikube
-minikube ssh
-ps -ef|grep kubelet
 ```
 
 ### Dashboard界面

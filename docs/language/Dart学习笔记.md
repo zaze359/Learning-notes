@@ -306,13 +306,16 @@ dart中的类可以通过``implements``被当作接口供子类实现，不过�
 
 #### mixin(混入)
 
-> 使用``with``可以将``mixin``类组合使用。
->
-> 相当于多继承的功能。
->
+使用``with``可以将``mixin``类组合使用，相当于多继承的功能。
+
 > 多继承的歧义问题：`相同方法名默认使用最后 一个`。
 
 ```dart
+// mixin 类
+mixin AutomaticKeepAliveClientMixin<T extends StatefulWidget> on State<T> {
+    
+}
+
 class _PageState extends State<Page> with AutomaticKeepAliveClientMixin {
 
   @override
@@ -348,7 +351,73 @@ class _PageState extends State<Page> with AutomaticKeepAliveClientMixin {
 
 
 
-### 2.7 单例模式
+### 访问可见性
+
+dart 没有 public，protected和private 这些访问修饰符，默认都是public。
+
+可以使用 `_` 开头表示私有，仅在当前作用域可见。
+
+```dart
+// _A 仅能在当前这个 .dart文件访问
+class _A {
+    
+}
+
+class B {
+    // _b仅能在 B中访问
+    void _b() {
+        
+    }
+}
+```
+
+###  get/set
+
+```cpp
+// book是成员变量，它的 get 方法 返回的是 _book
+// 表示返回类型是 Book
+Book get book => _book;
+
+// page是成员变量
+// page的set方法接收一个 int类型的参数，后面的函数体是set方法的实现。
+set page(int page) {
+    _params["{{page}}"] = page;
+}
+
+```
+
+
+
+### 扩展（extension）
+
+通过  `extension`  关键字来对类进行扩展
+
+> 可以省略扩展名，但是它仅能在声明的地方使用。
+
+```dart
+// SiteEntityExt 是扩展名
+// SiteEntity 是原始类型
+// asExternalModel() 是扩展方法
+extension SiteEntityExt on SiteEntity {
+  Site asExternalModel() {
+    return Site(
+        title: title,
+        url: url,
+        tags: tags,
+        from: from,
+        type: type,
+        updateTime: updateTime);
+  }
+}
+
+// use
+SiteEntity site = new SiteEntity();
+site.asExternalModel();
+```
+
+
+
+### 单例模式
 
 > Dart单例模式：static变量 + 工厂构造函数
 
@@ -367,7 +436,7 @@ class BookConfig {
 
 
 
-### 2.8 并发
+### 并发
 
 使用isolate
 

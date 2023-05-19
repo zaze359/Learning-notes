@@ -32,6 +32,16 @@ C:\Program Files\MySQL\MySQL Shell 8.0\bin
 C:\Program Files\MySQL\MySQL Server 8.0\bin
 ```
 
+
+
+Schema
+
+Schema 包括ables、Views、Stored Procedures、Functions四大块。
+
+创建一个Schema就是创建一个Database，基本等同于Database，可以认为是拥有特定规范的一种Database模式。
+
+
+
 ## 常用命令
 
 ```shell
@@ -82,7 +92,7 @@ revoke select,insert,update,delete om *.* from test2@localhost;
 mysql -u root -p
 ```
 
-![](image/MySQL/1647444035572.png)
+![](./MySQL.assets/1647444035572.png)
 
 ### 断开数据库
 
@@ -141,5 +151,36 @@ INSERT INTO showcase(id, create_time,img_url,info,tags,title,update_time,url) VA
 
 ```sqlite
 SELECT * FROM showcase WHERE info='info' and (tags, title) in (select tags,title FROM showcase);
+```
+
+
+
+## binlog
+
+| 模式      |                               | 优点                         | 缺点                                            |
+| --------- | ----------------------------- | ---------------------------- | ----------------------------------------------- |
+| statement | 记录每一天会修改数据的SQL语句 | 日志文件小。性能高           | 一致性较差，不支持部分系统函数的复制。now()等。 |
+| row       | 记录每行数据的变更            | 强一致性。                   | 日志文件很大，导致较大的网络IO和磁盘IO。        |
+| mixed     | statement和row的混合模式。    | 一致性强，日志文件大小适中。 | 可能导致主从不一致。                            |
+
+查看是否开启
+
+```shell
+show variables like 'log_%'; 
+
+# log_bin ON
+```
+
+查看binlog日志
+
+```shell
+# 显示日志列表
+show binary logs;
+# 默认查看第一个binlog文件的内容。
+show binlog events;
+# 指定文件
+show binlog events in 'xxx';
+# 查看当前正在写入的binlog
+show master status;
 ```
 

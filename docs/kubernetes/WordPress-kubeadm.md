@@ -7,6 +7,8 @@
 * Service作为集群内部的负载均衡，内部使用域名访问WorkPress 、MariaDB等服务。
 * Ingress Controller作为反向代理。
 
+执行配置：
+
 ```shell
 # nginx-ingress
 kubectl apply -f common/ns-and-sa.yaml
@@ -21,6 +23,155 @@ kubectl apply -f wp.yml
 
 kubectl apply -f wp-ink.yml -f wp-ing.yml -f wp-kic-dep.yml
 ```
+
+## 集群部署
+
+| 虚拟机/实机     |                                                    |      |
+| --------------- | -------------------------------------------------- | ---- |
+| kubeadm-console | console 节点，我们主要就是来操作这个节点控制集群。 |      |
+| kubeadm-master  | master 节点                                        |      |
+| worker          | worker 节点                                        |      |
+| nfs             | 网络存储                                           |      |
+
+## NFS
+
+首先需要选择一个机器搭建NFS：[NFS网络存储](../linux/NFS网络存储.md)
+
+然后在集群中使用 `NFS Provisioner` 来部署 NFS。
+
+* Worker节点需要安装对于网络存储的客户端。
+
+* 涉及到的挂载路径需要预先创建好，否则Pod无法正常启动。
+
+### NFS Provisioner 配置
+
+> class.yaml
+>
+> 定义了一个StorageClass。后面我定义PVC 会用到
+
+```yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: nfs-client
+provisioner: k8s-sigs.io/nfs-subdir-external-provisioner # or choose another name, must match deployment's env PROVISIONER_NAME'
+parameters:
+  archiveOnDelete: "false"
+  # onDelete: "retain"
+```
+
+> rbac.yaml
+
+修改一下namespace，保证和deployment中部署的provisioner 一致即可。
+
+> deployment.yaml
+>
+> 负责部署provisioner。需要修改namespace，并且将里面的SERVER和PATH改为我们nfs服务器的地址和里面共享目录。
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nfs-client-provisioner
+  labels:
+    app: nfs-client-provisioner
+  
+  namespace: kube-nfs # 修改namespace
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: nfs-client-provisioner
+  template:
+    metadata:
+      labels:
+        app: nfs-client-provisioner
+    spec:
+      serviceAccountName: nfs-client-provisioner
+      containers:
+        - name: nfs-client-provisioner
+          image: chronolaw/nfs-subdir-external-provisioner:v4.0.2
+          volumeMounts:
+            - name: nfs-client-root
+              mountPath: /persistentvolume
+          env:
+            - name: PROVISIONER_NAME
+              value: k8s-sigs.io/nfs-subdir-external-provisioner
+            - name: NFS_SERVER
+              value: 192.168.56.16 # 修改IP
+            - name: NFS_PATH
+              value: /tmp/nfs # 修改目录
+      volumes:
+        - name: nfs-client-root
+          nfs:
+            server: 192.168.56.16 # 修改IP
+            path: /tmp/nfs # 修改目录
+```
+
+```shell
+kubectl apply -f class.yaml -f rbac.yaml -f deployment.yaml
+```
+
+### NFS 使用
+
+Provisoner会帮我自动创建PV，所以不用定义PV，只需要定义 PVC 和 pod即可。
+
+> 定义PVC 
+>
+> nfs-dyn-10m-pvc.yaml
+
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nfs-dyn-10m-pvc
+
+spec:
+  storageClassName: nfs-client # class.yaml 中的 storageClass
+  accessModes:
+    - ReadWriteMany
+
+  resources:
+    requests:
+      storage: 10Mi
+```
+
+> 定义pod
+>
+> nfs-dyn-pod.yml
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nfs-dyn-pod
+
+spec:
+  volumes:
+  - name: nfs-dyn-10m-vol
+    persistentVolumeClaim:
+      claimName: nfs-dyn-10m-pvc
+
+  containers:
+    - name: nfs-dyn-test
+      image: nginx:alpine
+      ports:
+      - containerPort: 80
+
+      volumeMounts:
+        - name: nfs-dyn-10m-vol
+          mountPath: /tmp
+```
+
+---
+
+
+
+
+
+
 
 
 
@@ -389,6 +540,7 @@ kubectl create secret tls dash-tls -n kubernetes-dashboard --cert=k8s.test.crt -
 ```
 
 ```yaml
+# IngressClass 
 apiVersion: networking.k8s.io/v1
 kind: IngressClass
 
@@ -400,6 +552,7 @@ spec:
 
 ---
 
+# Ingress
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 
@@ -435,8 +588,8 @@ spec:
             name: kubernetes-dashboard
             port:
               number: 443
-
 ---
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -507,6 +660,8 @@ spec:
           - -default-server-tls-secret=$(POD_NAMESPACE)/default-server-secret
           
 ---
+
+# service
 apiVersion: v1
 kind: Service
 metadata:

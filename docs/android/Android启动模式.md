@@ -66,15 +66,19 @@ date: 2020-08-12 09:38
 >
 > Android 12新增了 `singleInstancePerTask`变为5种，之前的版本只有前四种。
 
-**standard ：标准模式（默认为此模式）**
+#### standard ：标准模式
 
-在启动该 Activity 的任务中创建 Activity 的新实例。
+> Android中默认就是此模式。
+
+每次启动都会在启动该 Activity 的Task中创建一个Activity 的新实例，并置于栈顶。
 
 * 栈内新建。
 * Activity 可以多次实例化。
 * 每个task中都可以存在多个相同Activity的实例。
 
-**singleTop：栈顶复用**
+![standard](./Android%E5%90%AF%E5%8A%A8%E6%A8%A1%E5%BC%8F.assets/standard.jpg)
+
+#### singleTop：栈顶复用
 
 若当前`task`的顶部已存在所需的Activity实例，将会复用这个实例并调用`onNewIntent()`方法。若所需的Activity实例不在堆栈顶部，则也会创建一个新的实例。即仅位于顶部时和`standard`存在差异。
 
@@ -82,29 +86,37 @@ date: 2020-08-12 09:38
 * Activity 可以多次实例化。
 * 每个task中都可以存在多个相同Activity的实例。
 
-**singleTask：栈内复用**
+![singleTop](./Android%E5%90%AF%E5%8A%A8%E6%A8%A1%E5%BC%8F.assets/singleTop-1679839413476-5.jpg)
+
+#### singleTask：栈内复用
+
+> **singleTask 一般用于需要一个应用内仅存在一个实例时的场景。**
 
 系统默认会创建新的`task`（存在相同亲和性的任务时就不创建了），并将新建的Activity作为`task`的`root activity`，此Activity 实例有且仅有一个，若其他task中存在则复用存在实例，不存在则是新建一个实例。需要注意的是复用这个Activity时，原先堆栈中位于其上方的Activity都将出栈。
 
 * Activity被作为`root activity`。
-* Activity 实例有且仅有一个，存在则复用。
+* Activity 实例有且仅有一个，存在则复用，不存在则新建。
 * 复用时，原先堆栈中位于其上方的Activity都将出栈。
 
-**singleInstance：单实例（且独占一个栈）**
+![singleTask](./Android%E5%90%AF%E5%8A%A8%E6%A8%A1%E5%BC%8F.assets/singleTask.jpg)
 
+#### singleInstance：单实例（且独占一个栈）
+
+> **singleInstance一般用于需要和其他应用共享某个页面的场景。即多个应用共用一个实例。**
+>
 > 测试时发现 使用startActivityForResult()启动一个 singleInstance的Activity，并不会在一个单独的栈中。未找到原因不知道是否是bug。
 >
 > 使用startActivity()则是正常的。
 
-和singleTask类似，在单独的堆栈中且存在时会复用。
+和singleTask类似，在单独的堆栈中,且存在时会复用。不同点在于singleInstance中**目标 Activity 始终是其task唯一的成员**；由该 Activity 启动的任何 Activity 都会在其他的task中打开。
 
-**不同点在于该 Activity 始终是其task唯一的成员；由该 Activity 启动的任何 Activity 都会在其他的task中打开。**
+* 位于单独的task中，存在则复用。
+* task中仅有该Activity 实例，且仅有一个。
+* 由该 Activity启动的任何 Activity 都会在其他的task中。
 
-* Activity 实例有且仅有一个，存在则复用。
-* task中仅有该Activity。
-* 启动的任何 Activity 都会在其他的task中。
+![singleInstance](./Android%E5%90%AF%E5%8A%A8%E6%A8%A1%E5%BC%8F.assets/singleInstance.jpg)
 
-**singleInstancePerTask**
+#### singleInstancePerTask
 
 > Android 12 新增，
 
@@ -112,9 +124,13 @@ date: 2020-08-12 09:38
 
 ---
 
-> 假设堆栈中已存在 **A-B-C-D** 四个Activity实例，D为栈顶。不同启动模式的下对执行相同操作的结果如下表所示：
+> **假设堆栈中已存在 A-B-C-D 四个Activity实例，D为栈顶**。
 >
-> ABE都是standard模式。Tn表示不同的stack
+> 不同启动模式的下对执行相同操作的结果如下表所示：
+>
+> * ABE这三个Activity都是standard模式。
+> * C和D启动模式相同，根据情况变化。
+> * Tn表示不同的栈
 
 | C和D的启动模式 | 启动一个D            | 启动一个C                     | 启动一个E                                |
 | -------------- | -------------------- | ----------------------------- | ---------------------------------------- |

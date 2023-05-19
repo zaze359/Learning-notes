@@ -5,7 +5,38 @@
 ### SharedPreference
 
 * 如何支持进程?
-* 
+
+### 四大组件
+
+* Activity：活动，存放UI的容器。
+* Service：服务
+* BroadcastReceiver：广播接收器
+* ContentProvider：内容提供者，共享数据。
+
+### Fragment
+
+相关问题：
+
+* 你在 Fragment 之间传递数据的时候是怎么做的？为什么不用一个全局的静态变量呢？
+
+## 启动流程
+
+相关问题：
+
+* Activity所在进程是怎么启动的？
+
+  主要是调用`startActivity()` 后会通过ATMS了向zygote发起socket请求来启动应用。
+
+* 讲一下Activity启动流程中与AMS的交互过程。
+
+* 是否了解Activity的onCreate和onAttach的执行顺序？
+
+参考资料：
+
+* [Android应用启动流程](../android/system/Android应用启动流程.md)
+* [Android系统启动流程](../android/system/Android系统启动流程.md)
+
+
 
 ## 框架相关
 
@@ -38,19 +69,15 @@
 
 参考资料：
 
-* [ViewModel](../android/ViewModel.md)
+* [ViewModel](../android/jetpack/ViewModel.md)
 
 * [Android界面状态保存和恢复](../android/Android界面状态保存和恢复.md)
 
-## 网络流量统计怎么做？
+
 
 
 
 ## 图形架构
-
-
-
-
 
 
 
@@ -86,7 +113,22 @@
 
 那时CPU何时处理UI绘制的时间是不确定的。可能CPU/GPU仅需要5ms就能处理完的帧数据，却因为是在VSYNC周期末尾执行导致要到下一个周期才能处理完，产生掉帧。Android4.1之后引入VSYNC用于协调UI绘制，处理这种高帧率下依然出现掉帧的情况。不过如果仅仅引入VSYNC协调UI绘制，在低帧率的场景下依然存在严重的掉帧现象，即当CPU + GPU处理时间大于一帧时，需要多等一个周期屏幕才显示，且期间CPU/GPU空闲，为了优化这种低帧率下的场景。引入了三重缓冲，使得VSYNC到来时即使GPU仍在处理，CPU也不会去GPU不再争抢同一个Buffer，而是使用新增Buffer去处理数据。
 
-### 
+
+
+## zygote为什么使用socket 而不是Binder
+
+* **LocalSocket 的传输效率很高效(略低于Binder)，使用简单。**。
+
+  LocalSocket是专用于本地进程间通信机制，相比于普通的Socket，不用经过网络协议栈所以也就不用处理相关协议的编解码，同时不受限于网络带宽。虽然需要两次拷贝，由于Binder传输存在大小限制，数据量并不多，此时两者的差距并不明显。
+
+* **zygote是专用于 fork 其他的进程的，所以自身应当轻便简单且尽量不依赖外部**。若使用 Binder，则zygote需要先等待ServiceManger启动，然后将自身注册到ServiceManger后才能去fork其他进程。而其他服务需要和zygote通信时又需要从serviceManger中来查询，调用流程比较繁琐且因此耦合了ServiceManager。而Socket使用很简单并且技术成熟。
+
+* **fork机制仅会拷贝当前线程，并不支持多线程，而Binder机制恰恰是多线程的**。当然zygote中也存在很多线程，但是zygote会将这些线程管理起来，在fork前将所有线程停止，fork完后再重新启动。
+
+* Binder的阻塞调用会导致另一边也阻塞。会导致很多不必要的线程开销
+
+  
 
 
 
+## 网络流量统计怎么做？

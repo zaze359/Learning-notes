@@ -24,3 +24,11 @@ D:\openjdk\jdk-13
 java -version
 ```
 
+### 安装版本的Java
+
+调整以下环境变量的顺序即可，`%JAVA_HOME%\bin`在上面。
+
+![image-20230329212621613](./Java%E7%8E%AF%E5%A2%83%E9%85%8D%E7%BD%AE.assets/image-20230329212621613.png)
+
+
+

@@ -9,154 +9,13 @@ Kubernetes 源自Google的 Borg 系统，是一个生产级别的容器编排平
 
 [Kubernetes环境搭建流程](./Kubernetes环境搭建.md)
 
-> 安装`kubectl` 后，使用kubectl来控制
-
-```shell
-# minikube 中设置别名
-alias kubectl="minikube kubectl --"
-# 开启kubectl的自动补全功能
-source <(kubectl completion bash)
-```
-
-```shell
-#################################
-# 查看节点状态
-kubectl get node
-# 查看节点详细的状态
-kubectl describe node
-#################################
-# -f 指定YAML文件
-# 以busy-pod.yml文件中的定义 创建对象
-kubectl apply -f busy-pod.yml
-# create 是创建新资源，已存在时会报错。apply则可以更新。
-kubectl create -f busy-pod.yml
-# 以busy-pod.yml文件中的定义 删除对象
-kubectl delete -f busy-pod.yml
-# 指定名字删除：删除name为busy-pod的pod
-kubectl delete pod busy-pod
-
-kubectl delete pod coredns-6d8c4cb4d-2kznc -n kube-system
-
-##################################
-# 查看pod列表
-kubectl get pod
- 
-# -o wide 更多的输出信息：如部署的节点、IP地址等。
-kubectl get pod -o wide
-# -w 实时状态
-kubectl get pod -w
-
-# 查看 kube-system 内的pod。默认时defalut
-# -n 指定命名空间: kube-system。
-kubectl get pod -n kube-system
-# 找出 app标签是nginx的 所有Pod
-kubectl get pod -l app=nginx
-# 多匹配
-kubectl get pod -l 'app in (ngx, nginx, ngx-dep)'
-
-
-kubectl get job
-kubectl get cj
-kubectl get cm
-
-# 查看Daemonset
-kubectl get ds
-# 查看Deployment
-kubectl get deploy
-
-# 查看集群里有哪些 namespace
-# 也代表API对象哪里，默认在default
-kubectl get ns
-
-# 启动 ngx
-kubectl run ngx --image=nginx:alpine
-
-##############
-# 使用`kubectl rollout` 命令管理更新过程。
-# 查看更新过程
-kubectl rollout status deployment ngx-dep
-# 暂停
-kubectl rollout pause deployment ngx-dep
-# 继续
-kubectl rollout resume deployment ngx-dep
-
-# 查看 ngx-dep 更新历史版本，保存的是YAML。
-kubectl rollout history deploy ngx-dep
-# --revision 查看版本详情
-kubectl rollout history deploy --revision=3 ngx-dep
-
-# 回退到上一个版本
-kubectl rollout undo deploy ngx-dep
-# 回退到指定版本 --to-revision
-kubectl rollout undo deploy ngx-dep --to-revision=4
-
-###############################
-# 显示pod的日志
-kubectl logs busy-pod
-# 检查 busy-pod的详细状态
-# kubectl describe [kind] [name]
-kubectl describe pod busy-pod
-
-# 进入到 ngx-pod 内部
-kubectl exec -it busy-pod -- sh
-# 拷贝文件
-kubectl cp a.txt ngx-pod:/tmp
-
-#################################
-# &：端口转发工作在后台进行，这样退出也会继续运行
-# 将本地的8080端口映射到 xx-pod的80端口
-kubectl port-forward xx-pod 8080:80 &
-# fg 将后台工作调到前台，可被关闭。
-#################################
-# 查看当前 Kubernetes 版本支持的所有对象
-kubectl api-resources
-# 查看对象字段的说明文档,根据说明来创建对象。
-# kubectl explain [api-resources]
-kubectl explain pod
-```
-
-> 创建 YAML 模板，定义API对象
->
-> --dry-run=client -o yaml：表示输出一份yaml样例模板
-
-```shell
-# 定义Shell变量 out, 方便使用
-export out="--dry-run=client -o yaml"
-
-#########################
-### kubectl create 创建模板
-# CronJob模板 name: echo-cj
-kubectl create cj echo-cj --image=busybox --schedule="" $out
-
-# Config Map模板
-# kubectl create configmap <映射名称> <数据源>
-kubectl create cm info $out
-# ConfigMap + data字段
-# 使用 --from-literal 定义的简单属性：k=v
-# 使用 --from-file 定义复杂属性的例子：文件名作为key， 内容为value
-kubectl create cm info --from-literal=k=v $out
-
-# Secret模板
-# Secret.name: user
-# 参数：name: root。 
-# 模板生成时会对value自动进行加密，默认是Base64编码
-kubectl create secret generic user --from-literal=name=root $out
-
-#######################
-### kubectl expose 创建 Service 模板
-# deploy ngx-dep 表示使用 名为ngx-dep的Deployment 
-# --port：映射端口,Server的端口
-# --target-port： 容器端口
-kubectl expose deploy ngx-dep --port=80 --target-port=80 $out
-```
-
-
+[Kubernetes常用命令](./Kubernetes常用命令.md)
 
 ## 基本架构
 
 Kubernetes 采用的是**控制面 / 数据面（Control Plane / Data Plane）**架构，同时将集群里的**计算机被称为节点（Node）**。
 
-![img](./kubernetes%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.assets/65d38ac50b4f2f1fd4b6700d5b8e7be1.jpg)
+![img](./Kubernetes%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.assets/65d38ac50b4f2f1fd4b6700d5b8e7be1-1683443671876-1.jpg)
 
 ### Plane：面
 
@@ -272,7 +131,7 @@ Kubernetes 借鉴了 OOP的设计思想，保证单个Pod的职责单一，并�
 * Pod 默认在后台运行。
 * Pod 都是运行在 Kubernetes 内部的私有网段里的，**外界无法直接访问**。需要进行端口映射才能使外部访问。
 
-![img](./kubernetes%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.assets/b5a7003788cb6f2b1c5c4f6873a8b5cf.jpg)
+![img](./Kubernetes%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.assets/b5a7003788cb6f2b1c5c4f6873a8b5cf-1683443671876-2.jpg)
 
 ### 使用YAML描述Pod
 
@@ -330,27 +189,26 @@ metadata:
    
 spec:
   containers:
-    - image: busybox:latest
-      name: busy
-      imagePullPolicy: IfNotPresent
-      
-      resources:
-		requests: 
-		  cpu: 10m 
-		  memory: 100Mi 
-		limits: 
-		  cpu: 20m 
-		  memory: 200Mi
-		  
-      env:
-        - name: os
-          value: "ubuntu"
-        - name: debug
-          value: "on"
-      command:
-        - /bin/echo
-      args:
-        - "$(os), $(debug)"
+  - image: busybox:latest
+    name: busy
+    imagePullPolicy: IfNotPresent
+    
+    resources:
+      requests: 
+        cpu: 10m 
+        memory: 100Mi 
+      limits: 
+        cpu: 20m 
+        memory: 200Mi
+    env:
+      - name: os
+        value: "ubuntu"
+      - name: debug
+        value: "on"
+    command:
+      - /bin/echo
+    args:
+      - "$(os), $(debug)"
 ```
 
 
@@ -371,7 +229,7 @@ kubectl apply -f busy-pod.yml
 
 它们的YAML文件存放在 `/etc/kubernetes/manifests` 下。里面包括了4个核心组件，这些组件都是以静态Pod的方式存在。
 
-![image-20230219151332222](./kubernetes%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.assets/image-20230219151332222.png)
+![image-20230219151332222](./Kubernetes%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.assets/image-20230219151332222-1683443671876-3.png)
 
 
 
@@ -498,9 +356,9 @@ spec:
     command: ["/bin/sleep", "300"]
 ```
 
-> `envFrom`：将配置中所有字段全部导入，并可指定前缀。
+> `envFrom`：将配置中所有字段全部导入。
 >
-> `prefix`：指定前缀
+> `prefix`：给数据中的key添加指定的前缀。例如 `CM_count`、`CM_debug`
 
 ```yaml
 apiVersion: v1
@@ -541,7 +399,7 @@ echo $USERNAME $PASSWORD
 
 ### Volume
 
-Volume 是 Kubernetes为 Pod定义的一个概念，相当于存储卷。我们**可以为Pod挂载多个Volume，用以提供数据**。Docker将计算机的磁盘挂载到容器中类似，此时Pod相当于计算机。
+Volume 是 Kubernetes为 Pod定义的一个概念，相当于存储卷。我们**可以为Pod挂载多个Volume，用以提供数据**。和Docker将计算机的磁盘挂载到容器中类似，Pod相当于计算机。
 
 * Volume 可以挂载 ConfigMap/Secret、持久卷、临时卷等等的存储类型。
 * Volume 属于Pod，定义在Pod内，和容器是同级的。Pod挂载后就可以被Pod内容器挂载。
@@ -550,8 +408,9 @@ Volume 是 Kubernetes为 Pod定义的一个概念，相当于存储卷。我们*
 > 定义Volume
 
 * `volumes`：**需要在pod 中定义 Volume**。（这里定义了两个volume，一个是引用 ConfigMap(info) 的 cm-vol 。一个是引用 Secret(user)的 sec-vol。）
-  * `confiMap`：指定引用的 ConfigMap 配置。
+  * `confiMap`：指定引用的 ConfigMap 配置。配置中的key-value数据变成了一个个文件，默认使用key作为文件名，value 中文件中的数据。`items` 可以指定仅加载指定项，并且重命名key生成的文件。
   * `secret`：指定引用的 Secret 配置。
+  * `emptyDir`：emptyDir卷会在容器删除时一起被清除，崩溃时并不会被清除，可以作为缓存空间使用。
 * `containers`：定义Pod。（这里定义了一个使用 busybox 镜像的容器busy，启动后会 sleep 300秒。）
 * `volumeMounts`：配置需要使用的 volume。（这里busy容器将 `cm-vol` 挂载到 `/tmp/cm-items`下， `sec-vol`挂载到`/tmp/sec-items`下。）
   * `mountPath`：挂载路径。
@@ -568,9 +427,15 @@ spec:
   - name: cm-vol
     configMap:
       name: info
+      items:
+      - key: # 原文件名
+        path: # 修改后的文件名
   - name: sec-vol
     secret:
       secretName: user
+      
+  - name: chache-vol
+  	emptyDir: {}
 
   containers:
   - volumeMounts:
@@ -585,9 +450,9 @@ spec:
     command: ["/bin/sleep", "300"]
 ```
 
-进入容器内部查看发现，配置中的key-value数据变成了一个个文件，默认使用key作为文件名，value 中文件中的数据。
+进入容器内部查看：一个个文件就是之前的configmap配置。
 
-![image-20230217171226284](./kubernetes%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.assets/image-20230217171226284.png)
+![image-20230217171226284](./Kubernetes%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.assets/image-20230217171226284-1683443671876-4.png)
 
 
 
@@ -653,16 +518,18 @@ PV属于集群的系统资源，和Node同级。Pod 可以使用它，但是无�
 
 * `PersistentVolume`：表示存储设备。
 * `PersistentVolumeClaim`：负责向系统申请PV。申请成功后将会和PV绑定。PVC可以理解为一份需求说明，表明需要什么样子的设备。
-* `StorageClass`：抽象了特定类型的存储系统，将存储设备归纳分组，更容易选择PV对象，简化了PVC和PV的绑定过程。简单的StorageClass 可以不用单独定义直接取个别名即可。
+* `StorageClass`：抽象了特定类型的存储系统，将存储设备归纳分组，从而更容易选择PV对象，简化了PVC和PV的绑定过程。简单的StorageClass 可以不用单独定义直接取个别名即可。
 
 #### 定义PV
+
+PV 就是 `PersistentVolume`，它表示存储设备。
 
 > 定义一个PV对象：host-path-pv.yml
 
 字段说明：
 
 * **storageClassName**：对应StorageClass，可以任意起。使用时对应就行。
-* **accessModes**：访问模式。结构为 ：【权限+节点挂载次数】
+* **accessModes**：访问模式。结构为 ：【权限+节点挂载次数】storageClass
   * ReadWriteOnce（RWO）：可读可写，但只能被一个节点上的 Pod 挂载。
   * ReadOnlyMany：只读不可写，可以被任意节点上的 Pod 多次挂载。
   * ReadWriteMany：可读可写，可以被任意节点上的 Pod 多次挂载。
@@ -689,11 +556,18 @@ spec:
 ```shell
 kubectl apply -f host-path-pv.yml
 kubectl get pv
+
+
+# pvc 删除后， pv会变为 Released状态,而pvc只能和 Available状态的 pv绑定。
+# 此时可以编辑pv, 删除claimRef 中对pvc的引用。
+# 当然也可以删除重建整个pv
+kubectl edit pv host-10m-pv
+
 ```
 
 #### 定义PVC
 
-PersistentVolumeClaim 负责向系统申请PV，里面定义了需要什么样设备。申请成功后PVC就会和和PV绑定。
+PVC 就是 `PersistentVolumeClaim`，它负责向系统申请PV，里面定义了PV规格，表明需要什么样设备。申请成功后PVC就会和和PV绑定。
 
 它的格式和 PersistentVolume类似。
 
@@ -703,7 +577,6 @@ PersistentVolumeClaim 负责向系统申请PV，里面定义了需要什么样�
 * storageClassName：需要和PV中的storageClassName对应。
 
 ```yaml
-
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -728,8 +601,8 @@ kubectl get pvc
 
 挂载方式和 上方 Volume中挂载ConfigMap一样。只是改变了类型。
 
-* persistentVolumeClaim.claimName：spec中定义使用的PVC的名字。
-* volumeMounts：指定Pod挂载路径和卷名。
+* `persistentVolumeClaim.claimName`：定义使用的PVC的名字。
+* `volumeMounts`：指定Pod挂载路径和卷名。
 
 > host-path-pod.yml
 
@@ -761,7 +634,9 @@ kubectl apply -f host-path-pod.yml
 
 
 
-### 网络存储
+---
+
+### 网络存储(NFS)
 
 hostPath的方式挂载的是本地存储，不适合在动态变化的集群中使用。应该使用网络存储。常见的网络存储有AWS、Azure、Ceph、NFS等。
 
@@ -916,16 +791,13 @@ Kubernetes中每类存储都有对应的Provisioner。
 kubectl apply -f class.yaml -f rbac.yaml -f deployment.yaml
 ```
 
+#### 使用NFS
 
+使用步骤基本没有改变，只是不在需要定义PV，Provisoner会帮我自动创建，只需要定义 PVC 和 pod即可
 
-#### 使用
-
-使用步骤基本没有改变，只是不在需要定义PV，Provisoner会帮我自动创建。
-
-> 定义PVC进行绑定，指定class.yaml 中的 storageClass：nfs-dyn-10m-pvc.yml
+> nfs-dyn-10m-pvc.yml：定义PVC进行绑定，指定class.yaml 中的 storageClass。
 
 ```yaml
-
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -941,7 +813,7 @@ spec:
       storage: 10Mi
 ```
 
-> 定义pod：nfs-dyn-pod.yml
+> nfs-dyn-pod.yml：定义pod
 
 ```yaml
 
@@ -993,7 +865,7 @@ Pod负责容器的管理，但是容器执行多久，什么时候执行等这�
 
 整体结构 和Pod的描述很相似，不过 Job是属于 `batch`组而不是`apps` 组。
 
-![img](./kubernetes%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.assets/9b780905a824d2103d4ayyc79267ae28.jpg)
+![img](./Kubernetes%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.assets/9b780905a824d2103d4ayyc79267ae28-1683443671876-5.jpg)
 
 Job中重要的控制字段：
 
@@ -1050,7 +922,7 @@ kubectl get pod -w
 
 pod的名字：job名字 + 随机字符串
 
-![image-20230217015106545](./kubernetes%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.assets/image-20230217015106545.png)
+![image-20230217015106545](./Kubernetes%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.assets/image-20230217015106545-1683443671876-6.png)
 
 
 
@@ -1071,7 +943,7 @@ spec 是一个层层套娃的结构。
 | `-`  | 表示连续范围     | 【0 9-12 * * *】9:00,10:00,11:00,12:00 这四个时间点 |
 | `/n` | n表示间隔        | 【*/1 * * * *】每隔一分钟执行一次。                 |
 
-![img](./kubernetes%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.assets/yy352c661ae37dd116dd12c61932b43c.jpg)
+![img](./Kubernetes%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.assets/yy352c661ae37dd116dd12c61932b43c-1683443671876-7.jpg)
 
 
 
@@ -1186,7 +1058,7 @@ kubectl get ds
 
 ### StatefullSet
 
-Deployment/DaemonSet 负责无状态应用的部署，而**StatefulSet 专门用来负责管理有状态的应用的部署**。处理多实例的依赖关系、启动顺序和网络标识等。
+Deployment/DaemonSet 负责无状态应用的部署，而**StatefulSet 专门用来负责管理有状态的应用的部署**。它能处理多实例的依赖关系、启动顺序和网络标识等。
 
 StatefulSet 创建的Pod的名字是固定的，每次启动都是同样配置的Pod，如：`redis-pv-sts-0`、`redis-pv-sts-1`。而且名字内存在一个编号，编号表示了**启动顺序**。
 
@@ -1353,7 +1225,7 @@ Kubernetes 在初始化集群的时候已经预设 4 个名字空间：default�
 kubectl get ns
 ```
 
-![image-20230219191042949](./kubernetes%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.assets/image-20230219191042949.png)
+![image-20230219191042949](./Kubernetes%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.assets/image-20230219191042949-1683443671876-8.png)
 
 定义namespace：
 
@@ -1467,21 +1339,33 @@ kubectl describe svc ngx-svc
 
 * Type：表示负载均衡类型。
 
-![image-20230219180128128](./kubernetes%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.assets/image-20230219180128128.png)
+![image-20230219180128128](./Kubernetes%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.assets/image-20230219180128128-1683443671876-9.png)
 
 ### Service Type
 
 Type 表示负载均衡类型。
 
-* **ClusterIP**：**是对集群内部 Pod的负载均衡**，需要进入集群内部才能访问。此处是80端口。
+* **ClusterIP**：**默认类型，是对集群内部 Pod的负载均衡，只能在集群内部访问**。此处是ngx-svc 80端口。
 
-  ![image-20230219181955143](./kubernetes%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.assets/image-20230219181955143.png)
+  ![image-20230219181955143](./Kubernetes%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.assets/image-20230219181955143-1683443671876-10.png)
 
-* **NodePort**：除了内部能访问之外，还会**在每个节点上创建一个对外暴露的节点端口，通过kube-proxy路由到service的port**。范围是(30000~32767)，此处是32280，它映射 service的80端口，以 **服务器的IP:32280（192.168.56.5:32280）**的方式访问。
+* **NodePort**：除了内部能访问之外，还允许外部访问，它**在每个节点上创建一个对外暴露的节点端口，它通过kube-proxy路由到service的port中，再通过service负载均衡到容器中**。范围是(30000~32767)，下方是32280，它映射 ngx-svc 的80端口，外部可以使用 **节点IP:32280（192.168.56.5:32280）**的方式来访问。
 
-  映射关系：服务器:32280 -> service:80 -> container:80  。
+  映射关系：**node:32280 -> service:80 -> container:80**  。
 
-  ![image-20230219181857821](./kubernetes%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.assets/image-20230219181857821.png)
+  ![image-20230219181857821](./Kubernetes%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.assets/image-20230219181857821-1683443671876-11.png)
+
+
+
+### Headless Service
+
+Headless Service就是没有指定Cluster IP的Service，即 `clusterIP: None`。Headless Service的解析结果不是一个Cluster IP，而是它所关联的所有Pod的IP列表。
+
+StatefulsSet 配合  Headless Service使用时，可以通过 域名来访问pod
+
+```shell
+${pod.name}.${headless service.name}.${namespace}.svc.cluster.local
+```
 
 
 
@@ -1537,13 +1421,14 @@ spec:
 kubectl get ing
 ```
 
-![image-20230219205509066](./kubernetes%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.assets/image-20230219205509066.png)
+![image-20230219205509066](./Kubernetes%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.assets/image-20230219205509066-1683443671876-12.png)
 
 ### Ingress Class
 
 Ingress 和 Ingress Controller 的中间连接层，方便我们将路由规则分组然后交给不同的Ingress Controller处理，降低了维护成本。
 
-* controller：指定使用什么Ingress Controller。
+* controller：指定使用什么 Ingress Controller。
+* name: 指定 Ingress Class，使用同一个 Ingress Class的 Ingress会由同一个 Ingress Controller处理。
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -1559,7 +1444,7 @@ spec:
 kubectl get ingressclass
 ```
 
-![image-20230219205500221](./kubernetes%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.assets/image-20230219205500221.png)
+![image-20230219205500221](./Kubernetes%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.assets/image-20230219205500221-1683443671876-13.png)
 
 ### Ingress Controller
 
@@ -1581,7 +1466,7 @@ kubectl get ingressclass
 
 从[nginxinc/kubernetes-ingress](https://github.com/nginxinc/kubernetes-ingress)的 deployments目录中选择需要的文件。
 
-![image-20230220190726412](./kubernetes%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.assets/image-20230220190726412.png)
+![image-20230220190726412](./Kubernetes%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.assets/image-20230220190726412-1683443671876-14.png)
 
 
 
@@ -1607,36 +1492,36 @@ kubectl apply -f common/crds
 * spec.template.labels：修改 app: ngx-kic-dep
 * containers.image：调整镜像版本
 * containers.args：添加 -ingress-class=ngx-ink。指向自己的Ingress Class。
-* hostNetwork：让 Pod 能够使用宿主机的网络。NodePort
+* **hostNetwork**：让 Pod 能够使用宿主机的网络。类似NodePort
 
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ngx-kic-dep
+  name: ngx-kic-dep  # 修改
   namespace: nginx-ingress
 
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: ngx-kic-dep
+      app: ngx-kic-dep # 修改
 
   template:
     metadata:
       labels:
-        app: ngx-kic-dep
+        app: ngx-kic-dep # 修改
 
     spec:
       serviceAccountName: nginx-ingress
 
-      # use host network
+      # use host network 让 Pod 能够使用宿主机的网络。类似NodePort
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
 
       containers:
 
-      - image: nginx/nginx-ingress:2.2-alpine
+      - image: nginx/nginx-ingress:2.2-alpine # 修改
         imagePullPolicy: IfNotPresent
         name: nginx-ingress
         ports:
@@ -1671,7 +1556,7 @@ spec:
             fieldRef:
               fieldPath: metadata.name
         args:
-          - -ingress-class=ngx-ink
+          - -ingress-class=ngx-ink # 指向自己的Ingress Class
           - -health-status
           - -ready-status
           - -nginx-status
@@ -1714,7 +1599,7 @@ brctl show
 
 Kubernetes使用摘要算法计算YAML中 template 的 **Hash 值作为 版本号**。
 
-![image-20230222170049649](./kubernetes%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.assets/image-20230222170049649.png)
+![image-20230222170049649](./Kubernetes%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.assets/image-20230222170049649-1683443671876-15.png)
 
 Pod中的 `767bbdccb5` 就是Hash值的前几位，作为版本号。
 
@@ -1737,7 +1622,7 @@ kubectl apply -f ngx-dep.yml
 
 使用`kubectl rollout` 命令来管理更新过程。
 
-> 更新说明：metadata.annotations中添加
+> 更新说明：`metadata.annotations`中添加
 >
 > kubernetes.io/change-cause: v1, ngx=1.21
 

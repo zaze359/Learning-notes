@@ -22,13 +22,13 @@
 
 | 回调                                  | 调用时机                                                     | Activity状态                                     | Lifecycle事件 | 说明                                                         |
 | ------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------ | ------------- | ------------------------------------------------------------ |
-| `onCreate(Bundle savedInstanceState)` | **Activity创建时触发**                                       | Created：**不可见**                              |               | 可以在此方法中做一些初始化操作。如：调用`setContentView()`设置页面布局或`databinding`绑定视图、成员变量的初始化、`ViewModel`的关联等。紧接着调用`onStart()` |
-| `onStart()`                           | `onCreate()`调用后被调用。`onRestart()`后也会被调用          | Started：**可见**                                | ON_START      | 调用使 Activity 对用户可见，紧接着调用`onResume()`。<br />一般于`onStop()`对应。 |
-| `onRestart()`                         | 从`ON_STOP`状态恢复为`ON_START`过程中会先调用此方法然后紧接着调用`onStart`。 |                                                  |               |                                                              |
-| `onResume`                            | `onStart()`调用后会调用；从Paused状态变为Resumed状态时也会调用 | Resumed：**可见可交互**                          | ON_RESUME     | Activity处于前台可见且获取到焦点。<br />一般和`onPause()`对应。 |
-| `onPause()`                           | 半透明 Activity或者外部弹窗打开时。多窗口切换。触发`onStop()`之前会先调用`onPause()` | **部分可见**。在多窗口时Activity还是全部可见的。 | ON_PAUSE      | Activity部分可见时调用，比如触发了外部弹窗。可以在此时暂停一些非必要的操作和释放一些资源。比如停止相机的预览。但是不能做耗时操作，会影响跳转页面的显示。 |
-| `onStop()`                            | Activity完全不可见时调用。例如跳转到新的界面，退到后台等。   | **完全不可见**                                   | ON_STOP       | Activity完全不可见时会调用。此时可以释放一些无用资源。例如暂停动画等。也可以此时持久化一些数据（但不太推荐这么做）。 |
-| `onDestory()`                         | 调用了`finish()`或者被进程被kill等原因导致Activity销毁时会调用 | **不可见且被销毁**                               | ON_DESTORY    | 会此时应当释放所有资源。                                     |
+| `onCreate(Bundle savedInstanceState)` | **Activity创建时触发**                                       | Created：**不可见**                              |               | 可以在此方法中**做一些初始化操作**。如：调用`setContentView()`设置页面布局或`databinding`绑定视图、成员变量的初始化、`ViewModel`的关联等。紧接着调用`onStart()` |
+| `onStart()`                           | **Activity由不可见变为可见的时候调用**。`onCreate()`、`onRestart()`调用后。 | Started：**可见**                                | ON_START      | 使 Activity 对用户可见，紧接着调用`onResume()`。<br />一般于`onStop()`对应。 |
+| `onRestart()`                         | 从`ON_STOP`状态恢复为`ON_START`过程中会先调用此方法。        |                                                  |               | 紧接着调用`onStart()`                                        |
+| `onResume`                            | **Activity处于前台可见且获取到焦点**。<br />`onStart()`调用后会调用；<br />从Paused状态变为Resumed状态时也会调用 | Resumed：**可见可交互**                          | ON_RESUME     | 一般和`onPause()`对应。<br />此时可以和用户进行交互。<br />Activity位于栈顶。 |
+| `onPause()`                           | **Activity部分可见时调用**。<br />半透明 Activity或者外部弹窗打开时。多窗口切换。触发`onStop()`之前会先调用`onPause()` | **部分可见**。在多窗口时Activity还是全部可见的。 | ON_PAUSE      | 可以在此时暂停一些非必要的操作和释放一些资源。比如停止相机的预览。但是不能做耗时操作，会影响跳转页面的显示。 |
+| `onStop()`                            | **Activity完全不可见时调用**。例如跳转到新的界面，退到后台等。 | **完全不可见**                                   | ON_STOP       | 此时可以释放一些无用资源。例如暂停动画等。也可以此时持久化一些数据（但不太推荐这么做）。 |
+| `onDestory()`                         | **Activity被销毁前会调用**。<br />执行了`finish()`或者被进程被kill等原因导致Activity销毁时会调用 | **不可见且被销毁**                               | ON_DESTORY    | 会此时应当释放所有资源。                                     |
 
 ### Activity状态的变化场景分析
 
@@ -131,12 +131,12 @@ MainActivity onStop
 | ------------------------- | ------------------------------------------------------------ |
 | ~~`onAttach()`~~          | 已废弃。和Context（Activity）关联时调用。之后会调用`onCreate()` |
 | `onCreate()`              | `onAttach()`之后被调用。                                     |
-| `onCreateView()`          | 可以在这里构建View。                                         |
-| `onViewCreate()`          | 可以在这里对View进行一些初始化操作。和`onDestoryView()`对应  |
-| ~~`onActivityCreated()`~~ | 已废弃。使用`onViewCreate()`。                               |
+| `onCreateView()`          | 加载布局时调用，可以在这里构建View。                         |
+| `onViewCreate()`          | 布局加载完毕后调用，可以在这里对View进行一些操作。和`onDestoryView()`对应 |
+| ~~`onActivityCreated()`~~ | 已废弃，关联的Activity一定已经创建后调用。使用`onViewCreate()`。 |
 | `onViewStateRestored()`   | 在`onViewCreate()`之后，`onStart()`之前调用。状态恢复时调用，相当于Activity中的`onRestoreInstanceState()` |
-| `onDestoryView()`         | 准备销毁view。和`onViewCreate()`对应。                       |
-| `onDestory()`             | 准备销毁fragment。                                           |
+| `onDestoryView()`         | 准备销毁view时调用。和`onViewCreate()`对应。                 |
+| `onDestory()`             | 准备销毁fragment时调用。                                     |
 | `onDetach()`              | 不再和Activity绑定时调用。                                   |
 
 

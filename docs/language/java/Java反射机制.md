@@ -31,7 +31,7 @@ Java反射就是Java程序能够在运行中获取类内部信息，并进行修
 
 * 反射修改属性：获取Class实例对象，然后获取需要修改的属性Field, 调用`Field.set()`方法修改属性值。 
 
-### Class类实例获取
+### 获取Class类的实例
 
 > 一个类被JVM加载后，有且仅有一个class对象实例。我们通过它来获取类相关西信息。
 
@@ -102,9 +102,9 @@ Class<?> clazz = Class.forName("com.android.okhttp.HttpHandler");
 
 ### final属性值的修改问题
 
-> 对于final修饰的属性，需要修改Field的modifiers属性，去除它的final修饰。
+> Notes：对于final修饰的属性，需要修改Field 的 modifiers属性，去除它的final修饰。
 >
-> **final的修饰常量**（静态、非静态相同），本身将被编译器优化，内联到使用处，此时**反射修改无效**，反射修改后取出来还是原来的值。
+> 因为**final修饰的常量（静态、非静态相同）**，本身将被编译器优化，内联到使用处，所以**反射修改无效**，依然还是原来的值。
 
 ```java
 // 此处以静态常量、变量为例子，非静态相同。
@@ -164,13 +164,9 @@ public class TestJava {
 
 ```
 
+## 代码案例
 
-
-
-
-### 代码案例一
-
-> 发射的简单使用
+### 案例一：反射的简单使用
 
 ```java
 package com.zaze.utils;
@@ -268,9 +264,7 @@ public class ReflectUtil {
 
 ```
 
-### 代码案例二
-
-> 通过反射代理默认的HttpURL网络访问
+### 案例二：反射代理默认的HttpURL
 
 ```java
 package com.zaze.utils.http;
@@ -348,9 +342,7 @@ public class HttpURLHandler extends URLStreamHandler {
 
 ```
 
-### 代码案例三
-
-> ViewModelFactory实例
+### 案例三：ViewModel实例的构建
 
 ```kotlin
 open class ViewModelFactory : ViewModelProvider.NewInstanceFactory() {

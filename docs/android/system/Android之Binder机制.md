@@ -1,10 +1,8 @@
 ---
-
 layout: post
 title: "Binder篇"
 date: 2018-04-17
 categories: android
-
 ---
 
 
@@ -12,591 +10,1469 @@ categories: android
 
 # Binder篇
 
-## 参考资料
+## 前言
 
 本文中的部分图片和解读说明摘自以下参考资料。
-
-### 书籍
 
 - **<< Android的设计与实现：卷I >> 杨云君　著**
 - **<< 深入理解Android: 卷I >>**
 
-### 链接
-
 * [Android系统开篇][Android系统开篇]
 * [为什么Android要采用Binder作为IPC机制][为什么Android要采用Binder作为IPC机制]
-* [Linux设备驱动之字符设备驱动][Linux设备驱动之字符设备驱动]
-* [Linux字符设备驱动框架][Linux字符设备驱动框架]
-* [Linux 的虚拟文件系统][Linux 的虚拟文件系统]
-* [设备与驱动的关系以及设备号、设备文件][设备与驱动的关系以及设备号、设备文件]
 * [图解Android - Binder 和 Service][图解Android - Binder 和 Service]
-* [线程局部存储][线程局部存储]
 
+在开始阅读Binder源码实现的过程中可能还会涉及一些Linux或者其他一些概念，我把其中一些概念罗列到了 [Android系统分析预备知识](./Android系统分析预备知识.md) 一文中，有需要时可以查看，其中的知识点也会在后续分析Android系统的过程中慢慢补充。
 
-## 必须了解的一些概念
-
-### Unix/Linux 一切皆是文件
-
-**“一切皆是文件”是 Unix/Linux的基本哲学之一，所有的一切都是通过文件的形式来进行访问和管理，即使不是文件也被抽象成文件的形式。**包括一般的数据文件、程序普通文件、目录、套接字，**设备文件**等。
-
-Linux的内核中大量使用"注册+回调"机制进行驱动程序的编写。
-
-### 设备驱动和设备文件
-
-设备可以分为以下三类：对于字符设备和块设备来说，在`/dev`目录下都有对应的设备文件，通过这些设备文件来操作设备。
-
-- **字符设备(无缓冲)**：只能一个字节一个字节的读写的设备，不能随机读取设备内存中的某一数据，读取数据需要按照先后顺序进行。字符设备是面向流的设备。常见的字符设备如鼠标、键盘、串口、控制台、LED等外设。
-- **块设备(有缓冲)**：是指可以从设备的任意位置读取一定长度的数据设备。块设备如硬盘、磁盘、U盘和SD卡等存储设备。
-- **网络设备**：网络设备比较特殊，不在是对文件进行操作，而是由专门的网络接口来实现。应用程序不能直接访问网络设备驱动程序。在/dev目录下也没有文件来表示网络设备。
-
-![image-20230301203221532](./Android%E4%B9%8BBinder%E6%9C%BA%E5%88%B6.assets/image-20230301203221532.png)
-
-#### **设备驱动**
-
-**每种设备类型都有与之相对应的设备驱动程序，它是内核的组成部分**。驱动程序创建了一个硬件与硬件或硬件与软件沟通的接口，经由主板上的总线(bus)或其它沟通子系统(subsystem)与硬件形成连接的机制来处理设备的所有IO请求。
-
-#### **设备文件**
-
-**用户程序需要通过设备文件来使用驱动程序进而操作字符设备和块设备，可以认为是设备驱动的接口**。系统中的一个设备对应一个设备文件，这个文件会占用VFS中的一个`inode`。设备文件并不使用数据块，因此设备文件也就没有大小，在设备文件中，inode中文件大小这个字段存放的是访问设备的设备号。设备文件位于`/dev`目录下，它的参数包括：设备文件名、设备类型、主设备号及次设备号。
-
-但是由于外设的种类较多，操作方式各不相同，所以**Linux为所有的设备文件提供了统一的操作函数接口**，使用`struct file_operations`这一数据结构，它是文件层次的I/O接口，包括许多操作函数的指针：如`open()`、`close()`、`read()`、`write()`和用于控制的`ioctl()`等，从而隐藏了设备操作的差异性。这样，应用程序根本不必考虑操作的是设备还是普通文件，可一律当作文件处理，具有非常清晰统一的I/O接口。
-
-我们操作一个设备文件的流程如下：
-
-1. **寻找索引节点(inode)**：通过虚拟文件系统(VFS) 找到相应的`inode`。
-2. **执行open()函数（其他函数同理）**：执行创建这个设备文件时注册在inode中的open()函数，对于各种设备文件，最终调用各自驱动程序中的I/O函数进行具体设备的操作。
-
-当设备打开（open）时，内核利用主设备号分派执行相应的驱动程序，次设备号只由相应的设备驱动程序使用。例如一个嵌入式系统，有两个LED指示灯，LED灯需要独立的打开或者关闭。那么，可以写一个LED灯的字符设备驱动程序，将其主设备号注册成5号设备，次设备号分别为1和2。这里，次设备号就分别表示两个LED灯。所以，为了让我们写的驱动能够正常的被应用程序操作，需要做以下几件事：
-
-1. 实现相应的方法。
-2. 创建相应的设备文件。
-
-
-
----
-
-### 系统调用(system call)
-
-指运行在使用者空间的程序向操作系统内核请求需要更高权限运行的服务。系统调用提供了用户程序与操作系统之间的接口。
-
-大多数系统交互式操作需求在内核态执行，如设备IO操作或者进程间通信。
-
-常见的系统调用有以下几个：
-
-- **open** ：打开设备文件, 以便访问驱动程序。
-- **mmap** ：将设备文件映射到进程的虚拟地址空间。
-- **ioctl** ：如果需要扩展新的功能，通常以增设`ioctl()`命令的方式实现，类似于拾遗补漏.
-- **fcontl** ：根据文件描述词来操作文件的特性
-
-### C/S体系结构体会一下
-
-- **用户端(Client)** : 是C/S体系结构中使用Server端提供的Service的一方
-- **服务端(Server)** : 是C/S体系结构中为Client端提供Service的一方
-- **服务代理(Proxy):** 位于Client端, 提供访问服务的接口。主要作用是屏蔽用户端和Server端通讯的细节, 如对请求数据的序列化和对响应数据的反序列化、通信协议的处理等。
-- **服务(Service):** 运行在Server端，提供具体的功能处理Client端的请求。
-- **服务存根(Stub)**: 可以看作是Service的代理。位于Server端, 屏蔽了Proxy和Service端通信的细节, 对Client端Proxy请求数据的反序列化和对Server端响应数据的序列化、通信协议的封装和处理、匹配Client端调用Service的具体方法。
-- **通信协议**：Client端和Server端可以运行于不同的进程中，甚至可以在不同的主机中，因此需要提供远程通信功能。在Android中，主要使用Binder作为Client端与Server端通信的协议。
+这里主要通过 ServiceManger来了解Binder机制。因为ServiceManger是Android binder框架中的大管家，所有的service都有它来管理。所以无论是客户端还是服务端都需要和ServiceManager通讯，而且它们实际使用也是binder通讯。
 
 Android中Binder的体系结构：
 
-| C/S体系结构术语   | Android层 | Native层 |
-| ----------------- | --------- | -------- |
-| 通信协议          | Binder    | Binder   |
-| Client（客户端）  |           |          |
-| Server（服务端）  |           |          |
-| Proxy（服务代理） |           |          |
-| Stub（服务存根）  |           |          |
-| Service（服务）   |           |          |
-|                   |           |          |
+| C/S体系结构术语   | Android层 | Native层 |                                 |
+| ----------------- | --------- | -------- | ------------------------------- |
+| 通信协议          | Binder    | Binder   |                                 |
+| Client（客户端）  |           |          |                                 |
+| Server（服务端）  |           |          | 一个Server 可以包含多个 Service |
+| Proxy（服务代理） | BpBinder  | Proxy    |                                 |
+| Stub（服务存根）  | BBinder   | Stub     |                                 |
+| Service（服务）   |           |          |                                 |
+|                   |           |          |                                 |
 
+## 一、 什么是Binder
 
+Android使用的是Linux的进程管理机制，以进程为单位分配虚拟地址空间。为了安全考虑，不同进程之间是相互隔离的，这时候如果需要进行通信，必须使用进程间通讯 。常见的IPC方式以及存在的问题 我罗列在了 [Android系统分析预备知识](./Android系统分析预备知识.md) 一文中。
 
+这些IPC 大多存在要么效率低下，要么不适合封装给上层使用等问题, 所以在Android 中并没有大规模使用，取而代之的使用 **Binder**。
 
-
-## 一、 初窥Binder
-
-### 1.1 什么是Binder
-
-Android使用的是Linux的进程管理机制，以进程为单位分配虚拟地址空间。
-
-为了安全考虑，一个进程禁止直接与其他进程交互, 也就是**不同进程之间是相互隔离的(Process Isolation)**。
-
-这时候如果需要进行通信，就必须通过Linux内核提供的**进程间通讯(Inter Process Communication, IPC)**。
-
-常见的IPC方式有以下这些：
-
-- **Socket(套接字)** ： 是一种通用接口，主要用于不同机器或跨网络的通信。**Android 中Zygote使用Socket进行通信。**
-  - 数据需要拷贝两次，传输效率低。
-- **Signal(信号)** ： 适用于进程中断控制，比如非法内存访问，杀死某个进程等。Android中也使用signal机制，如Kill Process。
-  - 不适用于信息交换。
-- **Pipe(管道)** ： 在创建时分配一个page大小的内存。
-  - 缓存区大小比较有限。
-  - 数据需要拷贝两次
-- **Message Queue(消息队列)** ： 不合适频繁或信息量大的通信。
-  - 数据需要拷贝两次，额外的CPU消耗。
-- **Semaphore(信号量)** : 常作为一种锁机制，防止某进程正在访问共享资源时，其他进程也访问该资源。
-  - 主要作为进程间以及同一进程内不同线程之间的**同步手段**。
-- **Shared Memory(共享内存)** : 
-  - **数据无需拷贝**，共享缓冲区直接附加到进程虚拟地址空间，**速度快**；
-  - **实现方式复杂**，需要考虑到访问临界资源的并发同步问题，**进程间的同步问题**必须各进程利用同步工具解决，
-- ....等等
-
-但是这些IPC要么效率低下，要么不适合封装给上层使用, 所以在Android 中并没有大规模使用，取而代之的使用**Binder**。
-
+- Binder 基于开源的OpenBinder，**是一种 IPC 通讯机制**。
 - Binder是Android对Linux内核层的一个扩展，属于字符设备驱动。主要包括以下操作：
   - `binder_init`：初始化驱动设备。
   - `binder_open`：打开驱动设备。
   - `binder_mmap`：映射内存。
   - `binder_ioctl`：数据操作。
+- Binder的C/S框架：它是为了便于上层使用，Android对Binder进行封装后提供的一套框架，Native层 和 Java层各一套。
+  - Java层：`Binder(ActivityManagerService.java)`作为Server，`BinderProxy(ActivityManager.java)`作为Client。
+  - Native层：`BBinder(MediaPlayService.cpp)`作为Server，`BpBinder(MediaPlay.cpp`作为Client。
+- **Binder使用了mmap内存映射，仅需要一次数据拷贝**，仅次于共享内存。
 
-- **Binder仅需要一次数据拷贝，仅次于共享内存**。
-- 为了便于上层使用，Android通过对Binder的封装，在**Native层** 和 **Java层**分别提供一套操作Binder的C/S框架。
-  - Java层：`ActivityManagerService(Binder)`作为Server，`ActivityManager(BinderProxy)`作为Client。
-  - Native层：`MediaPlayService(BBinder)`作为Server，`MediaPlay(BpBinder)`作为Client。
+## 二、 ServiceManager
+
+在 Binder 的 C/S 架构中，除了的 Server 和 Client 之外，还有一个额外的组件**ServiceManager**。
+
+ServiceManager 是Android binder框架中的大管家，主要负责管理系统中的各种服务，并提供了**Service注册**和**Service检索**等功能。无论是客户端还是服务端都需要和ServiceManager通讯。
+
+* **ServiceManager 是由 init 启动的进程**：它优先于其他服务启动，相当于C/S体系结构中的Server。
+  * 对应可执行程序名为`/system/bin/servicemanager`。
+* **ServiceManager 中维护了一个Service信息的列表(`svclist`)**：Service在启动过程中将自身信息注册到ServiceManager中。当Client要使用服务时，只需向ServiceManager提供所需Service的名字便可获取Service信息。
+* **ServiceManager 将自身注册为Binder通讯的上下文管理者(context manager)**。
+* **ServiceManager  也是使用binder机制和外部交互的**。
+
+|                |                                                              |
+| -------------- | ------------------------------------------------------------ |
+| ServiceManager | 负责管理系统中的各种Service。                                |
+| Server         | 表示服务端，是一个程序，会将Service注册到ServiceManager中，一个Server可以包含多个Service。 |
+| Client         | 表示客户端，从ServiceManager中获取Service。接着和 Service所在的Server建立通信。 |
+| Binder         | Binder是ServiceManager、Server、Client 之间的通讯机制。      |
+| -              |                                                              |
+| Service        | 表示具体的某一服务功能。例如 MediaPlayService等              |
 
 
-
-### 1.2 ServiceManager
 
 ![image_1cbjv1brnoa21sc21coacpb1rtrm.png-187.2kB][C/S和ServiceManager]
 
-在Android的C/S体系结构中增加了一个额外的组件**ServiceManager**, 提供了**Service注册**和**Service检索**功能。
+### ServiceManager中的binder结构
 
-* **ServiceManager 是由 init 启动的进程**：它优先于其他服务启动，相当于C/S体系结构中的Server。对应可执行程序名为`/system/bin/servicemanager`，其程序入口为`service_manager.c`。
-* **ServiceManager 中维护了一个Service信息的列表(`svclist`)**：Service在启动过程中将自身信息注册到ServiceManager中。当Client要使用服务时，只需向ServiceManager提供所需Service的名字便可获取Service信息。
-* **ServiceManager 还维护了一个Binder通讯的上下文管理者(context manager)**。
+| 类/接口                                                      | 说明                                                         |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| [IBinder](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/libs/binder/include/binder/IBinder.h;drc=7346c436e5a11ce08f6a80dcfeb8ef941ca30176;bpv=0;bpt=1;l=51) | Binder通讯接口，描述如何进行binder通讯。BBinder和BpBinder 都是它的基类。 |
+| [BBinder](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/libs/binder/include/binder/Binder.h;drc=7346c436e5a11ce08f6a80dcfeb8ef941ca30176;l=30) | 用于服务端，继承自IBinder，在binder通讯环节中负责处理Client的请求，它和BpBinder是一一对应的，即BpBinder 只能和对应的BBinder通信。 |
+| [BpBinder](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/libs/binder/include/binder/BpBinder.h;drc=7346c436e5a11ce08f6a80dcfeb8ef941ca30176;l=39) | 用于客户端，继承自IBinder，主要负责处理binder通讯相关的逻辑。 |
+| -                                                            |                                                              |
+| [IInterface](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/libs/binder/include/binder/IInterface.h;l=27;) | 用于表明是一个 binder 接口。                                 |
+| [IServiceManager](https://cs.android.com/android/platform/superproject/+/refs/heads/master:out/soong/.intermediates/frameworks/native/libs/binder/libbinder/android_native_bridge_arm64_armv8-a_shared/gen/aidl/android/os/IServiceManager.h;bpv=0;bpt=1) | 定义了 ServiceManger 的业务接口。例如`addService()`等        |
+| -                                                            |                                                              |
+| [BnInterface](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/libs/binder/include/binder/IInterface.h;l=70;) | 是一个类模板，负责将binder通讯接口BBinder和业务接口结合在一起。它必然存在子类 `BnXXX`服务类来作为实现。 |
+| [BnServiceManager](https://cs.android.com/android/platform/superproject/+/refs/heads/master:out/soong/.intermediates/frameworks/native/libs/binder/libbinder/android_native_bridge_arm64_armv8-a_shared/gen/aidl/android/os/BnServiceManager.h) | 它是`BnInterface<IServiceManager>`的实现，供服务端实现服务时使用。相当于Java层的 `IXXX.Stub` 类似。 |
+| [ServiceManager](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/cmds/servicemanager/ServiceManager.h;l=32) | 继承自BnServiceManager，在这里真正实现了binder通讯相关接口以及具体的服务业务功能接口。实质是一个BBinder。 |
+| -                                                            |                                                              |
+| [BpInterface](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/libs/binder/include/binder/IInterface.h;l=84;) | 是一个类模板，客户端访问服务的代理对象接口。它必然存在子类 `BpXXX`代理类来作为实现。它并没有继承BpBinder，而是将BpBinder作为成员变量。 |
+| [BpServiceManager](https://cs.android.com/android/platform/superproject/+/refs/heads/master:out/soong/.intermediates/frameworks/native/libs/binder/libbinder/android_native_bridge_arm64_armv8-a_shared/gen/aidl/android/os/BpServiceManager.h;drc=7346c436e5a11ce08f6a80dcfeb8ef941ca30176;l=10) | 继承自 `BpInterface<IServiceManager>` ，是客户端访问服务的代理对象，BpBinder是它的一个成员变量。 |
+
+- **Binder通信相关接口**： 提供了binder通信协议的实现，由有`IBinder`, `BBinder`, `BpBinder`三个类组成。
+  - **IBinder**：定义了Binder通信的接口。**描述如何服务进行交互**。
+  - **BBinder**：它是Service 对应的Binder对象**，描述如何处理Client的请求**。
+  - **BpBinder**：它是**Client端访问BBinder的代理对象**，负责打开Binder设备与服务端通信。
+
+- **Binder服务接口**:  `IServiceManager`定义了Client端可以访问Server端提供的哪些服务。
+- **Proxy**: 供客户端使用的代理对象，主要包括`BpInterface` 和 `BpServiceManager` 。
+  - `mRemote` 成员变量中存储了Client端创建的`BpBinder`对象，可以用它访问服务。
+  - 提供了服务的业务访问接口。
+
+- **Stub**: 服务端使用，主要由`BnInterface` 和 `BnServiceManger`组成。
+
+![UML-Binder-Native](./Android%E4%B9%8BBinder%E6%9C%BA%E5%88%B6.assets/UML-Binder-Native-1682328292003-3.jpg)
+
+### servicemanager.rc
+
+> [servicemanager.rc - Android Code Search](https://cs.android.com/android/platform/superproject/+/master:frameworks/native/cmds/servicemanager/servicemanager.rc)
 
 
-```c
+```shell
+# args[0] = service，按空格分割，依次类推
+# 可执行文件 /system/bin/servicemanager
 service servicemanager /system/bin/servicemanager
-    class core 		# 类型为core，将由boot Action启动
-    user system 	# 属于system用户
-    group system	# 属于system组
-    critical		# critical服务, 异常退出后盖服务需要重启
+    class core animation	# 类型为core，将由boot Action启动
+    user system				# 属于system用户
+    group system readproc	# 属于system组
+    critical				# critical服务, 异常退出后盖服务需要重启
+    file /dev/kmsg w
+    
     # servicemanager 重启会导致以下服务重启
-    onrestart restart healthd 	
-    onrestart restart zygote
-    onrestart restart media
-    onrestart restart surfaceflinger
-    onrestart restart drm
+    onrestart setprop servicemanager.ready false
+    onrestart restart --only-if-running apexd
+    onrestart restart audioserver
+    onrestart restart gatekeeperd
+    onrestart class_restart --only-enabled main
+    onrestart class_restart --only-enabled hal
+    onrestart class_restart --only-enabled early_hal
+    task_profiles ServiceCapacityLow
+    shutdown critical
 ```
-- main
+### 程序入口
 
-```c
-void *svcmgr_handle;
-/**
- * 1. 初始化Binder通信环境，打开Binder设备并映射共享内存
- * 2. 将自身注册为上下文管理者
- * 3. 进入无限循环等待接收并处理IPC通信请求
- */
-int main(int argc, char **argv)
-{
-    struct binder_state *bs;
-    // #define BINDER_SERVICE_MANAGER ((void*) 0)
-    void *svcmgr = BINDER_SERVICE_MANAGER;
-    // 打开Binder设备, 映射共享内存用于接收IPC通信数据, 申请的内存为128k
-    bs = binder_open(128*1024);
-    // 将service_manager注册为context manager
-    if (binder_become_context_manager(bs)) {
-        return -1;
+`main()` 是 ServiceManager 程序入口。
+
+1. 初始化Binder通信环境，打开Binder设备并映射共享内存。
+2. 将自身注册为上下文管理者
+3. 进入无限循环等待接收并处理IPC通信请求
+
+> [main.cpp - Android Code Search](https://cs.android.com/android/platform/superproject/+/master:frameworks/native/cmds/servicemanager/main.cpp;l=113;)
+
+```cpp
+int main(int argc, char** argv) {
+    android::base::InitLogging(argv, android::base::KernelLogger);
+	// rc中没有启动参数，所以使用的是 "/dev/binder"
+    const char* driver = argc == 2 ? argv[1] : "/dev/binder";
+	// 初始化binder
+    sp<ProcessState> ps = ProcessState::initWithDriver(driver);
+    // 设置最大线程数为0
+    ps->setThreadPoolMaxThreadCount(0);
+    // 设置策略 FATAL_IF_NOT_ONEWAY
+    ps->setCallRestriction(ProcessState::CallRestriction::FATAL_IF_NOT_ONEWAY);
+    
+	// 创建ServiceManager实例，它是一个BBinder，具体的业务功能和binder通信都由它实现。
+    // 这里使用了智能指针 unique_ptr，构造函数中没做什么特别的事情
+    sp<ServiceManager> manager = sp<ServiceManager>::make(std::make_unique<Access>());
+    // 将自身作为 manager 添加到服务列表中
+    if (!manager->addService("manager", manager, false /*allowIsolated*/, IServiceManager::DUMP_FLAG_PRIORITY_DEFAULT).isOk()) {
+        LOG(ERROR) << "Could not self register servicemanager";
     }
-    svcmgr_handle = svcmgr;
-    // 进入无限循环等待接受IPC通信数据
-    binder_loop(bs, svcmgr_handler);
-    return 0;
+
+	// 添加上下文，赋值给了一个全局变量sp<BBinder> the_context_object; 
+    // 后续和serviceManger进行binder通讯时会使用到它。
+    IPCThreadState::self()->setTheContextObject(manager);
+    
+    // 将ServiceManager设置为上下文管理者，这里把自己的handle设置为0
+    ps->becomeContextManager();
+    
+    
+	// 创建looper
+    sp<Looper> looper = Looper::prepare(false /*allowNonCallbacks*/);
+
+    // 注册 BinderCallback
+    BinderCallback::setupTo(looper);
+    // 注册 ClientCallbackCallback
+    ClientCallbackCallback::setupTo(looper, manager);
+
+	// 开启无限循环等待IPC通信数据
+    while(true) {
+        // 
+        looper->pollAll(-1);
+    }
+
+    // should not be reached
+    return EXIT_FAILURE;
 }
 ```
 
-#### 1.2.1 Binder的初始化(binder_open)
+### binder初始化
 
-由于进程的地址空间是彼此的隔离的，但是内核空间是可以共享的，因此要实现进程间通信，可以在内核中开辟缓冲区保存进程间通信数据，以此来实现共享内存。
-1. ServiceManager调用`binder_open()`**初始化Binder通信环境**。(frameworks/base/cmds/service_manager/binder.c)
-2. `binder_open()` 借助**binder_state结构体来保存open和mmap系统调用的返回信息**。
-3. **open系统调用**打开Binder设备文件, 以便访问Binder驱动程序。导致Binder驱动的binder_open函数被调用。(kernel/drivers/staging/android/binder.c)
-4. **mmap系统调用**将Binder设备文件映射到进程的虚拟地址空间, 并通知Binder驱动程序在内核空间创建128KB的缓冲区来保存IPC数据。从而进程空间的某个内存区域和内核空间的某个内存区域建立了映射关系，当前进程的servicemanager可以利用内核缓冲区共享数据。
+1. 打开Binder设备驱动 并获取到 Binder驱动的 `fd`。
+2. 通过`mmap()`将 fd 映射到进程的内存空间用于接收IPC通信数据。
 
-```c
-/**
- * 保存open和mmap系统调用的返回信息
- */
-struct binder_state
+#### ProcessState::initWithDriver()
+
+这个函数调用 `init()` 以单例模式构建一个 ProcessState实例，保证当前进程唯一，并初始化了Binder通信环境。
+
+> [ProcessState.cpp - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/libs/binder/ProcessState.cpp;drc=7346c436e5a11ce08f6a80dcfeb8ef941ca30176;l=86)
+
+```cpp
+// driver = "/dev/binder"
+sp<ProcessState> ProcessState::initWithDriver(const char* driver)
 {
-    int fd;         // open系统调用返回的文件描述符
-    void *mapped;   // mmap系统调用 返回的映射区的起始地址
-    unsigned mapsize;   // 映射区大小
-};
-```
-
-```c
-/**
- * 1. 创建binder_state类型结构体 bs，并分配内存
- * 2. 通过open系统调用以读写方式方式打开设备文件
- * 3. 通过mmap系统调用将设备文件映射到当前进程的虚拟地址空间
- */
-struct binder_state *binder_open(unsigned mapsize)
-{
-    // 创建binder_state类型结构体 bs，并分配内存
-    struct binder_state *bs;
-    bs = malloc(sizeof(*bs));
-    if (!bs) {
-        errno = ENOMEM;
-        return 0;
-    }
-    // 通过open系统调用以 读写方式 打开设备文件
-    bs->fd = open("/dev/binder", O_RDWR);
-    if (bs->fd < 0) {
-        goto fail_open;
-    }
-    // 通过mmap系统调用将设备文件映射到当前进程的虚拟地址空间
-    bs->mapsize = mapsize; // 128KB
-    bs->mapped = mmap(NULL, mapsize, PROT_READ, MAP_PRIVATE, bs->fd, 0);
-    if (bs->mapped == MAP_FAILED) {
-        fprintf(stderr,"binder: cannot map device (%s)\n",
-                strerror(errno));
-        goto fail_map;
-    }
-    return bs;
-// 处理错误代码
-fail_map:
-    // 关闭设备
-    close(bs->fd);
-fail_open:
-    // 回收资源
-    free(bs);
-    return 0;
+    // init 中以单例模式创建ProcessState实例并初始化binder。
+    // 和 ProcessState::self() 的区别是入参不同，此处传入的了具体的 driver，以及requireDefault =true。
+    return init(driver, true /*requireDefault*/);
 }
 ```
 
-#### 1.2.2 注册上下文管理者(binder_become_context_manager)
+#### ProcessState::init()
+
+以单例模式 构建ProcessState对象，保证当前的ServiceManger进程只有一个ProcessState实例。主要的逻辑都在构造函数中，内部初始化了Binder通信环境。
+
+>[ProcessState.cpp - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/libs/binder/ProcessState.cpp;drc=7346c436e5a11ce08f6a80dcfeb8ef941ca30176;l=107)
+>
+>android 8后供应商进程无法访问 `/dev/binder`，而是应该访问 `/dev/vndbinder`。
+
+```cpp
+// Binder线程池最大线程数
+#define DEFAULT_MAX_BINDER_THREADS 15
+#define DEFAULT_ENABLE_ONEWAY_SPAM_DETECTION 1
+
+// binder驱动地址
+#ifdef __ANDROID_VNDK__
+const char* kDefaultDriver = "/dev/vndbinder";  // 这个是给供应商使用的
+#else
+const char* kDefaultDriver = "/dev/binder";
+#endif
+
+// 这是一个全局的静态变量，且init使用了单例模式，保证每个进程仅有一个 ProcessState 实例
+[[clang::no_destroy]] static sp<ProcessState> gProcess;
+
+/**
+ * init() 是单例模式
+ * 保证当前进程只有一个ProcessState 实例。
+ */
+sp<ProcessState> ProcessState::init(const char *driver, bool requireDefault)
+{
+    [[clang::no_destroy]] static std::once_flag gProcessOnce;
+    // 仅执行一次,单例模式
+    std::call_once(gProcessOnce, [&](){
+		// ...
+        int ret = pthread_atfork(ProcessState::onFork, ProcessState::parentPostFork,
+                                 ProcessState::childPostFork);
+        std::lock_guard<std::mutex> l(gProcessMutex);
+        // sp::make,创建了 ProcessState(driver)实例，并将实例sp化
+        gProcess = sp<ProcessState>::make(driver);
+    });
+	
+    if (requireDefault) {
+        // requireDefault=true时就记录下异常日志
+    }
+    verifyNotForked(gProcess->mForked);
+    return gProcess;
+}
+
+```
+
+> 这里介绍一个多种不同的Binder驱动
+>
+> 简单来说就是 Android 8 之后 供应商进程无法再访问`/dev/binder`这个设备节点，而是提供了 `/dev/hwbinder` 给供应商进程访问，不过提供的是HIDL接口而不是AIDL接口，所以如果想继续使用AIDL，不想进行转换，则应该使用 `/dev/vndbinder`节点。
+>
+> [使用 Binder IPC  | Android 开源项目  | Android Open Source Project](https://source.android.com/docs/core/architecture/hidl/binder-ipc?hl=zh-cn)
+>
+> ![image-20230318221353753](./Android%E4%B9%8BBinder%E6%9C%BA%E5%88%B6.assets/image-20230318221353753.png)
+
+#### ProcessState的构造函数
+
+在这里 打开了binder驱动并分配内存，从而和内核中的Binder驱动建立了交互通道。
+
+> 由于进程的地址空间是彼此的隔离的，但是内核空间是可以共享的，因此通过`mmap`在内核中开辟缓冲区来保存进程间通信的数据，以**共享内存的方式实现进程间通信**。
+
+1. 首先通过 `open_drive()` 函数打开Binder设备，并返回了一个Binder驱动的 `fd`。
+2. 设备打开成功则 通过`mmap()`系统调用将 fd 映射到进程的地址空间，后续Binder就使用这块内存来共享数据。
+3. 设备打开成功则 初始化mDriverFD，记录fd。
+
+[ProcessState.cpp - ProcessState(driver)](https://cs.android.com/android/platform/superproject/+/master:frameworks/native/libs/binder/ProcessState.cpp;l=529;drc=3a7ad36d2815b7b3ecc930c6b94b6be0e62fbce7;bpv=0;bpt=1)
+
+```cpp
+// binder驱动大小，不超过1MB，可以看出Binder不支持大数据的传输
+#define BINDER_VM_SIZE ((1 * 1024 * 1024) - sysconf(_SC_PAGE_SIZE) * 2)
+ProcessState::ProcessState(const char* driver)
+      : mDriverName(String8(driver)),
+        mDriverFD(-1),
+        mVMStart(MAP_FAILED),
+        mThreadCountLock(PTHREAD_MUTEX_INITIALIZER),
+        mThreadCountDecrement(PTHREAD_COND_INITIALIZER),
+        mExecutingThreadsCount(0),
+        mWaitingForThreads(0),
+        mMaxThreads(DEFAULT_MAX_BINDER_THREADS),
+        mCurrentThreads(0),
+        mKernelStartedThreads(0),
+        mStarvationStartTimeMs(0),
+        mForked(false),
+        mThreadPoolStarted(false),
+        mThreadPoolSeq(1),
+        mCallRestriction(CallRestriction::NONE) {
+    // 打开binder驱动, 返回的result中其实是一个fd
+    base::Result<int> opened = open_driver(driver);
+
+    if (opened.ok()) {
+        // mmap the binder, providing a chunk of virtual address space to receive transactions.
+        // 分配内存：映射共享内存用于接收IPC通信数据, 申请的内存为 1MB
+        mVMStart = mmap(nullptr, BINDER_VM_SIZE, PROT_READ, MAP_PRIVATE | MAP_NORESERVE, opened.value(), 0);
+        if (mVMStart == MAP_FAILED) {
+            close(opened.value());
+            // *sigh*
+            opened = base::Error()
+                    << "Using " << driver << " failed: unable to mmap transaction memory.";
+            mDriverName.clear();
+        }
+    }
+    // 打开成功则 更新mDriverFD 记录fd
+    if (opened.ok()) {
+        mDriverFD = opened.value();
+    }
+}
+```
+
+#### ProcessState.open_device()
+
+1. 通过系统调用 `open()` 打开binder设备, 返回文件描述符用于调用ioctl指令。会使Binder驱动的`binder_open`函数被调用
+2. BINDER_VERSION命令获取Binder协议版本号。
+3. BINDER_SET_MAX_THREADS设置当前server线程池上线。
+
+> [ProcessState.cpp - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/libs/binder/ProcessState.cpp;drc=7346c436e5a11ce08f6a80dcfeb8ef941ca30176;l=496)
+
+```cpp
+static base::Result<int> open_driver(const char* driver) {
+    // 通过open()系统调用 以读写的方式打开/dev/binder设备节点来用于Binder驱动程序,返回文件描述符
+    int fd = open(driver, O_RDWR | O_CLOEXEC);
+    if (fd < 0) {
+        return base::ErrnoError() << "Opening '" << driver << "' failed";
+    }
+    int vers = 0;
+    // 通过fd 向Binder驱动发送 BINDER_VERSION 命令获取Binder协议版本号,存入&vers
+    status_t result = ioctl(fd, BINDER_VERSION, &vers);
+    // ...
+    //
+    // 向Binder驱动发送BINDER_SET_MAX_THREADS命令来设置当前Binder线程池上线。
+    // 这线程池就是当前服务支持的客户端最大并发访问数，为15。
+    size_t maxThreads = DEFAULT_MAX_BINDER_THREADS;
+    result = ioctl(fd, BINDER_SET_MAX_THREADS, &maxThreads);
+	// ...
+    uint32_t enable = DEFAULT_ENABLE_ONEWAY_SPAM_DETECTION;
+    result = ioctl(fd, BINDER_ENABLE_ONEWAY_SPAM_DETECTION, &enable);
+    // ...
+    return fd;
+}
+```
+
+### 构建ServiceManager实例
+
+ServiceManager继承了BnServiceManager，实际是一个BBinder，**实现了binder通讯相关接口以及具体的服务业务功能接口**。
+
+#### ServiceManager
+
+> [ServiceManager.cpp - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/cmds/servicemanager/ServiceManager.cpp;l=237;bpv=0;bpt=1)
+>
+> [ServiceManager.h - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/cmds/servicemanager/ServiceManager.h;l=32;)
+
+```cpp
+ // 构造函数中没做什么特别的事情。赋值 mAccess
+ServiceManager::ServiceManager(std::unique_ptr<Access>&& access) : mAccess(std::move(access)) {
+
+}
+// BnServiceManager 实际继承自 BBinder
+// IBinder::DeathRecipient 也是一个重要的接口，它会在BnXXX 死亡时回调
+class ServiceManager : public os::BnServiceManager, public IBinder::DeathRecipient {
+    
+}
+```
+
+#### BnServiceManager
+
+这个类和Java层的 IxxService.Stub 类似，**将通讯和业务结合，定义了binder通讯接口 和 业务接口**。
+
+它的实现在 `IServiceManager.cpp` 中，是代理模式，
+
+> [BnServiceManager.h - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:out/soong/.intermediates/frameworks/native/libs/binder/libbinder/android_native_bridge_arm64_armv8-a_shared/gen/aidl/android/os/BnServiceManager.h)
+>
+> [BnServiceManager实现](https://cs.android.com/android/platform/superproject/+/refs/heads/master:out/soong/.intermediates/frameworks/native/libs/binder/libbinder/android_native_bridge_arm64_armv8-a_shared/gen/aidl/android/os/IServiceManager.cpp;l=569;)
+
+```cpp
+namespace android {
+namespace os {
+// BnInterface 继承自BBinder
+class BnServiceManager : public ::android::BnInterface<IServiceManager> {
+public:
+  static constexpr uint32_t TRANSACTION_getService = ::android::IBinder::FIRST_CALL_TRANSACTION + 0;
+  static constexpr uint32_t TRANSACTION_checkService = ::android::IBinder::FIRST_CALL_TRANSACTION + 1;
+  static constexpr uint32_t TRANSACTION_addService = ::android::IBinder::FIRST_CALL_TRANSACTION + 2;
+  // .... 接口对应的索引
+  explicit BnServiceManager();
+  // onTransact()
+  ::android::status_t onTransact(uint32_t _aidl_code, const ::android::Parcel& _aidl_data, ::android::Parcel* _aidl_reply, uint32_t _aidl_flags) override;
+};  // class BnServiceManager
+}  // namespace os
+}  // namespace android
+```
+
+### 注册自身作为上下文管理者
 
 打开Binder设备并映射内存后， servicemanage会将自身注册为Binder通信的上下文管理者。
 
-- service_manager.c -> binder_become_context_manager
-```c
-int binder_become_context_manager(struct binder_state *bs)
-{   
-    // 调用Linux系统函数ioctl, 向Binder设备发送BINDER_SET_CONTEXT_MGR
-    return ioctl(bs->fd, BINDER_SET_CONTEXT_MGR, 0);
+#### ProcessState::becomeContextManager()
+
+调用`ioctl()`，向Binder设备发送 `BINDER_SET_CONTEXT_MGR_EXT或者BINDER_SET_CONTEXT_MGR`
+
+> [ProcessState.cpp - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/libs/binder/ProcessState.cpp;drc=7346c436e5a11ce08f6a80dcfeb8ef941ca30176;l=210)
+
+```cpp
+bool ProcessState::becomeContextManager()
+{
+    AutoMutex _l(mLock);
+
+    // flat_binder_object 基本都没赋值，内部的handle = 0
+    flat_binder_object obj {
+        .flags = FLAT_BINDER_FLAG_TXN_SECURITY_CTX,
+    };
+
+    // 发送 BINDER_SET_CONTEXT_MGR_EXT 请求
+    int result = ioctl(mDriverFD, BINDER_SET_CONTEXT_MGR_EXT, &obj);
+
+    // fallback to original method
+    if (result != 0) {
+        android_errorWriteLog(0x534e4554, "121035042");
+		// 失败调用原先的方法,发送 BINDER_SET_CONTEXT_MGR
+        int unused = 0; // 0
+        result = ioctl(mDriverFD, BINDER_SET_CONTEXT_MGR, &unused);
+    }
+
+    if (result == -1) {
+        ALOGE("Binder ioctl to become context manager failed: %s\n", strerror(errno));
+    }
+
+    return result == 0;
+}
+
+```
+
+### 创建Looper
+
+Native层的Looper 和Java层的Looper逻辑是类似的。作用也是类似，内部通过 `epoll` 机制来处理消息，具体分析可以看[Android消息机制之Native篇](./Android消息机制之Native篇) 一文。
+
+```cpp
+sp<Looper> looper = Looper::prepare(false /*allowNonCallbacks*/);
+```
+
+
+
+### 注册BinderCallback
+
+#### BinderCallback
+
+> [main.cpp - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/cmds/servicemanager/main.cpp;drc=7346c436e5a11ce08f6a80dcfeb8ef941ca30176;l=39)
+
+```cpp
+class BinderCallback : public LooperCallback {
+public:
+    static sp<BinderCallback> setupTo(const sp<Looper>& looper) {
+        sp<BinderCallback> cb = sp<BinderCallback>::make();
+
+        int binder_fd = -1;
+        // 内部会建之前创建的Binder fd 赋值给 binder_fd
+        // 
+        IPCThreadState::self()->setupPolling(&binder_fd);
+		
+        // 将binder_fd 添加到 looper中，当fd中有数据写入时会回调给cb。
+        int ret = looper->addFd(binder_fd,
+                                Looper::POLL_CALLBACK,
+                                Looper::EVENT_INPUT,
+                                cb,
+                                nullptr /*data*/);
+        return cb;
+    }
+
+    // 处理接收到的Binder消息
+    int handleEvent(int /* fd */, int /* events */, void* /* data */) override {
+        IPCThreadState::self()->handlePolledCommands();
+        return 1;  // Continue receiving callbacks.
+    }
+};
+
+```
+
+#### IPCThreadState::setupPolling()
+
+> [IPCThreadState.cpp - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/libs/binder/IPCThreadState.cpp;drc=7346c436e5a11ce08f6a80dcfeb8ef941ca30176;l=769)
+
+```cpp
+status_t IPCThreadState::setupPolling(int* fd)
+{
+    if (mProcess->mDriverFD < 0) {	
+        return -EBADF;
+    }
+	// 标记binder 进入 looper状态。
+    mOut.writeInt32(BC_ENTER_LOOPER);
+    // 这里内部会调用 talkWithDriver()和binder驱动进行通信。
+    flushCommands();
+    // 赋值 mDriverFD
+    *fd = mProcess->mDriverFD;
+    pthread_mutex_lock(&mProcess->mThreadCountLock);
+    mProcess->mCurrentThreads++;
+    pthread_mutex_unlock(&mProcess->mThreadCountLock);
+    return 0;
 }
 ```
 
-#### 1.2.3 接收并处理IPC通信请求(binder_loop)
+#### IPCThreadState::flushCommands()
 
-servicemanger是一个处理client请求的Server进程。
-在其成为context manager之后便可以想要Service组件注册服务的请求和Client组件使用服务的请求。
-当Service组件向serviceManager注册服务时，Service组件所在的进程对应servicemanger就是Client。
+将请求发送给binder驱动。
 
-##### binder_loop
+> [IPCThreadState.cpp - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/libs/binder/IPCThreadState.cpp;l=586;drc=7346c436e5a11ce08f6a80dcfeb8ef941ca30176)
 
-```c
-/**
- * 1. 首先调用了binder_write函数。传入BC_ENTER_LOOPER指令,标记当前线程进入Binder Looper状态。
- * 2. 之后进入循环从Binder驱动中读取数据并处理数据。
- * [*bs] : binder_state
- * [func] : binder_handler ???
- */
-void binder_loop(struct binder_state *bs, binder_handler func)
+```cpp
+void IPCThreadState::flushCommands()
 {
-    int res;
-    // 定义binder_write_read结构体，发送BINDER_WRITE_READ指令时使用。
-    struct binder_write_read bwr;
-    unsigned readbuf[32];
-    bwr.write_size = 0;
-    bwr.write_consumed = 0;
-    bwr.write_buffer = 0;
-    // BC_ENTER_LOOPER是Binder协议中的Binder Command指令,BC_为前缀。
-    readbuf[0] = BC_ENTER_LOOPER;
-    // 表示标记当前线程进入Binder Looper状态。
-    binder_write(bs, readbuf, sizeof(unsigned));
-    // 进入循环
+    if (mProcess->mDriverFD < 0)
+        return;
+    // 和binder驱动通信，这个后面再分析,false表示不接收数据仅发送
+    talkWithDriver(false);
+    // flush 可能会导致 BC_RELEASE/BC_DECREFS 会写入到mOut中，所以在指向一次。
+    if (mOut.dataSize() > 0) {
+        talkWithDriver(false);
+    }
+    if (mOut.dataSize() > 0) {
+        ALOGW("mOut.dataSize() > 0 after flushCommands()");
+    }
+}
+
+```
+
+####  Looper::addFd()
+
+将binder fd添加到了 Looper中，并注册epoll 事件，会被保存在 `Looper.mRequests` 中。
+
+> [Looper.cpp - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:system/core/libutils/Looper.cpp;drc=7346c436e5a11ce08f6a80dcfeb8ef941ca30176;l=440)
+
+```cpp
+int Looper::addFd(int fd, int ident, int events, const sp<LooperCallback>& callback, void* data) {
+    if (!callback.get()) {
+        if (! mAllowNonCallbacks) {
+            ALOGE("Invalid attempt to set NULL callback but not allowed for this looper.");
+            return -1;
+        }
+
+        if (ident < 0) {
+            ALOGE("Invalid attempt to set NULL callback with ident < 0.");
+            return -1;
+        }
+    } else {
+        ident = POLL_CALLBACK;
+    }
+
+    { // acquire lock
+        AutoMutex _l(mLock);
+        if (mNextRequestSeq == WAKE_EVENT_FD_SEQ) mNextRequestSeq++;
+        const SequenceNumber seq = mNextRequestSeq++;
+
+        Request request;
+        // binder的fd
+        request.fd = fd;
+        request.ident = ident;
+        request.events = events;
+        request.callback = callback;
+        request.data = data;
+		// 创建一个epoll事件
+        epoll_event eventItem = createEpollEvent(request.getEpollEvents(), seq);
+        // 查询fd是否已经存在
+        auto seq_it = mSequenceNumberByFd.find(fd);
+        if (seq_it == mSequenceNumberByFd.end()) {
+            // 不存在, fd注册监听事件
+            int epollResult = epoll_ctl(mEpollFd.get(), EPOLL_CTL_ADD, fd, &eventItem);
+            if (epollResult < 0) {
+                ALOGE("Error adding epoll events for fd %d: %s", fd, strerror(errno));
+                return -1;
+            }
+            // 将 request 保存到了 mRequests
+            mRequests.emplace(seq, request);
+            mSequenceNumberByFd.emplace(fd, seq);
+        } else { // 存在, fd注册监听事件
+            int epollResult = epoll_ctl(mEpollFd.get(), EPOLL_CTL_MOD, fd, &eventItem);
+            if (epollResult < 0) {
+                if (errno == ENOENT) {
+                    epollResult = epoll_ctl(mEpollFd.get(), EPOLL_CTL_ADD, fd, &eventItem);
+                    if (epollResult < 0) {
+                        ALOGE("Error modifying or adding epoll events for fd %d: %s",
+                                fd, strerror(errno));
+                        return -1;
+                    }
+                    // 唤醒并重新创建epoll
+                    scheduleEpollRebuildLocked();
+                } else {
+                    ALOGE("Error modifying epoll events for fd %d: %s", fd, strerror(errno));
+                    return -1;
+                }
+            }
+            const SequenceNumber oldSeq = seq_it->second;
+            mRequests.erase(oldSeq);
+            // 将 request 保存到了 mRequests
+            mRequests.emplace(seq, request);
+            seq_it->second = seq;
+        }
+    } // release lock
+    return 1;
+}
+```
+
+
+
+### 开启Looper接收并处理消息
+
+这里开启了looper循环，通过 epoll 机制处理消息。
+
+> [main.cpp - Android Code Search](https://cs.android.com/android/platform/superproject/+/master:frameworks/native/cmds/servicemanager/main.cpp;l=147)
+
+```cpp
+// 开启无限循环等待IPC通信数据
+while(true) {
+    // 拉取消息
+    looper->pollAll(-1);
+}
+```
+
+#### Looper::pollAll()
+
+内部循环调用了 `pollOnce()`，它会在有请求消息时被唤醒处理消息。
+
+* Callback消息：会回调 `handleEvent()` 来处理。Binder是通过注册callback的方式来处理消息。
+* Message消息：会回调 `handleMessage()`来处理。
+
+Looper消息机制相关内容可以看[Android消息机制之Native篇](./Android消息机制之Native篇) 一文。
+
+> [Looper.h - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:system/core/libutils/include/utils/Looper.h;l=280;drc=7346c436e5a11ce08f6a80dcfeb8ef941ca30176)
+
+```cpp
+inline int pollAll(int timeoutMillis) {
+    return pollAll(timeoutMillis, nullptr, nullptr, nullptr);
+}
+
+int Looper::pollAll(int timeoutMillis, int* outFd, int* outEvents, void** outData) {
+    if (timeoutMillis <= 0) {
+        int result;
+        do {
+            // poll 机制，有消息时会被唤醒，并处理消息
+            result = pollOnce(timeoutMillis, outFd, outEvents, outData);
+        } while (result == POLL_CALLBACK);
+        return result;
+    } else {
+        nsecs_t endTime = systemTime(SYSTEM_TIME_MONOTONIC)
+                + milliseconds_to_nanoseconds(timeoutMillis);
+
+        for (;;) {
+            int result = pollOnce(timeoutMillis, outFd, outEvents, outData);
+            if (result != POLL_CALLBACK) {
+                return result;
+            }
+
+            nsecs_t now = systemTime(SYSTEM_TIME_MONOTONIC);
+            timeoutMillis = toMillisecondTimeoutDelay(now, endTime);
+            if (timeoutMillis == 0) {
+                return POLL_TIMEOUT;
+            }
+        }
+    }
+}
+
+
+int Looper::pollOnce(int timeoutMillis, int* outFd, int* outEvents, void** outData) {
     for (;;) {
-        bwr.read_size = sizeof(readbuf);
-        bwr.read_consumed = 0;
-        bwr.read_buffer = (unsigned) readbuf;
-        // 调用ioctl进入BINDER_WRITE_READ分支。
-        // 由于write_size = 0, read_size > 0 将会调用binder_thread_read
-        // 该函数用于从Binder驱动中读取IPC请求数据，从驱动层返回出来。
-        res = ioctl(bs->fd, BINDER_WRITE_READ, &bwr);
-        if (res < 0) {
-            LOGE("binder_loop: ioctl failed (%s)\n", strerror(errno));
-            break;
-        }
-        // 处理Binder请求。
-        res = binder_parse(bs, 0, readbuf, bwr.read_consumed, func);
-        if (res == 0) {
-            LOGE("binder_loop: unexpected reply?!\n");
-            break;
-        }
-        if (res < 0) {
-            LOGE("binder_loop: io error %d %s\n", res, strerror(errno));
-            break;
-        }
+		// 调用 pollInner(), 内部会创建Response 并添加到 mResponses中
+        result = pollInner(timeoutMillis);
     }
 }
-```
 
-##### binder_write
-
-```c
-/**
- * binder_ioctl函数被调用，进入BINDER_WRITE_READ分支
- * 本次调用将会根据进程在用户空间设置bwr.write_size值，进入binder_thread_write函数
- * [*bs] : binder_state
- * [*data] : readbuf 存储了指令
- * [len] : sizeof()计算某种符号所占的字节数, 这里应该是data的size吧
- */
-int binder_write(struct binder_state *bs, void *data, unsigned len)
-{
-    struct binder_write_read bwr;
-    int res;
-    bwr.write_size = len;
-    bwr.write_consumed = 0;
-    bwr.write_buffer = (unsigned) data;
-    bwr.read_size = 0;
-    bwr.read_consumed = 0;
-    bwr.read_buffer = 0;
-    // 传入指令BINDER_WRITE_READ
-    res = ioctl(bs->fd, BINDER_WRITE_READ, &bwr);
-    if (res < 0) {
-        fprintf(stderr,"binder_write: ioctl failed (%s)\n",
-                strerror(errno));
-    }
-    return res;
-}
-```
-
-##### binder_parse
-
-```c
-/**
- * 在上次ioctl调用读取到IPC后，对返回数据进行解析
- * Binder驱动层可以返回多种BR指令给servicemanger， 其中BR_TRANSACTION指令用于注册和检索service。
- * func参数由svcmgr_handler指定, Binder驱动层的BR_TRANSACTION指令由它处理。
- */
-int binder_parse(struct binder_state *bs, struct binder_io *bio,
-                 uint32_t *ptr, uint32_t size, binder_handler func)
-{
-    int r = 1;
-    uint32_t *end = ptr + (size / 4);
-
-    while (ptr < end) {
-        uint32_t cmd = *ptr++; // 读取BR指令
-        switch(cmd) {
-        case BR_NOOP:
-            break;
-        case BR_TRANSACTION_COMPLETE:
-            break;
-        case BR_INCREFS:
-        case BR_ACQUIRE:
-        case BR_RELEASE:
-        case BR_DECREFS:
-            ptr += 2;
-            break;
-        case BR_TRANSACTION: {
-            struct binder_txn *txn = (void *) ptr;
-            if ((end - ptr) * sizeof(uint32_t) < sizeof(struct binder_txn)) {
-                LOGE("parse: txn too small!\n");
-                return -1;
-            }
-            binder_dump_txn(txn);
-            if (func) {
-                unsigned rdata[256/4];
-                struct binder_io msg; // Binder驱动发送给当前进程的IPC数据
-                struct binder_io reply; // 要写入Binder驱动的IPC数据
-                int res;
-                // 初始化
-                bio_init(&reply, rdata, sizeof(rdata), 4);
-                bio_init_from_txn(&msg, txn);
-                // 调用func处理BR_TRANSACTION，处理结果保存在reply中
-                res = func(bs, txn, &msg, &reply);
-                // 处理结果返回给Binder程序
-                binder_send_reply(bs, &reply, txn->data, res);
-            }
-            ptr += sizeof(*txn) / sizeof(uint32_t);
-            break;
-        }
-        case BR_REPLY: {
-            struct binder_txn *txn = (void*) ptr;
-            if ((end - ptr) * sizeof(uint32_t) < sizeof(struct binder_txn)) {
-                LOGE("parse: reply too small!\n");
-                return -1;
-            }
-            binder_dump_txn(txn);
-            if (bio) {
-                bio_init_from_txn(bio, txn);
-                bio = 0;
+int Looper::pollInner(int timeoutMillis) {
+    // Handle all events.
+    // 处理所有事件
+    for (int i = 0; i < eventCount; i++) {
+        const SequenceNumber seq = eventItems[i].data.u64;
+        uint32_t epollEvents = eventItems[i].events;
+        if (seq == WAKE_EVENT_FD_SEQ) {
+            if (epollEvents & EPOLLIN) {
+                // 唤醒epoll
+                awoken();
             } else {
-                /* todo FREE BUFFER */
+                ALOGW("Ignoring unexpected epoll events 0x%x on wake event fd.", epollEvents);
             }
-            ptr += (sizeof(*txn) / sizeof(uint32_t));
-            r = 0;
-            break;
-        }
-        case BR_DEAD_BINDER: {
-            struct binder_death *death = (void*) *ptr++;
-            death->func(bs, death->ptr);
-            break;
-        }
-        case BR_FAILED_REPLY:
-            r = -1;
-            break;
-        case BR_DEAD_REPLY:
-            r = -1;
-            break;
-        default:
-            LOGE("parse: OOPS %d\n", cmd);
-            return -1;
+        } else {
+            // 监听到其他文件描述符所发出的请求
+            const auto& request_it = mRequests.find(seq);
+            if (request_it != mRequests.end()) {
+                const auto& request = request_it->second;
+                int events = 0;
+                if (epollEvents & EPOLLIN) events |= EVENT_INPUT;
+                if (epollEvents & EPOLLOUT) events |= EVENT_OUTPUT;
+                if (epollEvents & EPOLLERR) events |= EVENT_ERROR;
+                if (epollEvents & EPOLLHUP) events |= EVENT_HANGUP;
+                // 先不处理, 放入到mResponse中
+                mResponses.push({.seq = seq, .events = events, .request = request});
+            } else {
+                ALOGW("Ignoring unexpected epoll events 0x%x for sequence number %" PRIu64
+                      " that is no longer registered.",
+                      epollEvents, seq);
+            }
         }
     }
-    return r;
+Done: ;
+    // 处理 callback
+    for (size_t i = 0; i < mResponses.size(); i++) {
+        Response& response = mResponses.editItemAt(i);
+        if (response.request.ident == POLL_CALLBACK) {
+            int fd = response.request.fd;
+            int events = response.events;
+            void* data = response.request.data;
+			// 回调 callback.handleEvent()
+            int callbackResult = response.request.callback->handleEvent(fd, events, data);
+            if (callbackResult == 0) {
+                AutoMutex _l(mLock);
+                removeSequenceNumberLocked(response.seq);
+            }
+            response.request.callback.clear();
+            result = POLL_CALLBACK;
+        }
+    }
+    return result;
 }
 ```
 
-##### svcmgr_handler
+#### BinderCallback.handleEvent()
 
-```c
-/**
- * binder_loop的func参数由此方法指定
- * servicemanager在接收到Binder驱动层的BR_TRANSACTION指令后, 由该函数处理。
- * 1. do_find_service : Client端的getService
- * 2. do_add_service : Client段的addService
- */
-int svcmgr_handler(struct binder_state *bs,
-                   struct binder_txn *txn,
-                   struct binder_io *msg,
-                   struct binder_io *reply)
+处理接收到的Binder消息
+
+> [main.cpp - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/cmds/servicemanager/main.cpp;l=58;)
+
+```cpp
+// 处理接收到的Binder消息
+int handleEvent(int /* fd */, int /* events */, void* /* data */) override {
+    IPCThreadState::self()->handlePolledCommands();
+    return 1;  // Continue receiving callbacks.
+}
+```
+
+#### IPCThreadState::self()
+
+IPCThreadState 负责处理IPC通信相关的逻辑，即Binder机制的通信部分是在这里实现的，在这里会和binder驱动进行通信。每一个线程都一个独立的IPCThreadState实例。
+
+> IPCThreadState对象的管理 涉及到了 TLS：Thread Local Storage（线程本地存储空间）这一概念，它主要是用于 存储线程私有的变量，每个线程都有这样一块私有空间。`IPCThreadState` 就存储在了 TLS中。 关于TLS具体的介绍放在了 [Android系统分析预备知识](./Android系统分析预备知识.md)中。
+
+`self()`是单例模式
+
+* pthread_getspecific()：从TLS 中根据 key查找对应的数据。
+* pthread_setspecific(：将对应数据以 kv 格式保存到 TLS中。
+
+> [IPCThreadState.cpp - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/libs/binder/IPCThreadState.cpp;drc=7346c436e5a11ce08f6a80dcfeb8ef941ca30176;l=295)
+
+```cpp
+static pthread_mutex_t gTLSMutex = PTHREAD_MUTEX_INITIALIZER;
+static std::atomic<bool> gHaveTLS(false);
+// 保存在 tls中的key
+static pthread_key_t gTLS = 0;
+static std::atomic<bool> gShutdown = false;
+static std::atomic<bool> gDisableBackgroundScheduling = false;
+
+
+IPCThreadState* IPCThreadState::self()
 {
-    struct svcinfo *si;
-    uint16_t *s;
-    unsigned len;
-    void *ptr;
-    uint32_t strict_policy;
-    // 检查Binder驱动层传递的txn->targer
-    if (txn->target != svcmgr_handle)
-        return -1;
-    // 读取并校验传递过来的IPC数据
-    strict_policy = bio_get_uint32(msg);
-    s = bio_get_string16(msg, &len);
-    if ((len != (sizeof(svcmgr_id) / 2)) ||
-        memcmp(svcmgr_id, s, sizeof(svcmgr_id))) {
-        fprintf(stderr,"invalid id %s\n", str8(s));
-        return -1;
+    // 默认 gHaveTLS = false
+    if (gHaveTLS.load(std::memory_order_acquire)) {
+// 后续会goto到这
+restart:
+        // 
+        const pthread_key_t k = gTLS;
+        // 获取 gTLS 对应的IPCThreadState
+        IPCThreadState* st = (IPCThreadState*)pthread_getspecific(k);
+        // 存在之间返回
+        if (st) return st;
+        // 不存在 new一个IPCThreadState 对象
+        // 构造函数内调用了 pthread_setspecific(gTLs, this) 将自身保存到TLS中
+        return new IPCThreadState;
     }
-    // Binder驱动在接收到添加或者检索的Service的请求后，会在txn->code中记录相应的请求 
-    switch(txn->code) {
-    case SVC_MGR_GET_SERVICE: // 对应客户端的getService
-    case SVC_MGR_CHECK_SERVICE:
-        // 与Parcel的处理方式类似, 在连续的buffer内存中,顺序读取流
-        s = bio_get_string16(msg, &len);
-        // 查找service
-        ptr = do_find_service(bs, s, len);
-        // 没有找到则跳出
-        if (!ptr)
-            break;
-        // 找到则放入reply中 binder_io->data(binder_object)->pointer
-        bio_put_ref(reply, ptr);
-        return 0;
-    case SVC_MGR_ADD_SERVICE: // 对应客户端的addService
-        s = bio_get_string16(msg, &len);
-        ptr = bio_get_ref(msg);
-        if (do_add_service(bs, s, len, ptr, txn->sender_euid))
-            return -1;
+    // gShutdown = false
+    if (gShutdown.load(std::memory_order_relaxed)) {
+        ALOGW("Calling IPCThreadState::self() during shutdown is dangerous, expect a crash.\n");
+        return nullptr;
+    }
+	
+    // 上锁
+    pthread_mutex_lock(&gTLSMutex);
+    // TLS 不存时，先创建一个 TLS Key, 然后跳转到restart处 获取TLS
+    if (!gHaveTLS.load(std::memory_order_relaxed)) {
+        // 创建一个 TLS Key，赋值给gTLS，用于检索
+        int key_create_value = pthread_key_create(&gTLS, threadDestructor);
+        if (key_create_value != 0) {
+            // 创建失败
+            pthread_mutex_unlock(&gTLSMutex);
+            ALOGW("IPCThreadState::self() unable to create TLS key, expect a crash: %s\n",
+                    strerror(key_create_value));
+            return nullptr;
+        }
+        // gHaveTLS 更新为 true
+        gHaveTLS.store(true, std::memory_order_release);
+    }
+    // 解锁
+    pthread_mutex_unlock(&gTLSMutex);
+    // 跳转到 restart
+    goto restart;
+}
+```
+
+#### IPCThreadState的构造函数
+
+在构造函数中通过 `pthread_setspecific()` 将自身保存到 TLS中
+
+> [IPCThreadState.cpp - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/libs/binder/IPCThreadState.cpp;drc=7346c436e5a11ce08f6a80dcfeb8ef941ca30176;bpv=0;bpt=1;l=972)
+
+```cpp
+IPCThreadState::IPCThreadState()
+      : mProcess(ProcessState::self()),
+        mServingStackPointer(nullptr),
+        mServingStackPointerGuard(nullptr),
+        mWorkSource(kUnsetWorkSource),
+        mPropagateWorkSource(false),
+        mIsLooper(false),
+        mIsFlushing(false),
+        mStrictModePolicy(0),
+        mLastTransactionBinderFlags(0),
+        mCallRestriction(mProcess->mCallRestriction) {
+    // 将自己设置到 TLS(线程本地存储) 中去。
+    pthread_setspecific(gTLS, this);
+    clearCaller();
+    mHasExplicitIdentity = false;
+	// mIn是一个Parcel，用于存储 来自Binder的输入数据
+    mIn.setDataCapacity(256);
+    // mOut也是一个Parcel，用于存储 发送到Binder的输出数据
+    mOut.setDataCapacity(256);
+}
+```
+
+
+
+#### IPCThreadState::handlePolledCommands()
+
+处理接收到请求。
+
+> [IPCThreadState.cpp - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/libs/binder/IPCThreadState.cpp;drc=7346c436e5a11ce08f6a80dcfeb8ef941ca30176;l=784)
+
+```cpp
+status_t IPCThreadState::handlePolledCommands()
+{
+    status_t result;
+
+    do {
+        // 开启循环不断处理消息，直到mIn中没有数据。
+        result = getAndExecuteCommand();
+    } while (mIn.dataPosition() < mIn.dataSize());
+
+    processPendingDerefs();
+    flushCommands();
+    return result;
+}
+```
+
+#### IPCThreadState::getAndExecuteCommand()
+
+这里主要就是处理binder请求，调用 `talkWithDriver()` 向binder驱动读/写数据，最后调用`executeCommand()`来处理返回结果。
+
+> [IPCThreadState.cpp - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/libs/binder/IPCThreadState.cpp;drc=7346c436e5a11ce08f6a80dcfeb8ef941ca30176;bpv=0;bpt=1;l=627)
+
+```cpp
+status_t IPCThreadState::getAndExecuteCommand()
+{
+    status_t result;
+    int32_t cmd;
+	// 和binder驱动通讯。即读也写
+    result = talkWithDriver();
+    if (result >= NO_ERROR) {
+        size_t IN = mIn.dataAvail();
+        if (IN < sizeof(int32_t)) return result;
+        // 获取返回值
+        cmd = mIn.readInt32();
+
+        pthread_mutex_lock(&mProcess->mThreadCountLock);
+        mProcess->mExecutingThreadsCount++;
+        if (mProcess->mExecutingThreadsCount >= mProcess->mMaxThreads &&
+                mProcess->mStarvationStartTimeMs == 0) {
+            mProcess->mStarvationStartTimeMs = uptimeMillis();
+        }
+        pthread_mutex_unlock(&mProcess->mThreadCountLock);
+		// 执行返回的cmd
+        result = executeCommand(cmd);
+
+        pthread_mutex_lock(&mProcess->mThreadCountLock);
+        mProcess->mExecutingThreadsCount--;
+        if (mProcess->mExecutingThreadsCount < mProcess->mMaxThreads &&
+                mProcess->mStarvationStartTimeMs != 0) {
+            int64_t starvationTimeMs = uptimeMillis() - mProcess->mStarvationStartTimeMs;
+            if (starvationTimeMs > 100) {
+                ALOGE("binder thread pool (%zu threads) starved for %" PRId64 " ms",
+                      mProcess->mMaxThreads, starvationTimeMs);
+            }
+            mProcess->mStarvationStartTimeMs = 0;
+        }
+
+        if (mProcess->mWaitingForThreads > 0) {
+            pthread_cond_broadcast(&mProcess->mThreadCountDecrement);
+        }
+        pthread_mutex_unlock(&mProcess->mThreadCountLock);
+    }
+
+    return result;
+}
+
+```
+
+#### IPCThreadState::executeCommand()
+
+这里最终会通过 `BBinder.transact(code)` 来处理对应请求。code是定义在 对应服务(例如`BnServiceManager`)中的接口id。
+
+> [IPCThreadState.cpp - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/libs/binder/IPCThreadState.cpp;drc=7346c436e5a11ce08f6a80dcfeb8ef941ca30176;l=1274)
+
+```cpp
+// 一个全局的 BBinder，其实就是servicemanager
+sp<BBinder> the_context_object;
+// 这个函数会在 serviceManager 启动时被调用
+void IPCThreadState::setTheContextObject(const sp<BBinder>& obj)
+{
+    the_context_object = obj;
+}
+// 解析返回数据时的结果体
+struct binder_transaction_data_secctx {
+  struct binder_transaction_data transaction_data;
+  binder_uintptr_t secctx;
+};
+struct binder_transaction_data {
+  union {
+    __u32 handle;
+    binder_uintptr_t ptr;
+  } target;
+  binder_uintptr_t cookie;
+  __u32 code;
+  __u32 flags;
+  __kernel_pid_t sender_pid;
+  __kernel_uid32_t sender_euid;
+  binder_size_t data_size;
+  binder_size_t offsets_size;
+  union {
+    struct {
+      binder_uintptr_t buffer;
+      binder_uintptr_t offsets;
+    } ptr;
+    __u8 buf[8];
+  } data;
+};
+
+status_t IPCThreadState::executeCommand(int32_t cmd)
+{
+    BBinder* obj;
+    RefBase::weakref_type* refs;
+    status_t result = NO_ERROR;
+
+    switch ((uint32_t)cmd) {
+    case BR_ERROR:
+        result = mIn.readInt32();
         break;
-    case SVC_MGR_LIST_SERVICES: { // 遍历检索services
-        unsigned n = bio_get_uint32(msg);
-        si = svclist;
-        while ((n-- > 0) && si)
-            si = si->next;
-        if (si) {
-            bio_put_string16(reply, si->name);
-            return 0;
+
+    case BR_OK:
+        break;
+    // ...
+    case BR_TRANSACTION_SEC_CTX:
+    case BR_TRANSACTION: // 对应 BC_TRANSACTION。注册和检索service就会返回这个，此处是在对应的服务进程
+        {
+            binder_transaction_data_secctx tr_secctx;
+            binder_transaction_data& tr = tr_secctx.transaction_data;
+			
+            // 从mIn 读取 binder_transaction_data
+            if (cmd == (int) BR_TRANSACTION_SEC_CTX) {
+                result = mIn.read(&tr_secctx, sizeof(tr_secctx));
+            } else {
+                result = mIn.read(&tr, sizeof(tr));
+                tr_secctx.secctx = 0;
+            }
+
+            if (result != NO_ERROR) break;
+
+            Parcel buffer;
+            buffer.ipcSetDataReference(
+                reinterpret_cast<const uint8_t*>(tr.data.ptr.buffer),
+                tr.data_size,
+                reinterpret_cast<const binder_size_t*>(tr.data.ptr.offsets),
+                tr.offsets_size/sizeof(binder_size_t), freeBuffer);
+
+            const void* origServingStackPointer = mServingStackPointer;
+            mServingStackPointer = __builtin_frame_address(0);
+
+            const pid_t origPid = mCallingPid;
+            const char* origSid = mCallingSid;
+            const uid_t origUid = mCallingUid;
+            const bool origHasExplicitIdentity = mHasExplicitIdentity;
+            const int32_t origStrictModePolicy = mStrictModePolicy;
+            const int32_t origTransactionBinderFlags = mLastTransactionBinderFlags;
+            const int32_t origWorkSource = mWorkSource;
+            const bool origPropagateWorkSet = mPropagateWorkSource;
+            clearCallingWorkSource();
+            clearPropagateWorkSource();
+
+            mCallingPid = tr.sender_pid;
+            mCallingSid = reinterpret_cast<const char*>(tr_secctx.secctx);
+            mCallingUid = tr.sender_euid;
+            mHasExplicitIdentity = false;
+            mLastTransactionBinderFlags = tr.flags;
+
+            Parcel reply;
+            status_t error;
+            
+            if (tr.target.ptr) { // ptr != 0
+                // 当前只有弱引用，使用前先通过wp生成一个sp
+                if (reinterpret_cast<RefBase::weakref_type*>(tr.target.ptr)->attemptIncStrong(this)) {
+                    // 调用BBinder的 transact()
+                    error = reinterpret_cast<BBinder*>(tr.cookie)->transact(tr.code, buffer,
+                            &reply, tr.flags);
+                    reinterpret_cast<BBinder*>(tr.cookie)->decStrong(this);
+                } else {
+                    error = UNKNOWN_TRANSACTION;
+                }
+            } else { // ptr = 0，这里是处理ServiceManager的。
+                // the_context_object 也是一个 BBinder
+                // 内部会调用 ServiceManager.onTransact()
+                // 若由需要回复的内容会保存在 reply 中。
+                error = the_context_object->transact(tr.code, buffer, &reply, tr.flags);
+            }
+
+            if ((tr.flags & TF_ONE_WAY) == 0) {
+                if (error < NO_ERROR) reply.setError(error);
+                buffer.setDataSize(0);
+                constexpr uint32_t kForwardReplyFlags = TF_CLEAR_BUF;
+                sendReply(reply, (tr.flags & kForwardReplyFlags));
+            } else {
+                if (error != OK) {
+                    //
+                }
+            }
+
+            mServingStackPointer = origServingStackPointer;
+            mCallingPid = origPid;
+            mCallingSid = origSid;
+            mCallingUid = origUid;
+            mHasExplicitIdentity = origHasExplicitIdentity;
+            mStrictModePolicy = origStrictModePolicy;
+            mLastTransactionBinderFlags = origTransactionBinderFlags;
+            mWorkSource = origWorkSource;
+            mPropagateWorkSource = origPropagateWorkSet;
         }
-        return -1;
-    }
+        break;
+
+    case BR_DEAD_BINDER:
+        {
+            // 收到Binder驱动发来的service死掉的消息，只有Bp端能收到
+            BpBinder *proxy = (BpBinder*)mIn.readPointer();
+            // 发送讣告，会回调给 DeathRecipient
+            proxy->sendObituary();
+            mOut.writeInt32(BC_DEAD_BINDER_DONE);
+            mOut.writePointer((uintptr_t)proxy);
+        } break;
+
+    case BR_CLEAR_DEATH_NOTIFICATION_DONE:
+        {
+            BpBinder *proxy = (BpBinder*)mIn.readPointer();
+            proxy->getWeakRefs()->decWeak(proxy);
+        } break;
+
+    case BR_FINISHED:
+        result = TIMED_OUT;
+        break;
+
+    case BR_NOOP:
+        break;
+
+    case BR_SPAWN_LOOPER:
+        // 这里将收到来自驱动的指令，表示需要创建一个新线程，用于和Binder通信。
+        // isMain=false， 表示不是主线程。
+        mProcess->spawnPooledThread(false);
+        break;
+
     default:
-        LOGE("unknown code %d\n", txn->code);
-        return -1;
+        ALOGE("*** BAD COMMAND %d received from Binder driver\n", cmd);
+        result = UNKNOWN_ERROR;
+        break;
     }
-    bio_put_uint32(reply, 0);
-    return 0;
+    if (result != NO_ERROR) {
+        mLastError = result;
+    }
+
+    return result;
 }
 ```
 
-- do_add_service
+#### BnServiceManager::onTransact()
 
-```c
-int do_add_service(struct binder_state *bs,
-                   uint16_t *s, unsigned len,
-                   void *ptr, unsigned uid)
+在 `BBinder.transact()` 会调用这个函数，这里就是最终处理具体业务的地方，会调用具体的业务接口，例如 `addService()`、`getService()`等等。
+
+> [IServiceManager.cpp - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:out/soong/.intermediates/frameworks/native/libs/binder/libbinder/android_native_bridge_arm64_armv8-a_shared/gen/aidl/android/os/IServiceManager.cpp;l=574)
+
+```cpp
+::android::status_t BnServiceManager::onTransact(uint32_t _aidl_code, const ::android::Parcel& _aidl_data, ::android::Parcel* _aidl_reply, uint32_t _aidl_flags) {
+  ::android::status_t _aidl_ret_status = ::android::OK;
+  switch (_aidl_code) {
+  case BnServiceManager::TRANSACTION_getService: // getService
+  {
+    ::std::string in_name;
+    ::android::sp<::android::IBinder> _aidl_return;
+    if (!(_aidl_data.checkInterface(this))) {
+      _aidl_ret_status = ::android::BAD_TYPE;
+      break;
+    }
+    // 读取数据并校验
+    // getService()
+    ::android::binder::Status _aidl_status(getService(in_name, &_aidl_return));
+    _aidl_ret_status = _aidl_status.writeToParcel(_aidl_reply);
+    // ... 校验
+  }
+  break;
+  case BnServiceManager::TRANSACTION_checkService: // checkService
+  {
+    ::std::string in_name;
+    ::android::sp<::android::IBinder> _aidl_return;
+    if (!(_aidl_data.checkInterface(this))) {
+      _aidl_ret_status = ::android::BAD_TYPE;
+      break;
+    }
+    // 读取数据并校验
+    // checkService
+    ::android::binder::Status _aidl_status(checkService(in_name, &_aidl_return));
+    _aidl_ret_status = _aidl_status.writeToParcel(_aidl_reply);
+    // ... 校验
+  }
+  break;
+  case BnServiceManager::TRANSACTION_addService: // addService
+  {
+    ::std::string in_name;
+    ::android::sp<::android::IBinder> in_service;
+    bool in_allowIsolated;
+    int32_t in_dumpPriority;
+    if (!(_aidl_data.checkInterface(this))) {
+      _aidl_ret_status = ::android::BAD_TYPE;
+      break;
+    }
+  	// 数据的读取和校验流程
+    _aidl_ret_status = _aidl_data.readUtf8FromUtf16(&in_name);
+    // ...
+    // 调用 addService()
+    ::android::binder::Status _aidl_status(addService(in_name, in_service, in_allowIsolated, in_dumpPriority));
+    // 写回执
+    _aidl_ret_status = _aidl_status.writeToParcel(_aidl_reply);
+    // 校验
+    if (((_aidl_ret_status) != (::android::OK))) {
+      break;
+    }
+    if (!_aidl_status.isOk()) {
+      break;
+    }
+  }
+  break;
+  // ... 一系列函数id的 case 处理
+  break;
+  default:
+  {// 默认，这里是binder通讯相关的
+    _aidl_ret_status = ::android::BBinder::onTransact(_aidl_code, _aidl_data, _aidl_reply, _aidl_flags);
+  }
+  break;
+  }
+  return _aidl_ret_status;
+}
+```
+
+### 发送回执
+
+#### IPCThreadState::sendReply()
+
+这里主要调用了2个函数：
+
+* `writeTransactionData()`：这个函数主要是将请求信息写入到 mOut中。
+* `waitForResponse()`：这里才是和Binder驱动具体通讯的地方，内部调用了 `talkWithDriver()`
+
+> [IPCThreadState.cpp - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/libs/binder/IPCThreadState.cpp;drc=7346c436e5a11ce08f6a80dcfeb8ef941ca30176;l=994)
+
+```cpp
+status_t IPCThreadState::sendReply(const Parcel& reply, uint32_t flags)
 {
-    struct svcinfo *si;
-    if (!ptr || (len == 0) || (len > 127))
-        return -1;
-    // 验证该UID是否具备添加服务的权限。
-    // root和system用户以及在allowed结构体数组中定义的
-    if (!svc_can_register(uid, s)) {
-        LOGE("add_service('%s',%p) uid=%d - PERMISSION DENIED\n",
-             str8(s), ptr, uid);
-        return -1;
-    }
-    // 从svclist(服务列表)中查询是否已经注册过该服务
-    si = find_svc(s, len);
-    if (si) { // 已注册
-        if (si->ptr) {
-            LOGE("add_service('%s',%p) uid=%d - ALREADY REGISTERED, OVERRIDE\n",
-                 str8(s), ptr, uid);
-            svcinfo_death(bs, si);
-        }
-        si->ptr = ptr;
-    } else {
-        // 给新注册的服务分配内存, 并放入到svclist头部
-        si = malloc(sizeof(*si) + (len + 1) * sizeof(uint16_t));
-        if (!si) { // 分配内存OOM
-            LOGE("add_service('%s',%p) uid=%d - OUT OF MEMORY\n",
-                 str8(s), ptr, uid);
-            return -1;
-        }
-        si->ptr = ptr;
-        si->len = len;
-        memcpy(si->name, s, (len + 1) * sizeof(uint16_t));
-        si->name[len] = '\0';
-        si->death.func = svcinfo_death;
-        si->death.ptr = si;
-        si->next = svclist;
-        svclist = si;
-    }
-    // 接收Binder设备发送的服务退出通知，清理一些资源
-    binder_acquire(bs, ptr);
-    binder_link_to_death(bs, ptr, &si->death);
-    return 0;
+    status_t err;
+    status_t statusBuffer;
+    // cmd = BC_REPLY
+    // handle = -1,
+    // code = 0,
+    // data = replay
+    err = writeTransactionData(BC_REPLY, flags, -1, 0, reply, &statusBuffer);
+    if (err < NO_ERROR) return err;
+	// 
+    return waitForResponse(nullptr, nullptr);
 }
 ```
 
-- do_find_service
+#### IPCThreadState::writeTransactionData()
 
-```c
-/**
- * 从svclist中检索服务并返回
- */
-void *do_find_service(struct binder_state *bs, uint16_t *s, unsigned len)
+主要是将请求信息写入到 mOut中。
+
+> [IPCThreadState.cpp - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/libs/binder/IPCThreadState.cpp;drc=7346c436e5a11ce08f6a80dcfeb8ef941ca30176;l=1231)
+
+```cpp
+status_t IPCThreadState::writeTransactionData(int32_t cmd, uint32_t binderFlags,
+    int32_t handle, uint32_t code, const Parcel& data, status_t* statusBuffer)
 {
-    struct svcinfo *si;
-    // 从svclist中检索服务
-    si = find_svc(s, len);
-    if (si && si->ptr) {
-        // 返回
-        return si->ptr;
+	// 发送数据的结构体
+    binder_transaction_data tr;
+	// ptr=0
+    // 若是发送给ServiceManger的则handle=0，
+    tr.target.ptr = 0; /* Don't pass uninitialized stack data to a remote process */
+    tr.target.handle = handle;
+    tr.code = code;
+    tr.flags = binderFlags;
+    tr.cookie = 0;
+    tr.sender_pid = 0;
+    tr.sender_euid = 0;
+
+    const status_t err = data.errorCheck();
+    if (err == NO_ERROR) {
+        tr.data_size = data.ipcDataSize();
+        tr.data.ptr.buffer = data.ipcData();
+        tr.offsets_size = data.ipcObjectsCount()*sizeof(binder_size_t);
+        tr.data.ptr.offsets = data.ipcObjects();
+    } else if (statusBuffer) {
+        tr.flags |= TF_STATUS_CODE;
+        *statusBuffer = err;
+        tr.data_size = sizeof(status_t);
+        tr.data.ptr.buffer = reinterpret_cast<uintptr_t>(statusBuffer);
+        tr.offsets_size = 0;
+        tr.data.ptr.offsets = 0;
     } else {
-        return 0;
+        return (mLastError = err);
     }
+	// 写入指令
+    mOut.writeInt32(cmd);
+    // 写入数据
+    mOut.write(&tr, sizeof(tr));
+    return NO_ERROR;
+}
+```
+
+#### IPCThreadState::waitForResponse()
+
+内部调用了 `talkWithDriver()`和Binder驱动通讯并获取返回。
+
+> [IPCThreadState.cpp - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/libs/binder/IPCThreadState.cpp;drc=7346c436e5a11ce08f6a80dcfeb8ef941ca30176;l=1004)
+
+```cpp
+status_t IPCThreadState::waitForResponse(Parcel *reply, status_t *acquireResult)
+{
+    uint32_t cmd;
+    int32_t err;
+
+    while (1) {
+        // 和Binder驱动通讯
+        if ((err=talkWithDriver()) < NO_ERROR) break;
+        err = mIn.errorCheck();
+        if (err < NO_ERROR) break;
+        // dataAvail == 0，表示由于驱动的数据未读完，所以暂时没有发送新的请求，继续循环尝试发送。
+        if (mIn.dataAvail() == 0) continue;
+		// 从 mIn中读取binder驱动的返回结果
+        cmd = (uint32_t)mIn.readInt32();
+		// 这里就是根据不同的返回值做不同的处理
+        switch (cmd) {
+        case BR_ONEWAY_SPAM_SUSPECT:
+            ALOGE("Process seems to be sending too many oneway calls.");
+            CallStack::logStack("oneway spamming", CallStack::getCurrent().get(),
+                    ANDROID_LOG_ERROR);
+            [[fallthrough]];
+        case BR_TRANSACTION_COMPLETE:
+            if (!reply && !acquireResult) goto finish;
+            break;
+
+        case BR_TRANSACTION_PENDING_FROZEN:
+            ALOGW("Sending oneway calls to frozen process.");
+            goto finish;
+
+        case BR_DEAD_REPLY:
+            err = DEAD_OBJECT;
+            goto finish;
+
+        case BR_FAILED_REPLY:
+            err = FAILED_TRANSACTION;
+            goto finish;
+
+        case BR_FROZEN_REPLY:
+            err = FAILED_TRANSACTION;
+            goto finish;
+
+        case BR_ACQUIRE_RESULT:
+            {
+                ALOG_ASSERT(acquireResult != NULL, "Unexpected brACQUIRE_RESULT");
+                const int32_t result = mIn.readInt32();
+                if (!acquireResult) continue;
+                *acquireResult = result ? NO_ERROR : INVALID_OPERATION;
+            }
+            goto finish;
+
+        case BR_REPLY:
+            {
+                binder_transaction_data tr;
+                err = mIn.read(&tr, sizeof(tr));
+                ALOG_ASSERT(err == NO_ERROR, "Not enough command data for brREPLY");
+                if (err != NO_ERROR) goto finish;
+
+                if (reply) {
+                    if ((tr.flags & TF_STATUS_CODE) == 0) {
+                        reply->ipcSetDataReference(
+                            reinterpret_cast<const uint8_t*>(tr.data.ptr.buffer),
+                            tr.data_size,
+                            reinterpret_cast<const binder_size_t*>(tr.data.ptr.offsets),
+                            tr.offsets_size/sizeof(binder_size_t),
+                            freeBuffer);
+                    } else {
+                        err = *reinterpret_cast<const status_t*>(tr.data.ptr.buffer);
+                        freeBuffer(reinterpret_cast<const uint8_t*>(tr.data.ptr.buffer),
+                                   tr.data_size,
+                                   reinterpret_cast<const binder_size_t*>(tr.data.ptr.offsets),
+                                   tr.offsets_size / sizeof(binder_size_t));
+                    }
+                } else {
+                    freeBuffer(reinterpret_cast<const uint8_t*>(tr.data.ptr.buffer), tr.data_size,
+                               reinterpret_cast<const binder_size_t*>(tr.data.ptr.offsets),
+                               tr.offsets_size / sizeof(binder_size_t));
+                    continue;
+                }
+            }
+            goto finish;
+
+        default:
+            // 其他的处理方式，内部还包含了很多其他指令
+            err = executeCommand(cmd);
+            if (err != NO_ERROR) goto finish;
+            break;
+        }
+    }
+
+finish:
+    if (err != NO_ERROR) {
+        if (acquireResult) *acquireResult = err;
+        if (reply) reply->setError(err);
+        mLastError = err;
+        logExtendedError();
+    }
+
+    return err;
+}
+```
+
+### 和Binder驱动通讯
+
+#### IPCThreadState::talkWithDriver()
+
+通过 `ioctl()` 来 读/写 binder驱动中的数据。
+
+这里会向binder驱动发送BINDER_WRITE_READ 这个一级指令。binder驱动会根据 `write_size`, `read_size`的值来判断是读取数据还是写入数据。
+
+* write_size > 0：写入数据。
+* read_size > 0：读取数据。
+
+> [IPCThreadState.cpp - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/libs/binder/IPCThreadState.cpp;drc=7346c436e5a11ce08f6a80dcfeb8ef941ca30176;l=1108)
+>
+> BinderCallback接收请求时：doReceive = false
+>
+> 发送binder消息时：doReceive=true
+
+```cpp
+// doReceive 默认是 true，表示接收数据，false 表示不需要接收返回的数据仅发送数据。
+status_t IPCThreadState::talkWithDriver(bool doReceive)
+{
+    if (mProcess->mDriverFD < 0) {
+        return -EBADF;
+    }
+	// binder_write_read 是用来与binder设备交换数据的结构
+    binder_write_read bwr;
+
+    // needRead = true 表示，当前mIn缓冲区已经无数据，可以继续发送指令并读取返回
+    // 否则需要先等读取完毕
+    const bool needRead = mIn.dataPosition() >= mIn.dataSize();
+    // 读取完毕或不需要接收数据则 outAvail = mOut.dataSize()
+    // 否则，继续处理 mIn中的未读完数据，此次不写数据，outAvail = 0
+    const size_t outAvail = (!doReceive || needRead) ? mOut.dataSize() : 0;
+	// 需要写入outAvail大小的数据，数据在mOut.data()中。
+    // 不需要写则 write_size = 0
+    bwr.write_size = outAvail;
+    bwr.write_buffer = (uintptr_t)mOut.data();
+	
+    if (doReceive && needRead) {
+        // 需要写入 mIn.dataCapacity()大小的数据，数据在 mIn.data()中。
+        bwr.read_size = mIn.dataCapacity();
+        bwr.read_buffer = (uintptr_t)mIn.data();
+    } else { // 不需要读则 read_size = 0。
+        bwr.read_size = 0;
+        bwr.read_buffer = 0;
+    }
+
+    // Return immediately if there is nothing to do.
+    if ((bwr.write_size == 0) && (bwr.read_size == 0)) return NO_ERROR;
+	//
+    bwr.write_consumed = 0;
+    bwr.read_consumed = 0;
+    status_t err;
+    do {
+        
+#if defined(__ANDROID__)
+        // 通过 ioctl()来和binder驱动进行通信，这里发送的是BINDER_WRITE_READ指令。
+        // 内部会根据 write_size, read_size的值来判断是读取数据还是写入数据。
+        if (ioctl(mProcess->mDriverFD, BINDER_WRITE_READ, &bwr) >= 0)
+            err = NO_ERROR;
+        else
+            err = -errno;
+#else
+        err = INVALID_OPERATION;
+#endif
+        if (mProcess->mDriverFD < 0) {
+            err = -EBADF;
+        }
+    } while (err == -EINTR);
+	
+    if (err >= NO_ERROR) {
+        // 执行 成功
+        // 表示 Binder驱动中 处理 write_consumed大小的写入数据。
+        if (bwr.write_consumed > 0) {
+            if (bwr.write_consumed < mOut.dataSize())
+                // 驱动未消费完
+                LOG_ALWAYS_FATAL("Driver did not consume write buffer. "
+                                 "err: %s consumed: %zu of %zu",
+                                 statusToString(err).c_str(),
+                                 (size_t)bwr.write_consumed,
+                                 mOut.dataSize());
+            else {
+                mOut.setDataSize(0);
+                processPostWriteDerefs();
+            }
+        }
+        // 表示从binder驱动返回了 read_consumed 大小的数据
+        if (bwr.read_consumed > 0) {
+            mIn.setDataSize(bwr.read_consumed);
+            mIn.setDataPosition(0);
+        }
+        return NO_ERROR;
+    }
+    return err;
 }
 ```
 
 
-## 二、乱挖Binder驱动层
 
 
-kernel/drivers/staging/android/binder.c
+## 三、Binder驱动层（选读）
+
+在上面分析ServiceManager的过程中，我们已经了解到了 binder通讯的整体流程，大致概况为以下
+
+* 通过 `open()` 系统调用 打开binder驱动，并获取到驱动返回的fd。
+* 通过 `mmap()` 将fd映射到进程空间中。
+
+* 最终通过调用 `ioctl()` 来和binder驱动进行通讯。
+
+而`open()` 和 `ioctl()` 分别就是对应了 binder驱动程序中的  `binder_open()`、`binder_ioctl()`这两个函数。
 
 
 ### 2.1 一些结构体
@@ -692,6 +1568,8 @@ struct binder_proc {
 - euid(有效用户id)，geid(有效组id): 决定了我们的进程访问文件的权限。进程的有效用户id通常就是实际用户id。
 - suid,sgid:当一个进程访问设置了set-user-ID或是set-group-ID标志的文件时，该文件的宿主用户id被保存在suid中。
 
+> [binder.c - Android Code Search](https://cs.android.com/android/kernel/superproject/+/refs/heads/common-android-mainline:common/drivers/android/binder.c;drc=3703fe69dc6c3d662c8d30d463a095b99ed9d69d;bpv=0;bpt=1;l=5794)
+
 ```c
 /**
  * 驱动层的binder_open函数的作用是创建并初始化了binder_proc结构体, 
@@ -740,6 +1618,8 @@ static int binder_open(struct inode *nodp, struct file *filp)
 ```
 
 #### 2.2.2 binder_ioctl
+
+> [binder.c - Android Code Search](https://cs.android.com/android/kernel/superproject/+/refs/heads/common-android-mainline:common/drivers/android/binder.c;l=5510;)
 
 |ioctl指令|说明|
 |:-- |: --|
@@ -949,6 +1829,8 @@ out:
 
 ###### binder_thread_read
 
+这里会处理 `BC_XXX`这些二级指令
+
 ```c
 /**
  * BINDER_WRITE_READ指令read_size > 0时将执行读操作
@@ -963,361 +1845,359 @@ static int binder_thread_read(struct binder_proc *proc,
 }
 ```
 
-## 三、分析MediaServer的启动和注册
 
-Native System Service大多数由init和SystemServer的init1阶段启动。
-这里以init.rc中配置的media服务为例,分析Server启动和Service注册。
-对应的可执行文件是 /system/bin/mediaserver
-mediaserver的main函数位于 frameworks/av/media/mediaserver/main_mediaserver.cpp中
 
-- main_mediaserver.cpp
+## 补充
 
-```c
-/**
- * 1. 创建ProcessState对象
- * 2. 获取servicemanager的代理对象
- * 3. 运行并注册server
- * 4. Server进程开启线程池
- */
-int main(int argc, char** argv)
+### BBinder
+
+BBinder 继承自IBinder，它主要负责处理binder通讯相关的逻辑。业务相关的接口实现在它的子类 `BnXXX`中实现。
+
+向ServiceManger注册服务时的IBinder 就是 BBinder，例如`BnServiceManager`、`BnMediaPlayService`等。
+
+> [Binder.h - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/libs/binder/include/binder/Binder.h;drc=7346c436e5a11ce08f6a80dcfeb8ef941ca30176;l=30)
+
+```cpp
+class BBinder : public IBinder
 {
-    // 创建ProcessState对象，赋值给proc变量
-    sp<ProcessState> proc(ProcessState::self());
-    // 获取servicemanager的代理对象
-    sp<IServiceManager> sm = defaultServiceManager();
-    LOGI("ServiceManager: %p", sm.get());
-    // 运行并注册AudioFlinger服务
-    AudioFlinger::instantiate();
-    // 运行并注册MediaPlayerService服务
-    MediaPlayerService::instantiate();
-    // 运行并注册CameraService服务
-    CameraService::instantiate();
-    // 运行并注册AudioPolicyService服务
-    AudioPolicyService::instantiate();
-    // Server进程开启线程池
-    ProcessState::self()->startThreadPool();
-    // 添加线程
-    IPCThreadState::self()->joinThreadPool();
 }
 ```
 
-### 3.1 ProcessState.cpp
 
 
-#### ProcessState::self()
+#### BBinder::transact()
 
-1. 构建ProcessState对象
-2. 通过fcntl系统调用打开Binder设备。
-3. 调用mmap系统调用将Binder设备映射到进程的地址空间。
+内部调用`onTransact()` 来处理请求。
 
-```c
-/**
- * self()是一个构建单例的方法
- * 保证当前进程只有一个ProcessState对象。
- */
-sp<ProcessState> ProcessState::self()
+> [Binder.cpp - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/libs/binder/Binder.cpp;l=359;drc=7346c436e5a11ce08f6a80dcfeb8ef941ca30176;bpv=0;bpt=1)
+
+```cpp
+// NOLINTNEXTLINE(google-default-arguments)
+status_t BBinder::transact(
+    uint32_t code, const Parcel& data, Parcel* reply, uint32_t flags)
 {
-    if (gProcess != NULL) return gProcess;
-    AutoMutex _l(gProcessMutex);
-    if (gProcess == NULL) gProcess = new ProcessState;
-    return gProcess;
-}
-```
+    data.setDataPosition(0);
 
-```c
-/**
- * 和servicemanager的binder_open函数类似。
- * 1. 首先通过open_drive()函数打开Binder设备，初始化mDriverFD
- * 2. 通过mmap系统调用将Binder设备映射到进程的地址空间
- */
-ProcessState::ProcessState()
-    : mDriverFD(open_driver()) // 在初始化列表中打开Binder设备
-    , mVMStart(MAP_FAILED)
-    , mManagesContexts(false)
-    , mBinderContextCheckFunc(NULL)
-    , mBinderContextUserData(NULL)
-    , mThreadPoolStarted(false)
-    , mThreadPoolSeq(1)
-{
-    if (mDriverFD >= 0) {
-#if !defined(HAVE_WIN32_IPC)
-        // 通过mmap系统调用将Binder设备映射到进程空间
-        mVMStart = mmap(0, BINDER_VM_SIZE, PROT_READ, MAP_PRIVATE | MAP_NORESERVE, mDriverFD, 0);
-        if (mVMStart == MAP_FAILED) {
-            // *sigh*
-            LOGE("Using /dev/binder failed: unable to mmap transaction memory.\n");
-            close(mDriverFD);
-            mDriverFD = -1;
-        }
-#else
-        mDriverFD = -1;
-#endif
+    if (reply != nullptr && (flags & FLAG_CLEAR_BUF)) {
+        reply->markSensitive();
     }
-    LOG_ALWAYS_FATAL_IF(mDriverFD < 0, "Binder driver could not be opened.  Terminating.");
-}
-```
 
-#### open_device()
-
-```c
-/**
- * 1. 通过open系统调用打开binder设备, 返回文件描述符用于调用ioctl指令。
- * 2. BINDER_VERSION命令获取Binder协议版本号。
- * 3. BINDER_SET_MAX_THREADS设置当前server线程池上线。
- */
-static int open_driver()
-{
-    // 一样的套路打开/dev/binder设备节点来用于Binder驱动程序,返回文件描述符
-    int fd = open("/dev/binder", O_RDWR);
-    if (fd >= 0) {
-        // 通过fcontl,对fd设置文件描述符号标记。
-        // F_SETFD是设置文件描述符标记的命令
-        // FD_CLOEXEC是新的标记值，表示当前进程执行exec系列函数时，将会关闭fd
-        fcntl(fd, F_SETFD, FD_CLOEXEC);
-        int vers;
-        // 向Binder驱动发送BINDER_VERSION命令获取Binder协议版本号,存入&vers
-        status_t result = ioctl(fd, BINDER_VERSION, &vers);
-        if (result == -1) {
-            LOGE("Binder ioctl to obtain version failed: %s", strerror(errno));
-            close(fd);
-            fd = -1;
+    status_t err = NO_ERROR;
+    switch (code) {
+        case PING_TRANSACTION:
+            err = pingBinder();
+            break;
+        case START_RECORDING_TRANSACTION:
+            err = startRecordingTransactions(data);
+            break;
+        case STOP_RECORDING_TRANSACTION:
+            err = stopRecordingTransactions();
+            break;
+        case EXTENSION_TRANSACTION:
+            CHECK(reply != nullptr);
+            err = reply->writeStrongBinder(getExtension());
+            break;
+        case DEBUG_PID_TRANSACTION:
+            CHECK(reply != nullptr);
+            err = reply->writeInt32(getDebugPid());
+            break;
+        case SET_RPC_CLIENT_TRANSACTION: {
+            err = setRpcClientDebug(data);
+            break;
         }
-        // 比较版本是否一致
-        if (result != 0 || vers != BINDER_CURRENT_PROTOCOL_VERSION) {
-            LOGE("Binder driver protocol does not match user space protocol!");
-            close(fd);
-            fd = -1;
-        }
-        size_t maxThreads = 15;
-        // 向Binder驱动发送BINDER_SET_MAX_THREADS命令。
-        // 设置当前server线程池上线，支持客户端最大并发访问数为15。
-        result = ioctl(fd, BINDER_SET_MAX_THREADS, &maxThreads);
-        if (result == -1) {
-            LOGE("Binder ioctl to set max threads failed: %s", strerror(errno));
-        }
-    } else {
-        LOGW("Opening '/dev/binder' failed: %s\n", strerror(errno));
+        default:
+            // 调用 onTransact()
+            err = onTransact(code, data, reply, flags);
+            break;
     }
-    return fd;
-}
-```
 
-#### getContextObject()
+    // In case this is being transacted on in the same process.
+    if (reply != nullptr) {
+        reply->setDataPosition(0);
+        if (reply->dataSize() > LOG_REPLIES_OVER_SIZE) {
+            ALOGW("Large reply transaction of %zu bytes, interface descriptor %s, code %d",
+                  reply->dataSize(), String8(getInterfaceDescriptor()).c_str(), code);
+        }
+    }
 
-```c
-/**
- * 返回上下文管理者对应的BpBinder(服务代理对象)
- */
-sp<IBinder> ProcessState::getContextObject(const sp<IBinder>& /*caller*/)
-{
-    return getStrongProxyForHandle(0);
-}
-
-/**
- * 1. 查找是否存在对应的handle_entry
- * 2. handle == 0表示上下文管理器特殊处理
- * 3. 不存在则创建一个BpBinder(handle)
- */
-sp<IBinder> ProcessState::getStrongProxyForHandle(int32_t handle)
-{
-    sp<IBinder> result;
-    AutoMutex _l(mLock);
-    // 查找是否存在对应的handle_entry
-    handle_entry* e = lookupHandleLocked(handle);
-    if (e != NULL) {
-        // 如果当前不存在 或者我们不能在当前entry中获取到weak reference(应该是表示被回收吧)
-        // 则创建一个新的BpBinder
-        IBinder* b = e->binder;
-        if (b == NULL || !e->refs->attemptIncWeak(this)) {
-            if (handle == 0) {
-                //上下文管理器的特殊情况…
-                //上下文管理器是我们创建BpBinder代理的唯一对象，但没有包含引用。
-                //执行一个虚拟事务，以确保在创建第一个本地引用之前注册上下文管理器(在创建BpBinder时将会发生)。
-                //如果在不存在上下文管理器时为BpBinder创建了本地引用，那么驱动程序将无法提供对上下文管理器的引用，但是驱动程序API不返回状态。
-                
-                Parcel data;
-                status_t status = IPCThreadState::self()->transact(
-                        0, IBinder::PING_TRANSACTION, data, NULL, 0);
-                if (status == DEAD_OBJECT)
-                   return NULL;
+    if (CC_UNLIKELY(kEnableKernelIpc && mRecordingOn && code != START_RECORDING_TRANSACTION)) {
+        Extras* e = mExtras.load(std::memory_order_acquire);
+        AutoMutex lock(e->mLock);
+        if (mRecordingOn) {
+            Parcel emptyReply;
+            timespec ts;
+            timespec_get(&ts, TIME_UTC);
+            auto transaction = android::binder::debug::RecordedTransaction::
+                    fromDetails(getInterfaceDescriptor(), code, flags, ts, data,
+                                reply ? *reply : emptyReply, err);
+            if (transaction) {
+                if (status_t err = transaction->dumpToFile(e->mRecordingFd); err != NO_ERROR) {
+                    LOG(INFO) << "Failed to dump RecordedTransaction to file with error " << err;
+                }
+            } else {
+                LOG(INFO) << "Failed to create RecordedTransaction object.";
             }
-
-            b = new BpBinder(handle); 
-            e->binder = b;
-            if (b) e->refs = b->getWeakRefs();
-            result = b;
-        } else {
-            // This little bit of nastyness is to allow us to add a primary
-            // reference to the remote proxy when this team doesn't have one
-            // but another team is sending the handle to us.
-            result.force_set(b);
-            e->refs->decWeak(this);
         }
     }
 
-    return result;
+    return err;
+}
+```
+
+
+
+#### BBinder::onTransact()
+
+服务处理binder请求。
+
+> [Binder.cpp - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/libs/binder/Binder.cpp;drc=7346c436e5a11ce08f6a80dcfeb8ef941ca30176;bpv=0;bpt=1;l=750)
+
+```cpp
+// NOLINTNEXTLINE(google-default-arguments)
+status_t BBinder::onTransact(
+    uint32_t code, const Parcel& data, Parcel* reply, uint32_t /*flags*/)
+{
+    switch (code) {
+        case INTERFACE_TRANSACTION:
+            CHECK(reply != nullptr);
+            reply->writeString16(getInterfaceDescriptor());
+            return NO_ERROR;
+
+        case DUMP_TRANSACTION: {
+            int fd = data.readFileDescriptor();
+            int argc = data.readInt32();
+            Vector<String16> args;
+            for (int i = 0; i < argc && data.dataAvail() > 0; i++) {
+               args.add(data.readString16());
+            }
+            return dump(fd, args);
+        }
+
+        case SHELL_COMMAND_TRANSACTION: {
+            int in = data.readFileDescriptor();
+            int out = data.readFileDescriptor();
+            int err = data.readFileDescriptor();
+            int argc = data.readInt32();
+            Vector<String16> args;
+            for (int i = 0; i < argc && data.dataAvail() > 0; i++) {
+               args.add(data.readString16());
+            }
+            sp<IBinder> shellCallbackBinder = data.readStrongBinder();
+            sp<IResultReceiver> resultReceiver = IResultReceiver::asInterface(
+                    data.readStrongBinder());
+            (void)in;
+            (void)out;
+            (void)err;
+            if (resultReceiver != nullptr) {
+                resultReceiver->send(INVALID_OPERATION);
+            }
+            return NO_ERROR;
+        }
+
+        case SYSPROPS_TRANSACTION: {
+            report_sysprop_change();
+            return NO_ERROR;
+        }
+
+        default:
+            return UNKNOWN_TRANSACTION;
+    }
+}
+```
+
+
+
+### BpBinder
+
+BpBinder 继承自IBinder 是客户端用来与Server交互的代理类，p表示 Proxy。
+
+#### BpBinder::PrivateAccessor::create(handle)
+
+> [BpBinder.h - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/libs/binder/include/binder/BpBinder.h;drc=7346c436e5a11ce08f6a80dcfeb8ef941ca30176;l=135)
+
+```cpp
+// 调用 BpBinder::create()
+static sp<BpBinder> create(int32_t handle) { return BpBinder::create(handle); }
+
+sp<BpBinder> BpBinder::create(int32_t handle) {
+    // ....
+    return sp<BpBinder>::make(BinderHandle{handle}, trackedUid);
+}
+```
+
+#### BpBinder的构造函数
+
+> [BpBinder.cpp - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/libs/binder/BpBinder.cpp;bpv=0;bpt=1;l=221)
+
+```cpp
+// 定义
+class BpBinder : public IBinder {
+    
 }
 
-```
+// 调用了 BpBinder::BpBinder(Handle&& handle)
+BpBinder::BpBinder(BinderHandle&& handle, int32_t trackedUid) : BpBinder(Handle(handle)) {
+    if constexpr (!kEnableKernelIpc) {
+        LOG_ALWAYS_FATAL("Binder kernel driver disabled at build time");
+        return;
+    }
 
-### 3.2 BpBinder.cpp
+    mTrackedUid = trackedUid;
+	// 主要就是向输出缓冲区mOut中写入BC_INCREFS 和 handle = 0
+    IPCThreadState::self()->incWeakHandle(this->binderHandle(), this);
+}
 
-/frameworks/native/libs/binder/BpBinder.cpp
-
-#### 构造函数
-
-```
-/**
- * 1. BpBinder初始化列表赋值 mHandle = handle
- * 2. 调用IPCThreadState::self()->incWeakHandle(handle)
- */
-BpBinder::BpBinder(int32_t handle)
-    : mHandle(handle)
-    , mAlive(1)
-    , mObitsSent(0)
-    , mObituaries(NULL)
-{
-    ALOGV("Creating BpBinder %p handle %d\n", this, mHandle);
+// handle = 0
+BpBinder::BpBinder(Handle&& handle)
+      : mStability(0),
+        mHandle(handle),
+        mAlive(true),
+        mObitsSent(false),
+        mObituaries(nullptr),
+        mDescriptorCache(kDescriptorUninit),
+        mTrackedUid(-1) {
     extendObjectLifetime(OBJECT_LIFETIME_WEAK);
-    // 主要就是向输出缓冲区mOut中写入BC_INCREFS 和 handle = 0
-    IPCThreadState::self()->incWeakHandle(handle);
-}
-
-```
-
-### 3.3 IPCThreadState.cpp
-
-/frameworks/native/libs/binder/IPCThreadState.cpp
-TLS(Thread Local Storage, 线程局部存储), 在Linux的进程和线程模型中，同一个进程内的多个线程共享进程的地址空间，因此不同线程可以共享一个全局变量和静态变量。TLS的作用就是一个线程在访问时其他线程不可。它提供了一个全局的索引表存储线程局部数据的地址，通过pthread_key_t去查询其局部数据。
-
-```c
-/**
- * 这个方法主要用于获取IPCThreadState
- * 1. gTLS不存在则创建一个，然后goto restart;
- * 2. 根据gTLS查询IPCThreadState, 存在则返回，不存在则创建一个
- */
-IPCThreadState* IPCThreadState::self()
-{
-    if (gHaveTLS) { // TLS存在时, 不过初始是false
-restart:
-        // const 等同final
-        const pthread_key_t k = gTLS;
-        // 获取gTLS对应的IPCThreadState
-        IPCThreadState* st = (IPCThreadState*)pthread_getspecific(k);
-        if (st) return st;        
-        return new IPCThreadState;
-    }
-
-    if (gShutdown) { // 初始false
-        ALOGW("Calling IPCThreadState::self() during shutdown is dangerous, expect a crash.\n");
-        return NULL;
-    }
-    pthread_mutex_lock(&gTLSMutex);
-    // TLS不存在是，创建一个pthread_key_create, 重新跳转到restart处
-    if (!gHaveTLS) {
-        // 创建pthread_key_t : gTLS, 用于设置检索TLS
-        int key_create_value = pthread_key_create(&gTLS, threadDestructor);
-        if (key_create_value != 0) {
-            pthread_mutex_unlock(&gTLSMutex);
-            return NULL;
-        }
-        gHaveTLS = true;
-    }
-    pthread_mutex_unlock(&gTLSMutex);
-    // 跳转到restart
-    goto restart;
 }
 ```
 
-```
-void IPCThreadState::incWeakHandle(int32_t handle)
+#### IPCThreadState::incWeakHandle()
+
+```cpp
+void IPCThreadState::incWeakHandle(int32_t handle, BpBinder *proxy)
 {
     LOG_REMOTEREFS("IPCThreadState::incWeakHandle(%d)\n", handle);
-	// 向输出缓冲区中写入BC_INCREFS 和 handle = 0
+    // BC_INCREFS
     mOut.writeInt32(BC_INCREFS);
+    // 0
     mOut.writeInt32(handle);
-}
-```
-
-### 3.4 获取ServiceManager的Proxy对象(BpBinder)
-Client端查询服务或者Server端注册服务时，都要首先获取ServiceManager的Proxy对象(`BpBinder`)，然后通过这个代理对象与ServiceManager通信。
-
-![image_1cchrav4k4dvepjpmbvh1cum9.png-372.9kB][ServiceManager的类层次结构]
-
-- **Binder通信接口**： 提供了通信协议的实现，只要有`IBinder`, `BBinder`, `BpBinder`三个类组成。
-  - **IBinder**：定义了Binder通信的接口。**描述如何服务进行交互**。
-  - **BBinder**：它是Service 对应的Binder对象**，描述如何处理Client的请求**。
-  - **BpBinder**：它是**Client端访问BBinder的代理对象**，负责打开Binder设备与服务端通信。
-
-- **Binder服务接口**:  `IServiceManager`定义了Client端可以访问Server端提供的哪些服务。
-- **Proxy**: 主要由`BpInterface` 和 `BpServiceManager` 实现。
-  - `BpServiceManager`实现了服务接口中生命的方法
-  - `BpInterface->mRemote`中存储了Client端创建的`BpBinder`对象。
-
-- **Stub**: 主要有`BnInterface` 和 `BnServiceManger`实现。
-
-
-#### Static.h
-
-一些全局变量的定义
-
-```c
-namespace android {
-    // For TextStream.cpp
-    extern Vector<int32_t> gTextBuffers;
-    // For ProcessState.cpp
-    extern Mutex gProcessMutex;
-    extern sp<ProcessState> gProcess;
-    // For IServiceManager.cpp
-    extern Mutex gDefaultServiceManagerLock;
-    extern sp<IServiceManager> gDefaultServiceManager;
-    extern sp<IPermissionController> gPermissionController;
-}
-```
-
-#### IServiceManager->defaultServiceManager()
-
-```c
-/**
- * 用于获取ServiceManager的Proxy对象(BpBinder)
- * 1. 调用ProcessState::self()->getContextObject(NULL),获取BpBidner
- * 2. 通过Interface_cast()转换成IServiceManager(BpServiceManager)
- */
-sp<IServiceManager> defaultServiceManager()
-{
-    // 定义在Static.h中的全局变量, 从这里看是个单例
-    if (gDefaultServiceManager != NULL) return gDefaultServiceManager;
-    {
-        AutoMutex _l(gDefaultServiceManagerLock);
-        while (gDefaultServiceManager == NULL) {
-            // interface_cast是在IServiceManager的父类IInterface中定义的
-            gDefaultServiceManager = interface_cast<IServiceManager>(
-                ProcessState::self()->getContextObject(NULL));
-            if (gDefaultServiceManager == NULL)
-                sleep(1);
-        }
+    if (!flushIfNeeded()) {
+        // Create a temp reference until the driver has handled this command.
+        proxy->getWeakRefs()->incWeak(mProcess.get());
+        mPostWriteWeakDerefs.push(proxy->getWeakRefs());
     }
-    return gDefaultServiceManager;
 }
 ```
 
-- 调用IMPLEMENT_META_INTERFACE
+#### BpBinder::transact()
+
+内部调用了 `IPCThreadState::self()->transact()` 来发送服务注册请求，IPCThreadState中处理的就是Binder的通信逻辑。
+
+> [BpBinder.cpp - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/libs/binder/BpBinder.cpp;l=333;drc=7346c436e5a11ce08f6a80dcfeb8ef941ca30176;bpv=0;bpt=1)
+
+```cpp
+status_t BpBinder::transact(
+    uint32_t code, const Parcel& data, Parcel* reply, uint32_t flags)
+{
+    if (mAlive) {
+        bool privateVendor = flags & FLAG_PRIVATE_VENDOR;
+        flags = flags & ~static_cast<uint32_t>(FLAG_PRIVATE_VENDOR);
+        if (code >= FIRST_CALL_TRANSACTION && code <= LAST_CALL_TRANSACTION) {
+            using android::internal::Stability;
+            int16_t stability = Stability::getRepr(this);
+            Stability::Level required = privateVendor ? Stability::VENDOR
+                : Stability::getLocalLevel();
+            if (CC_UNLIKELY(!Stability::check(stability, required))) {
+                return BAD_TYPE;
+            }
+        }
+
+        status_t status;
+        if (CC_UNLIKELY(isRpcBinder())) { // 这是处理 RpcBinder的
+            status = rpcSession()->transact(sp<IBinder>::fromExisting(this), code, data, reply,
+                                            flags);
+        } else {
+            // 这里是本地Binder的通信。
+            if constexpr (!kEnableKernelIpc) {
+                LOG_ALWAYS_FATAL("Binder kernel driver disabled at build time");
+                return INVALID_OPERATION;
+            }
+            // 调用了 IPCThreadState->transact()
+            status = IPCThreadState::self()->transact(binderHandle(), code, data, reply, flags);
+        }
+        if (data.dataSize() > LOG_TRANSACTIONS_OVER_SIZE) {
+            Mutex::Autolock _l(mLock);
+            ALOGW("Large outgoing transaction of %zu bytes, interface descriptor %s, code %d",
+                  data.dataSize(), String8(mDescriptorCache).c_str(), code);
+        }
+        if (status == DEAD_OBJECT) mAlive = 0;
+        return status;
+    }
+    return DEAD_OBJECT;
+}
 
 ```
-IMPLEMENT_META_INTERFACE(ServiceManager, "android.os.IServiceManager");
+
+
+
+### 重要的接口定义
+
+#### IInterface
+
+> [IInterface.h - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/libs/binder/include/binder/IInterface.h)
+
+```cpp
+class IInterface : public virtual RefBase
+{
+public:
+            IInterface();
+            static sp<IBinder>  asBinder(const IInterface*);
+            static sp<IBinder>  asBinder(const sp<IInterface>&);
+
+protected:
+    virtual                     ~IInterface();
+    virtual IBinder*            onAsBinder() = 0;
+};
 ```
 
-#### IInterface.cpp
+#### BnInterface
 
-- interface_cast
+服务端实现服务的接口，是一个类模板，将业务接口 `IXXX` 和 binder接口 `BBinder` 结合。 
 
-```c
-/**
- * 此时INTERFACE = IServiceManager
- * 所以调用的是IServiceManager::asInterface(obj)
- * 不过IServiceManager和IInterface都没有定义这个方法
- * 而是在宏定义DECLARE_META_INTERFACE中定义
- */
+> [IInterface.h - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/libs/binder/include/binder/IInterface.h;l=70;)
+
+```cpp
+template<typename INTERFACE>
+class BnInterface : public INTERFACE, public BBinder
+{
+public:
+    virtual sp<IInterface>      queryLocalInterface(const String16& _descriptor);
+    virtual const String16&     getInterfaceDescriptor() const;
+    typedef INTERFACE BaseInterface;
+
+protected:
+    virtual IBinder*            onAsBinder();
+};
+
+```
+
+#### BpInterface
+
+客户端访问服务的代理对象接口，通用是一个类模板。
+
+> [IInterface.h - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/libs/binder/include/binder/IInterface.h;l=84;)
+
+```cpp
+template<typename INTERFACE>
+class BpInterface : public INTERFACE, public BpRefBase
+{
+public:
+    explicit                    BpInterface(const sp<IBinder>& remote);
+    typedef INTERFACE BaseInterface;
+
+protected:
+    virtual IBinder*            onAsBinder();
+};
+```
+
+
+
+### interface_cast
+
+这是模板函数，具体的实现 在 `INTERFACE` 中。
+
+例如 `INTERFACE = IServiceManager` 则调用的就是 `IServiceManager::asInterface(obj)`
+
+```cpp
 template<typename INTERFACE>
 inline sp<INTERFACE> interface_cast(const sp<IBinder>& obj)
 {
@@ -1325,57 +2205,297 @@ inline sp<INTERFACE> interface_cast(const sp<IBinder>& obj)
 }
 ```
 
-- DECLARE_META_INTERFACE
+
+
+### IServiceManager
+
+#### 接口声明
+
+`IServiceManager.h`中声明了接口，其中最关键的是 `DECLARE_META_INTERFACE()` 这个宏定义，宏包括了 Binder通信相关接口。
+
+其他的就是一些 业务上的接口和常量。
+
+> [IServiceManager.h - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:out/soong/.intermediates/frameworks/native/libs/binder/libbinder/android_native_bridge_arm64_armv8-a_shared/gen/aidl/android/os/IServiceManager.h;l=27;drc=7346c436e5a11ce08f6a80dcfeb8ef941ca30176;bpv=1;bpt=1)
+
+```cpp
+class IServiceManager : public ::android::IInterface {
+public:
+  typedef IServiceManagerDelegator DefaultDelegator;
+  // 这是一个宏，它定义了 asInterface() 等一些接口
+  DECLARE_META_INTERFACE(ServiceManager)
+  // 
+  enum : int32_t { DUMP_FLAG_PRIORITY_CRITICAL = 1 };
+  // ....
+  // 定义的业务接口
+  virtual ::android::binder::Status getService(const ::std::string& name, ::android::sp<::android::IBinder>* _aidl_return) = 0;
+  virtual status_t addService(const String16& name, const sp<IBinder>& service,
+                                bool allowIsolated = false,
+                                int dumpsysFlags = DUMP_FLAG_PRIORITY_DEFAULT) = 0;
+ // ....
+};  // class IServiceManager
+```
+
+#### 接口实现
+
+`IServiceManager.cpp` 中是 具体的实现，其中最总要的就是 `DO_NOT_DIRECTLY_USE_ME_IMPLEMENT_META_INTERFACE()`这个宏，
+
+它包括了 `DECLARE_META_INTERFACE` 中定义的接口的具体实现。
+
+> [IServiceManager.cpp - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:out/soong/.intermediates/frameworks/native/libs/binder/libbinder/android_native_bridge_arm64_armv8-a_shared/gen/aidl/android/os/IServiceManager.cpp;bpv=0;bpt=1)
+
+```cpp
+namespace android {
+namespace os {
+// 这个宏中包括了 DECLARE_META_INTERFACE 中定义的接口的具体实现
+DO_NOT_DIRECTLY_USE_ME_IMPLEMENT_META_INTERFACE(ServiceManager, "android.os.IServiceManager")
+}  // namespace os
+}  // namespace android
+#include <android/os/BpServiceManager.h>
+#include <android/os/BnServiceManager.h>
+#include <binder/Parcel.h>
+#include <android-base/macros.h>
+
+namespace android {
+namespace os {
+
+// BpServiceManager 是 IInterface的实现类
+BpServiceManager::BpServiceManager(const ::android::sp<::android::IBinder>& _aidl_impl)
+    // 调用 BpInterface 的构造
+    : BpInterface<IServiceManager>(_aidl_impl){
+}
+
+// 业务接口的实现 
+::android::binder::Status BpServiceManager::getService(const ::std::string& name, ::android::sp<::android::IBinder>* _aidl_return) {
+  // ... 
+  return _aidl_status;
+}
 
 ```
-// 定义了方法和常量
-#define DECLARE_META_INTERFACE(INTERFACE)                               \
-    static const android::String16 descriptor;                          \
-    static android::sp<I##INTERFACE> asInterface(                       \
-            const android::sp<android::IBinder>& obj);                  \
-    virtual const android::String16& getInterfaceDescriptor() const;    \
-    I##INTERFACE();                                                     \
-    virtual ~I##INTERFACE();                                            \
+
+BpServiceManager 就是 IServiceManager和 IInterface的实现类。将传进来的 BpBinder保存在 mRemote中。
+
+[BpServiceManager.h - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:out/soong/.intermediates/frameworks/native/libs/binder/libbinder/android_native_bridge_arm64_armv8-a_shared/gen/aidl/android/os/BpServiceManager.h)
+
+```cpp
+// 接口声明
+class BpServiceManager : public ::android::BpInterface<IServiceManager> {}
+
+template<typename INTERFACE>
+class BpInterface : public INTERFACE, public IInterface, public BpHwRefBase
+{
+public:
+    explicit                    BpInterface(const sp<IBinder>& remote);
+    virtual IBinder*            onAsBinder();
+};
+
+// 实现
+template<typename INTERFACE>
+inline BpInterface<INTERFACE>::BpInterface(const sp<IBinder>& remote)
+    : BpRefBase(remote)
+{
+}
     
-    
-// 具体的实现
-// IServiceManager 中调用这个宏定义(ServiceManager, "android.os.IServiceManager")
-// 实质是 new BpServiceManager(obj : BpBinder)
+BpRefBase::BpRefBase(const sp<IBinder>& o)
+    // mRemote 就是 传进来的 BpBinder
+    : mRemote(o.get()), mRefs(nullptr), mState(0)
+{
+    extendObjectLifetime(OBJECT_LIFETIME_WEAK);
+
+    if (mRemote) {
+        mRemote->incStrong(this);           // Removed on first IncStrong().
+        mRefs = mRemote->createWeak(this);  // Held for our entire lifetime.
+    }
+}
+```
+
+### 几个重要的宏定义
+
+`DECLARE_META_INTERFACE` 这个宏定义了一些 **重要的binder通讯接口**，其中就包括了 `asInterface()`。
+
+这个宏在 在服务的业务接口中（例如`IServiceManager接口`），从而将业务接口和binder通讯接口结合起来。
+
+#### DECLARE_META_INTERFACE
+
+> [IInterface.h - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/libs/binder/include/binder/IInterface.h;drc=7346c436e5a11ce08f6a80dcfeb8ef941ca30176;bpv=0;bpt=1;l=96)
+
+```cpp
+// -----------------
+#define DECLARE_META_INTERFACE(INTERFACE)                                                         \
+public:                                                                                           \
+    // 定义描述符，可以通过描述符来查询对应接口
+    static const ::android::String16 descriptor;                                                  \
+    // asInterface
+    static ::android::sp<I##INTERFACE> asInterface(const ::android::sp<::android::IBinder>& obj); \
+    // 返回描述符
+    virtual const ::android::String16& getInterfaceDescriptor() const;                            \
+    // 构造和析构
+    I##INTERFACE();                                                                               \
+    virtual ~I##INTERFACE();                                                                      \
+    // 
+    static bool setDefaultImpl(::android::sp<I##INTERFACE> impl);                                 \
+    static const ::android::sp<I##INTERFACE>& getDefaultImpl();                                   \
+                                                                                                  \
+private:                                                                                          \
+    static ::android::sp<I##INTERFACE> default_impl;                                              \
+                                                                                                  \
+public:
+
+#define __IINTF_CONCAT(x, y) (x ## y)
+```
+
+#### DO_NOT_DIRECTLY_USE_ME_IMPLEMENT_META_INTERFACE
+
+`DO_NOT_DIRECTLY_USE_ME_IMPLEMENT_META_INTERFACE` 这个宏就是定义 `DECLARE_META_INTERFACE`宏中接口的**具体实现**的。
+
+它用于服务的实现类中，这里以 `INTERFACE=ServiceManager` 来解读，发现和使用aidl时自动生成的IBinder类内的实现很相似。
+
+> [IInterface.h - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/libs/binder/include/binder/IInterface.h;drc=7346c436e5a11ce08f6a80dcfeb8ef941ca30176;bpv=0;bpt=1;l=127;)
+
+```cpp
+#ifndef DO_NOT_CHECK_MANUAL_BINDER_INTERFACES
+
+// 这个宏内部调用也是 DO_NOT_DIRECTLY_USE_ME_IMPLEMENT_META_INTERFACE
 #define IMPLEMENT_META_INTERFACE(INTERFACE, NAME)                       \
-    const android::String16 I##INTERFACE::descriptor(NAME);             \
-    const android::String16&                                            \
-            I##INTERFACE::getInterfaceDescriptor() const {              \
-        return I##INTERFACE::descriptor;                                \
-    }                                                                   \
-    android::sp<I##INTERFACE> I##INTERFACE::asInterface(                \
-            const android::sp<android::IBinder>& obj)                   \
-    {                                                                   \
-        android::sp<I##INTERFACE> intr;                                 \
-        if (obj != NULL) {                                              \
-            intr = static_cast<I##INTERFACE*>(                          \
-                obj->queryLocalInterface(                               \
-                        I##INTERFACE::descriptor).get());               \
-            if (intr == NULL) {                                         \
-                intr = new Bp##INTERFACE(obj);                          \
-            }                                                           \
-        }                                                               \
-        return intr;                                                    \
-    }                                                                   \
-    I##INTERFACE::I##INTERFACE() { }                                    \
-    I##INTERFACE::~I##INTERFACE() { }                                   \
+    static_assert(internal::allowedManualInterface(NAME),               \
+                  "b/64223827: Manually written binder interfaces are " \
+                  "considered error prone and frequently have bugs. "   \
+                  "The preferred way to add interfaces is to define "   \
+                  "an .aidl file to auto-generate the interface. If "   \
+                  "an interface must be manually written, add its "     \
+                  "name to the whitelist.");                            \
+    DO_NOT_DIRECTLY_USE_ME_IMPLEMENT_META_INTERFACE(INTERFACE, NAME)    \
 
+#else
+
+#define IMPLEMENT_META_INTERFACE(INTERFACE, NAME)                       \
+    DO_NOT_DIRECTLY_USE_ME_IMPLEMENT_META_INTERFACE(INTERFACE, NAME)    \
+
+#endif
+
+// Macro to be used by both IMPLEMENT_META_INTERFACE and IMPLEMENT_META_NESTED_INTERFACE
+// 这里就是 DECLARE_META_INTERFACE 的具体实现
+// ITYPE=IServiceManager, INAME=IServiceManager, BPTYPE=BpServiceManager
+#define DO_NOT_DIRECTLY_USE_ME_IMPLEMENT_META_INTERFACE0(ITYPE, INAME, BPTYPE)                     \
+    // 返回描述符
+    const ::android::String16& ITYPE::getInterfaceDescriptor() const { return ITYPE::descriptor; } \
+    // obj 就是 通过 ProcessState::getContextObject() 获取到的 BpBinder(0)
+    ::android::sp<ITYPE> ITYPE::asInterface(const ::android::sp<::android::IBinder>& obj) {        \
+        ::android::sp<ITYPE> intr;                                                                 \
+        if (obj != nullptr) {                                                                      \
+            // 根据descriptor 查找是否已存在对应的 IServiceManager
+            intr = ::android::sp<ITYPE>::cast(obj->queryLocalInterface(ITYPE::descriptor));        \
+            if (intr == nullptr) {                                                                 \
+                // 不存在就构建一个，这里就很明显了，其实就是使用 BpBinder 构建了一个 BpServiceManager
+                // ::android::sp<BpServiceManager>::make(BpBinder(0))
+                intr = ::android::sp<BPTYPE>::make(obj);                                           \
+            }                                                                                      \
+        }                                                                                          \
+        return intr;                                                                               \
+    }                                                                                              \
+    ::android::sp<ITYPE> ITYPE::default_impl;                                                      \
+    bool ITYPE::setDefaultImpl(::android::sp<ITYPE> impl) {                                        \
+        /* Only one user of this interface can use this function     */                            \
+        /* at a time. This is a heuristic to detect if two different */                            \
+        /* users in the same process use this function.              */                            \
+        assert(!ITYPE::default_impl);                                                              \
+        if (impl) {                                                                                \
+            ITYPE::default_impl = std::move(impl);                                                 \
+            return true;                                                                           \
+        }                                                                                          \
+        return false;                                                                              \
+    }                                                                                              \
+    const ::android::sp<ITYPE>& ITYPE::getDefaultImpl() { return ITYPE::default_impl; }            \
+    //
+    ITYPE::INAME() {}                                                                              \
+    ITYPE::~INAME() {}
+
+// Macro for an interface type.
+// 这里是入口
+#define DO_NOT_DIRECTLY_USE_ME_IMPLEMENT_META_INTERFACE(INTERFACE, NAME)                        \
+    // 描述符的值
+    const ::android::StaticString16 I##INTERFACE##_descriptor_static_str16(                     \
+            __IINTF_CONCAT(u, NAME));                                                           \
+    // 描述符 
+    const ::android::String16 I##INTERFACE::descriptor(I##INTERFACE##_descriptor_static_str16); \
+    // IServiceManager, IServiceManager, BpServiceManager
+    DO_NOT_DIRECTLY_USE_ME_IMPLEMENT_META_INTERFACE0(I##INTERFACE, I##INTERFACE, Bp##INTERFACE)
 ```
 
+### Binder消息码
 
-### 3.3 注册Service
+| 指令       |                                                   |
+| ---------- | ------------------------------------------------- |
+| BINDER_XXX | 一级指令,binder首先处理这些状态码                 |
+| BR_XXXX    | 返回码                                            |
+| BC_XXXX    | 这些是 BINDER_WRITE_READ 这个一级指令下的二级指令 |
 
-### 3.4 Server进程开启线程池
+> [binder.h - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:bionic/libc/kernel/uapi/linux/android/binder.h;drc=7346c436e5a11ce08f6a80dcfeb8ef941ca30176;bpv=0;bpt=1;l=226)
 
-## 四、Client端使用服务代理对象
+```cpp
 
-## 五、服务代理和服务通信
+#define BINDER_WRITE_READ _IOWR('b', 1, struct binder_write_read)
+#define BINDER_SET_IDLE_TIMEOUT _IOW('b', 3, __s64)
+#define BINDER_SET_MAX_THREADS _IOW('b', 5, __u32)
+#define BINDER_SET_IDLE_PRIORITY _IOW('b', 6, __s32)
+#define BINDER_SET_CONTEXT_MGR _IOW('b', 7, __s32)
+#define BINDER_THREAD_EXIT _IOW('b', 8, __s32)
+#define BINDER_VERSION _IOWR('b', 9, struct binder_version)
+#define BINDER_GET_NODE_DEBUG_INFO _IOWR('b', 11, struct binder_node_debug_info)
+#define BINDER_GET_NODE_INFO_FOR_REF _IOWR('b', 12, struct binder_node_info_for_ref)
+#define BINDER_SET_CONTEXT_MGR_EXT _IOW('b', 13, struct flat_binder_object)
+#define BINDER_FREEZE _IOW('b', 14, struct binder_freeze_info)
+#define BINDER_GET_FROZEN_INFO _IOWR('b', 15, struct binder_frozen_status_info)
+#define BINDER_ENABLE_ONEWAY_SPAM_DETECTION _IOW('b', 16, __u32)
+#define BINDER_GET_EXTENDED_ERROR _IOWR('b', 17, struct binder_extended_error)
 
-## 六、Java层中的Binder
+// 这些是从 binder驱动中返回的消息码
+enum binder_driver_return_protocol {
+  BR_ERROR = _IOR('r', 0, __s32),
+  BR_OK = _IO('r', 1),
+  BR_TRANSACTION_SEC_CTX = _IOR('r', 2, struct binder_transaction_data_secctx),
+  BR_TRANSACTION = _IOR('r', 2, struct binder_transaction_data),
+  BR_REPLY = _IOR('r', 3, struct binder_transaction_data),
+  BR_ACQUIRE_RESULT = _IOR('r', 4, __s32),
+  BR_DEAD_REPLY = _IO('r', 5),
+  BR_TRANSACTION_COMPLETE = _IO('r', 6),
+  BR_INCREFS = _IOR('r', 7, struct binder_ptr_cookie),
+  BR_ACQUIRE = _IOR('r', 8, struct binder_ptr_cookie),
+  BR_RELEASE = _IOR('r', 9, struct binder_ptr_cookie),
+  BR_DECREFS = _IOR('r', 10, struct binder_ptr_cookie),
+  BR_ATTEMPT_ACQUIRE = _IOR('r', 11, struct binder_pri_ptr_cookie),
+  BR_NOOP = _IO('r', 12),
+  BR_SPAWN_LOOPER = _IO('r', 13),
+  BR_FINISHED = _IO('r', 14),
+  BR_DEAD_BINDER = _IOR('r', 15, binder_uintptr_t),
+  BR_CLEAR_DEATH_NOTIFICATION_DONE = _IOR('r', 16, binder_uintptr_t),
+  BR_FAILED_REPLY = _IO('r', 17),
+  BR_FROZEN_REPLY = _IO('r', 18),
+  BR_ONEWAY_SPAM_SUSPECT = _IO('r', 19),
+};
+
+// 应用端发送时使用的binder驱动指令。
+enum binder_driver_command_protocol {
+  BC_TRANSACTION = _IOW('c', 0, struct binder_transaction_data),
+  BC_REPLY = _IOW('c', 1, struct binder_transaction_data),
+  BC_ACQUIRE_RESULT = _IOW('c', 2, __s32),
+  BC_FREE_BUFFER = _IOW('c', 3, binder_uintptr_t),
+  BC_INCREFS = _IOW('c', 4, __u32),
+  BC_ACQUIRE = _IOW('c', 5, __u32),
+  BC_RELEASE = _IOW('c', 6, __u32),
+  BC_DECREFS = _IOW('c', 7, __u32),
+  BC_INCREFS_DONE = _IOW('c', 8, struct binder_ptr_cookie),
+  BC_ACQUIRE_DONE = _IOW('c', 9, struct binder_ptr_cookie),
+  BC_ATTEMPT_ACQUIRE = _IOW('c', 10, struct binder_pri_desc),
+  BC_REGISTER_LOOPER = _IO('c', 11),
+  BC_ENTER_LOOPER = _IO('c', 12),
+  BC_EXIT_LOOPER = _IO('c', 13),
+  BC_REQUEST_DEATH_NOTIFICATION = _IOW('c', 14, struct binder_handle_cookie),
+  BC_CLEAR_DEATH_NOTIFICATION = _IOW('c', 15, struct binder_handle_cookie),
+  BC_DEAD_BINDER_DONE = _IOW('c', 16, binder_uintptr_t),
+  BC_TRANSACTION_SG = _IOW('c', 17, struct binder_transaction_data_sg),
+  BC_REPLY_SG = _IOW('c', 18, struct binder_transaction_data_sg),
+};
+```
 
 
 
@@ -1392,8 +2512,4 @@ inline sp<INTERFACE> interface_cast(const sp<IBinder>& obj)
 
 [设备与驱动的关系以及设备号、设备文件]: https://www.cnblogs.com/lidabo/p/5300529.html
 [图解Android - Binder 和 Service]: http://www.cnblogs.com/samchen2009/p/3316001.html
-[ServiceManager的类层次结构]: http://static.zybuluo.com/zaze/1767giazv6g21m2dvi016g4u/image_1cchrav4k4dvepjpmbvh1cum9.png
-[线程局部存储]:http://www.cppblog.com/Tim/archive/2012/07/04/181018.html
-
-
 [Android启动流程]: http://static.zybuluo.com/zaze/l1yityve5up0dcnq9icxtwjf/image_1cegf6i1jmjmtdbqisgik1mu89.png

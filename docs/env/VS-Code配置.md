@@ -59,8 +59,9 @@ date: 2020-07-01 17:05
 * Spring Initializr Java Support
 
 - DevTools（代码修改热更新，无需重启）
-- Web（集成tomcat、SpringMVC）
-- Lombok（智能生成setter、getter、toString等接口，无需手动生成，代码更简介）
+- Web：集成tomcat、SpringMVC
+- Maven Help：更方便的操作maven，还可以查看maven依赖树。
+- Lombok P：智能生成setter、getter、toString等接口，无需手动生成。
 - Thymeleaf （模板引擎）。
   YAML
 

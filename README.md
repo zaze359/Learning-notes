@@ -1,4 +1,4 @@
-> 学习笔记索引目录～～
+> 温故而知新
 
 # 个人备忘
 
@@ -11,6 +11,8 @@
 [MMD-3D学习小抄本](https://www.yuque.com/koujiakoubengyuewei/mmd)
 
 [Material Design：里面有在各种语言下的M3 API导航](https://m3.material.io/)
+
+[Material Symbols and Icons - Google Fonts](https://fonts.google.com/icons)
 
 [VS Code 开发配置记录](./docs/env/VS-Code配置.md)
 
@@ -142,6 +144,8 @@
 
 [Android的图形架构](./docs/android/Android的图形架构.md)
 
+[Android客户端框架](./docs/android/Android客户端框架.md)
+
 [Android之依赖注入-Hilt](./docs/android/Android之依赖注入.md)
 
 ---
@@ -212,27 +216,39 @@
 
 ## 源码研究
 
+[Android系统分析预备知识](./docs/android/system/Android系统分析预备知识.md)
+
 > AOSP下载
 
 [Android源码下载及编译](./docs/android/aosp/AOSP下载及编译.md)
 
 [AOSP目录结构表](./docs/android/aosp/AOSP目录结构表.md)
 
-> Android的启动流程
+> Android中的启动流程
+
+[Android Init Language](./docs/android/system/Android-Init-Language.md)
 
 [Android系统启动流程分析](./docs/android/system/Android系统启动流程.md)
 
 [Android应用启动流程分析](./docs/android/system/Android应用启动流程.md)
 
-> Android的消息机制
+[Android之Activity启动流程](./docs/android/system/Android之Activity启动流程.md)
+
+> Android中的消息机制
 
 [Android消息机制之Java篇](./docs/android/system/Android消息机制之Java篇.md)
 
 [Android消息机制之Native篇](./docs/android/system/Android消息机制之Native篇.md)
 
-[从AIDL开始分析Binder](./docs/android/system/从AIDL开始分析Binder.md)
+> Android Binder机制
 
-[Binder篇](./docs/android/system/Binder篇.md)
+[Android之Binder机制](./docs/android/system/Android之Binder机制.md)
+
+~~[从AIDL开始分析Binder-Java（草稿）](./docs/android/system/从AIDL开始分析Binder.md)~~
+
+[从MediaServer开始分析Binder-Native](./docs/android/system/从MediaServer分析Binder.md)
+
+
 
 > Android渲染流程
 

@@ -10,6 +10,10 @@ Android提供了AIDL工具 帮我们快速构建一套基于Binder的跨进程�
 
 我们先从 `IRemoteService.java` 来开始分析Binder在Java层的实现机制。
 
+> in表示输入参数
+>
+> out表示输出参数：它会在binder调用的返回过程中新建一个对象，并写入到 reply 中返回给我们。
+
 ```java
 // IRemoteService.aidl
 package com.zaze.demo;
@@ -23,6 +27,9 @@ interface IRemoteService {
 	
     // 定义一个接口
     String getMessage();
+    
+    // out 会被服务端更新，然后返回给我们
+    void testMessage(out IpcMessage outMessage);
 }
 ```
 
@@ -34,32 +41,30 @@ interface IRemoteService {
 >
 > 但我们发起接口调用时会发现 Proxy的断点在Client进程中执行，而Stud 中的断点在Service进程中被触发。
 
-* **IRemoteService**：继承自IInterface，提供一个 asBinder() 函数来 **返回远程对象接口IBinder（描述如何和服务进行交互）**。
-* **Proxy**：**供客户端使用，负责提供访问服务的接口**。主要作用是屏蔽用户端和Server端通讯的细节。
+* **IBinder**：binder通讯接口，描述如何和服务进行交互
+* **Binder**：继承自IBinder，实现了binder通讯相关的逻辑。
+* **IRemoteService**：继承自IInterface，定义了业务接口，同时提供`asBinder()` 函数来 返回远程对象接口IBinder。
+* **IRemoteService.Stud**：**主要供服务端使用，负责处理Client端的请求**，将接口和Binder进行绑定，具体服务会继承此类来实现功能。它屏蔽了Proxy和Service端通信的细节。
+  * `onTransact()`：负责处理Client请求，将请求数据反序列化，并调用相应的接口功能的具体实现。
+  * `asInterface()`：返回一个访问服务接口 IRemoteService。
+    * 客户端：**由于客户端没有实现Stub，所以会返回Proxy 来进行远程访问。**Client在连接上Service后可以调用这个函数来获取对应访问接口。
+    * 服务端：由于服务端实现了Stub，所以能够查询到，这样**服务端实际是本地直接调用**。
+* **IRemoteService.Stub.Proxy**：**供客户端使用，继承内部持有负责访问服务接口的IBinder**。屏蔽了客户端和Server端通讯的细节。
   * 首先会将请求参数序列化到_data中。
   * 通过`mRemote.transact()` 发送_data 和 _reply，并获取到接口调用结果。
   * 若远程调用成功则从_reply中将数据反序列化处理并返回，失败则会调用`getDefaultImpl()`来处理。
-* **Stud**：**供服务端使用，负责处理Client端的请求提供服务**，将接口和Binder进行绑定。它屏蔽了Proxy和Service端通信的细节。
-  * `onTransact()`：负责处理Client请求，将请求数据反序列化，并调用相应的接口功能的具体实现。
-  * `asInterface()`：返回一个访问服务接口。
-    * Client在连接上Service后可以调用这个函数来获取对应访问接口，**由于客户端没有实现Stub，所以会返回Proxy 来进行远程访问。**
-    * 服务端实现了Stub，所以能够查询到，这样**服务端实际使用的就是本地直接调用**。
-  * 具体的功能接口需要继承此类来实现。
 
 ```java
 public interface IRemoteService extends android.os.IInterface {
    
+    // ------------ Stub start -------------------------
     /**
-     * Local-side IPC implementation stub class.
      * 服务端中会继承Stub来实现服务的具体功能。
      */
     public static abstract class Stub extends android.os.Binder implements com.zaze.demo.IRemoteService {
         // 描述符，可以通过描述符来查询对应接口
         private static final java.lang.String DESCRIPTOR = "com.zaze.demo.IRemoteService";
 
-        /**
-         * Construct the stub at attach it to the interface.
-         */
         public Stub() {
             // 服务端将接口和Binder进行关联,
             // 后续queryLocalInterface(DESCRIPTOR)来查询IRemoteService接口。
@@ -67,9 +72,6 @@ public interface IRemoteService extends android.os.IInterface {
         }
 
         /**
-         * Cast an IBinder object into an com.zaze.demo.IRemoteService interface,
-         * generating a proxy if needed.
-         *
          * 客户端连接上服务后调用这个函数来，获取到Proxy对象。
          */
         public static com.zaze.demo.IRemoteService asInterface(android.os.IBinder obj) {
@@ -133,11 +135,14 @@ public interface IRemoteService extends android.os.IInterface {
             }
         }
 
+        
+        // ------------------------------------------------
+        // ------------ Proxy start -----------------------
         // 客户端获取该实例来访问服务端
-        // 负责将数据序列化到_data中
-        // 通过mRemote.transact() 发送_data 和 _reply。
-        // 获取调用结果。
-        // 从_reply中将数据反序列化处理
+        // 1. 数据序列化到_data中
+        // 2. 通过mRemote.transact() 发送_data 和 _reply。
+        // 3. 获取_reply调用结果。
+        // 4. 从_reply中将数据反序列化处理
         private static class Proxy implements com.zaze.demo.IRemoteService {
             private android.os.IBinder mRemote;
 
@@ -166,8 +171,8 @@ public interface IRemoteService extends android.os.IInterface {
                 java.lang.String _result;
                 try {
                     _data.writeInterfaceToken(DESCRIPTOR);
-                    // 发送消息
-                    // mRemote 是远程调用对象
+                    // mRemote 是远程调用对象IBinder
+                    // 通过 IBinder.transact() 发送消息
                     boolean _status = mRemote.transact(Stub.TRANSACTION_getMessage, _data, _reply, 0);
                     if (!_status && getDefaultImpl() != null) {
                         // 远程调用失败，使用默认实现来处理。
@@ -186,6 +191,11 @@ public interface IRemoteService extends android.os.IInterface {
 
             public static com.zaze.demo.IRemoteService sDefaultImpl;
         }
+        
+        // ------------ Proxy end ------------------------
+        // -----------------------------------------------
+        
+        
 		// 接口的调用ID是按照定义顺序来定义的
         // 所以AIDL中定义的函数不能变更位置，会导致函数调用错乱。
         static final int TRANSACTION_basicTypes = (android.os.IBinder.FIRST_CALL_TRANSACTION + 0);
@@ -193,9 +203,6 @@ public interface IRemoteService extends android.os.IInterface {
 		
         // 设置一个默认实现，当远程调用失败时会使用这个默认实现来处理。
         public static boolean setDefaultImpl(com.zaze.demo.IRemoteService impl) {
-            // Only one user of this interface can use this function
-            // at a time. This is a heuristic to detect if two different
-            // users in the same process use this function.
             if (Stub.Proxy.sDefaultImpl != null) {
                 throw new IllegalStateException("setDefaultImpl() called twice");
             }
@@ -210,6 +217,9 @@ public interface IRemoteService extends android.os.IInterface {
             return Stub.Proxy.sDefaultImpl;
         }
     }
+    
+    // ------------ Stub end -------------------------
+    // -----------------------------------------------
 
     /**
      * Demonstrates some basic types that you can use as parameters
@@ -244,22 +254,24 @@ public interface IRemoteService extends android.os.IInterface {
 
 下面的表格展示了重要的类和接口，以及和AMS的对照：
 
-| 类/接口       |                                                              | IRemoteService.aidl      | IActivityManager.aidl       |
-| ------------- | ------------------------------------------------------------ | ------------------------ | --------------------------- |
-| IInterface    | 用于表示是Binder接口，所有的Binder接口都需要实现这个接口。**提供了返回远程调用接口IBinder的能力**。 | IRemoteService.java      | IActivityManager.java       |
-| IBinder       | 远程对象的基础接口， **接口描述了与远程对象交互的抽象协议**。 | IRemoteService.Stub      | IActivityManager.Stub       |
-| Binder        | 实现IBinder，一般都是**基于它来实现远程调用服务**。          | IRemoteService.Stub      | IActivityManager.Stub       |
-| Stub          | **供服务端使用，负责提供服务**。继承Binder和IInterface       | IRemoteService.Stub      | IActivityManager.Stub       |
-| Proxy         | **供客户端使用，负责调用远程服务**。继承IInterface           | IRemoteService.Proxy     | IActivityManager.Proxy      |
-| 自定义Service | 继承Stub来实现服务功能。                                     | 案例中采用的是匿名内部类 | ActivityManagerService.java |
-|               |                                                              |                          |                             |
+| 类/接口                        |                                                              | IRemoteService.aidl       | IActivityManager.aidl       |
+| ------------------------------ | ------------------------------------------------------------ | ------------------------- | --------------------------- |
+| IInterface                     | 用于表示是Binder接口，所有的Binder接口都需要实现这个接口。它提供了返回远程调用接口IBinder的能力。 | IRemoteService.java       | IActivityManager.java       |
+| IBinder                        | 远程对象的基础接口， 接口描述了与远程对象交互的抽象协议。    | IRemoteService.Stub       | IActivityManager.Stub       |
+| Binder: IBinder                | 一般都是基于它来实现远程调用服务。                           | IRemoteService.Stub       | IActivityManager.Stub       |
+| -                              |                                                              |                           |                             |
+| IXXXService: IInterface        | 用于定义业务逻辑相关接口。                                   |                           |                             |
+| Stub: Binder, IXXXService      | 供服务端使用来实现服务，这里将服务业务和Binder通讯相结合。   | IRemoteService.Stub       | IActivityManager.Stub       |
+| Proxy: IXXXService, IInterface | 供客户端使用，负责调用远程服务。                             | IRemoteService.Stub.Proxy | IActivityManager.Stub.Proxy |
+| XXXService: Stub               | 服务端来实现服务功能的实现类。                               | 案例中采用的是匿名内部类  | ActivityManagerService.java |
+|                                |                                                              |                           |                             |
 
 ### 重要的函数
 
 | 函数                              |                                                              |      |
 | --------------------------------- | ------------------------------------------------------------ | ---- |
 | IInterface.**asBinder()**         | 返回远程对象接口IBinder，它描述如何和远程对象进行交互。      |      |
-| IBinder.**transact()**            | Client发送消息时调用。                                       |      |
+| IBinder.**transact()**            | Client调用对应API时 内部最终都会通过这个函数来发送消息。     |      |
 | IBinder.**onTransact()**          | Service接收到消息时回调。                                    |      |
 | IBinder.**queryLocalInterface()** | 它的作用是查询是否存在本地接口实现，保证Service调用自身时直接走本地调用。 |      |
 
@@ -275,7 +287,7 @@ Android设计的Binder架构包括了Java层和Native层两套，它们的实现
 >
 > 可以在Android Studio中或者[Android Code Search)](https://cs.android.com/)中查看源码
 
-在上面分析过程中我们知道了Client最终是调用了 `mRemote.transact()`来发送给Service，而最终的结果是Service进程中`Stub.onTransact()` 被调用。 `mRemote: IBinder`就是远程对象的本地代理，也是这个通信流程的关键。
+在上面分析过程中我们知道了Client最终是调用了 `mRemote.transact()`来发送给Service，而最终的结果是Service进程中`Stub.onTransact()` 被调用。 `mRemote`就是远程对象的本地代理 IBinder，也是这个通信流程的关键。
 
 我们来回忆一下`mRemote`是怎么被赋值的：
 
@@ -283,13 +295,13 @@ Android设计的Binder架构包括了Java层和Native层两套，它们的实现
 * 然后我们调用``IRemoteService.Stub.asInterface(IBinder)`` 来获取到Proxy。
 * Proxy在构造函数中将传入的IBinder 赋值给mRemote。
 
-所以`mRemote`就是我们 `bindService()`时获取到的`IBinder`实例，因此这个我们需要了解以下 `bindService()`这个过程，
+所以`mRemote`就是我们 `bindService()`时获取到的`IBinder`实例，因此这个我们需要了解一下 `bindService()`这个过程，
+
+
 
 
 
 我将部分重要源码摘录在此处，并将阅读源码过程的个人理解以注解的形式附加在源码内。
-
-
 
 ### ContextImpl
 

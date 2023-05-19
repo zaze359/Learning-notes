@@ -10,9 +10,11 @@
 
 由于精度缺失问题在《阿里巴巴Java开发手册》中提到：**浮点数之间的等值判断，基本数据类型不能用 == 来比较，包装数据类型不能用 equals 来判断**。
 
-* 使用`BitInteger`处理超过long的数据，内部是使用`int[]`数组来存储任意大小的整型数据，`BigDecimal.valueOf(double val)`存在精度损失风险。
+处理方式：
 
-* 使用`BigDecimal`处理浮点数精度丢失问题，推荐使用`BigDecimal(String val)`。
+* 使用`BitInteger`处理超过long的数据：内部是使用`int[]`数组来存储任意大小的整型数据，`BigDecimal.valueOf(double val)`存在精度损失风险。
+
+* 使用`BigDecimal`处理浮点数精度丢失问题：推荐使用`BigDecimal(String val)`。
 
 ---
 
@@ -271,11 +273,10 @@ threadA.start();
 // 可以通过 threadA.isDaemon()判断。
 ```
 
-User线程和Daemon线程的差异
+User线程 和 Daemon线程的差异：
 
-* JVM进程退出的条件是，不存在User线程。即仅存在 守护线程时虚拟机会直接退出。
+* 当JVM中所有的User线程退出后，所有的Daemon线程也会马上退出执行，并且JVM进程也会退出。JVM进程退出的条件是：不存在User线程，即**仅存在守护线程时虚拟机会直接退出**。
 * main函数所在线程的退出，不影响其他User线程的运行，也不影响JVM进程是否退出执行。
-* 当JVM中所有的User线程退出后，所有的Daemon线程也会马上退出执行，并且JVM进程也会退出。
 
 
 

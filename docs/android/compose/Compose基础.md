@@ -85,7 +85,7 @@ fun DefaultPreview() {
 
 [状态和 Jetpack Compose  | Android Developers](https://developer.android.com/jetpack/compose/state)
 
-#### 状态
+#### 状态：State
 
 可以使用`mutableStateOf()` 创建可观察到`MutableState<T>`，每当值发生变化时，将会重新读取 `State<T>.value` 并自动重组界面。
 
@@ -95,11 +95,13 @@ interface MutableState<T> : State<T> {
 }
 ```
 
-#### 状态存储
+#### 状态存储：remember
 
-> remember
+##### remember
 
-**使用 `remember {}` 将对象存储在内存中**，防止重组时状态被重置，起到记录状态修改的保护作用。但是调用 `remember` 的可组合项从组合中移除后，记录的值也将被移除。
+**使用 `remember {}` 将状态存储在内存中**，防止重组时状态被重置，起到记录状态修改的保护作用。
+
+> Notes：调用 `remember` 的可组合项从组合中移除后，记录的值也将被移除。
 
 ```kotlin
 @Composable
@@ -131,9 +133,9 @@ private fun Greeting(name: String) {
 }
 ```
 
-> rememberSaveable
+##### rememberSaveable
 
-**当重新创建 activity 或进程后，应使用 `rememberSaveable` 来保存状态，以便恢复界面的状态**。
+**对于重新创建 activity 或进程的场景，应使用 `rememberSaveable` 来保存状态，以便恢复界面的状态**。
 
 对于一般的数据类型，直接保存即可：
 
@@ -197,9 +199,11 @@ val expanded = rememberSaveable { mutableStateOf(false) }
   }
   ```
 
-> rememberUpdatedState
+##### rememberUpdatedState
 
-`rememberUpdatedState` 会更新保存在内存中值，从而能获取最新的值。它其实是 对上方 `remember` 保存状态的一个封装。**当一个值需要被长生命周期的表达式引用（LaunchedEffect）时使用，保证效应在值改变时不应重启。**
+`rememberUpdatedState` 会更新保存在内存中值，从而**保证每次都能获取到最新的值**。它其实是 对上方 `remember` 保存状态的一个封装。
+
+> **当一个值需要被长生命周期的表达式引用（LaunchedEffect）时使用，保证效应在值改变时不重启。**
 
 源码：
 
@@ -484,7 +488,7 @@ fun HomeScreen(
         }
         // 绑定
         lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { // 解绑
+        onDispose { // 解绑，需要注意的是这里解绑后会接收不到 Lifecycle.Event.ON_DESTROY
             lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
@@ -854,7 +858,16 @@ fun ScrollableSample() {
 
 默认为从子级传到父级，当子级无法滚动时，将由父级处理。
 
-提供了 `nestedScroll` 自定义协调滚动。
+提供了 `Modifier.nestedScroll()` 自定义协调滚动。
+
+```kotlin
+val scrollState = rememberLazyListState()
+val topBarState = rememberTopAppBarState()
+val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(topBarState)
+
+Modifier.fillMaxSize()
+	.nestedScroll(scrollBehavior.nestedScrollConnection)
+```
 
 
 
@@ -968,6 +981,10 @@ Modifier.fillMaxWidth().padding(vertical = 4.dp, horizontal = 8.dp)
 | ``fillMaxWidth()``                      | 填充至其父的最大可用宽度 | 会使父布局也填充满最大可以用的空间。                         |
 | ``fillMaxHeight()``                     | 填充至其父的最大可用高度 |                                                              |
 | ``fillMaxSize()``                       | 填充至其父的最大可用尺寸 |                                                              |
+| `width()`                               | 设置宽度                 |                                                              |
+| `height()`                              | 设置高度                 | `IntrinsicSize.Min` 强行调整为最小固有高度                   |
+| `widthIn(min, max)`                     | 设置最小最大宽度         |                                                              |
+| `heightIn(min,max)`                     | 设置最小最大高度         |                                                              |
 | ``padding()``                           | 设置内边距               | 没有外边距修饰符。                                           |
 | ``paddingFromBaseline()``               | 在文本基线上方添加内边距 | 到基线保持特定距离                                           |
 | ``offset()``                            | 设置x,y的偏移量          | `padding` 和 `offset` 之间的区别在于,可组合项添加 `offset` 不会改变其测量结果。需要注意在 LTR 和 RTL 这两种不同的布局方式中，它的表现将不同。对于正偏移值，在LTR中右移，RTL中左移。 |

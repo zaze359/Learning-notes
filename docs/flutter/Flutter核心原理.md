@@ -170,10 +170,6 @@ abstract class RenderObjectElement extends Element {
 
 
 
-
-
-
-
 ### Element生命周期
 
 ![Element的生命周期](./Flutter%E6%A0%B8%E5%BF%83%E5%8E%9F%E7%90%86.assets/Element%E7%9A%84%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F.png)
@@ -207,7 +203,7 @@ class StatefulElement extends ComponentElement {
     state._widget = widget;
   }
 
-  // 此处调用state的build方法，所以this(StatefulElement)就是BuildContext
+  // 此处调用state的build(BuildContext)方法，所以this:StatefulElement 就是BuildContext
   @override
   Widget build() => state.build(this);
 }

@@ -1,12 +1,8 @@
 # Android异常分析
 
-Android常见的异常可以分为ANR（Application Not Responding）和崩溃，崩溃包括JavaCrash和[NativeCrash](./Android异常分析之NativeCrash.md)。
+Android常见的异常可以分为**ANR（Application Not Responding）**和**Crash 崩溃**，崩溃包括 JavaCrash 和 [NativeCrash](./Android异常分析之NativeCrash.md)。
 
 Java崩溃是由于触发了未捕获的异常，native崩溃一般都是访问了非法地址等导致程序异常退出。
-
-
-
-### 异常分析
 
 * Java Crash：异常信息比较直观，观察对应堆栈即可，OOM相关错误时需要观察内存信息和资源信息。
 
@@ -16,10 +12,6 @@ Java崩溃是由于触发了未捕获的异常，native崩溃一般都是访问�
   * 观察ANR 日志中 iowait、CPU、GC、system server 等信息，进一步确定是 I/O 问题，或是 CPU 竞争问题，还是由于大量 GC 导致卡死。
 
 ## 崩溃
-
-崩溃捕获
-
-### 崩溃
 
 ### 衡量指标
 
@@ -36,10 +28,6 @@ UV 异常率：
 ```tex
 UV 异常率 = 发生异常退出或崩溃的 UV / 登录 UV
 ```
-
-
-
-
 
 PV 崩溃率
 

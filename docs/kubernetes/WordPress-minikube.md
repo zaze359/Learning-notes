@@ -61,19 +61,20 @@ spec:
 ### 启动
 
 ```shell
+alias kubectl="minikube kubectl --"
 # 创建配置
 kubectl apply -f mariadb-cm.yml
 # 创建pod
 kubectl apply -f mariadb-pod.yml
 # 查看IP地址
 kubectl get pod -o wide
-# 172.17.0.2
+# 172.17.0.6
 ```
 
 > 验证数据是否正常
 
 ```shell
-# 启动 maria-pod sh
+# 进入 maria-pod sh
 kubectl exec -it maria-pod -- sh
 # 登录数据库
 mysql -u wp -p
@@ -90,7 +91,6 @@ show tables;
 
 > wp-cm.yml
 >
-> * HOST 指向 mariadb-pod 的 ip
 
 ```yaml
 apiVersion: v1
@@ -99,7 +99,7 @@ metadata:
   name: wp-cm
 
 data:
-  HOST: '172.17.0.2'
+  HOST: '172.17.0.6' # HOST 指向 mariadb-pod 的 ip
   USER: 'wp'
   PASSWORD: '123'
   NAME: 'db'
@@ -137,8 +137,6 @@ spec:
 ```shell
 kubectl apply -f wp-cm.yml
 kubectl apply -f wp-pod.yml
-kubectl get pod -o wide
-# 172.17.0.3
 ```
 
 
@@ -147,7 +145,7 @@ kubectl get pod -o wide
 
 ```shell
 # &：端口转发工作在后台进行，防止阻塞
-# 将kubernetes的 8080 端口映射到，pod的80端口
+# 将kubernetes的 8080 端口映射到，wp-pod的80端口
 kubectl port-forward wp-pod 8080:80 &
 ```
 
@@ -181,6 +179,20 @@ docker run -d --rm \
 
 
 
-## Database Error问题
+### 问题处理
+
+提示 `Error establishing a database connection` 错误
+
+删除dns后会重新创建
+
+```shell
+kubectl get pod -n kube-system
+
+kubectl delete pod coredns-65c54cc984-4bmtv -n kube-system
+kubectl delete pod coredns-6d8c4cb4d-jnz2w -n kube-system
+```
+
+
 
 将 `maria-pod` 和 `wp-pod` 删除重建。
+

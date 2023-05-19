@@ -22,26 +22,6 @@ date: 2020-04-16 13:43
 
 ##  [源码下载及编译](../aosp/AOSP下载及编译)
 
-## 问题处理
-
-问题1
-
-```
-[  1% 1563/81559] Lex: checkpolicy <= external/selinux/checkpolicy/policy_scan.l
-FAILED: out/host/linux-x86/obj/EXECUTABLES/checkpolicy_intermediates/policy_scan.c 
-/bin/bash -c "prebuilts/misc/linux-x86/flex/flex-2.5.39 -oout/host/linux-x86/obj/EXECUTABLES/checkpolicy_intermediates/policy_scan.c external/selinux/checkpolicy/policy_scan.l"
-flex-2.5.39: loadlocale.c:130:_nl_intern_locale_data: ?? 'cnt < (sizeof (_nl_value_type_LC_TIME) / sizeof (_nl_value_type_LC_TIME[0]))' ???
-Aborted (core dumped)
-[  1% 1566/81559] target  C++: nvram_hal_test <= system/nvram/hal/tests/nvram_hal_test.cc
-ninja: build stopped: subcommand failed.
-08:36:31 ninja failed with: exit status 1
-build/core/main.mk:21: recipe for target 'run_soong_ui' failed
-make: *** [run_soong_ui] Error 1
-```
-```
-Fix : export LC_ALL=C
-```
-
 ## 模拟器
 
 ### 模拟器连接
@@ -263,6 +243,47 @@ java -jar AXMLPrinter2.jar AndroidManifest.xml > AndroidManifest.txt
 ### 1. Android 程序生成步骤
 
 ![image_1dr2t0g351rs61vloir31f4tl509.png-133.1kB][4]
+
+
+
+
+
+
+
+## 问题处理
+
+问题1
+
+```
+[  1% 1563/81559] Lex: checkpolicy <= external/selinux/checkpolicy/policy_scan.l
+FAILED: out/host/linux-x86/obj/EXECUTABLES/checkpolicy_intermediates/policy_scan.c 
+/bin/bash -c "prebuilts/misc/linux-x86/flex/flex-2.5.39 -oout/host/linux-x86/obj/EXECUTABLES/checkpolicy_intermediates/policy_scan.c external/selinux/checkpolicy/policy_scan.l"
+flex-2.5.39: loadlocale.c:130:_nl_intern_locale_data: ?? 'cnt < (sizeof (_nl_value_type_LC_TIME) / sizeof (_nl_value_type_LC_TIME[0]))' ???
+Aborted (core dumped)
+[  1% 1566/81559] target  C++: nvram_hal_test <= system/nvram/hal/tests/nvram_hal_test.cc
+ninja: build stopped: subcommand failed.
+08:36:31 ninja failed with: exit status 1
+build/core/main.mk:21: recipe for target 'run_soong_ui' failed
+make: *** [run_soong_ui] Error 1
+```
+
+```
+Fix : export LC_ALL=C
+```
+
+## 
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

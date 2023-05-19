@@ -304,7 +304,7 @@ Widget build(BuildContext context) {
 >
 > `Text`指定的`overflow: TextOverflow.ellipsis`不生效的原因是，没有具体的宽度。
 >
-> 通过`Expanded`使得具有宽度。
+> 通过`Expanded`使其具有宽度。
 
 ```dart
 Row(
@@ -346,3 +346,12 @@ Row(
 ### RenderCustomMultiChildLayoutBox object was given an infinite size during layout.
 
 子布局无限大小问题，检查代码是否存在`Scaffold`嵌套。
+
+
+
+## Flutter异常
+
+### 系统找不到指定的路径
+
+1. 删除 `flutter/bin` 下的 cache文件夹。
+2. 重写执行 ``flutter doctor``。

@@ -2,6 +2,8 @@
 
 [Reference - Kotlin 语言中文站 (kotlincn.net)](https://www.kotlincn.net/docs/reference/)
 
+[关于本书 · Kotlin 官方文档 中文版 (kotlincn.net)](https://book.kotlincn.net/)
+
 ## 函数
 
 ### 代码块函数
@@ -381,20 +383,11 @@ class MyDelegate : ReadWriteProperty<Derived, String> {
 
 ### 扩展
 
-可以为类添加额外的 **方法、属性**。
-
-Kotlin的的扩展函数其实是一个静态方法，不会带来额外的性能消耗。扩展属性本质上是扩展函数。
-
-编译器会将扩展函数转换成对应的静态方法，而扩展函数调用处的代码也会被转换成静态方法的调用。
-
-其实相当于我们写Java时常用的工具类静态方法，只不过Kotlin 提供了 扩展 这种形式方便我们使用，编译时在进行转换，相当于一种模版。
+Kotlin的的扩展函数，可以为类添加额外的方法、属性, **它其实是一个静态方法**，编译器会将扩展函数转换成对应的静态方法，而扩展函数调用处的代码也会被转换成静态方法的调用，所以不会带来额外的性能消耗。所以扩展函数相当于我们平时写的工具类静态方法，只不过Kotlin 提供了 扩展 这种形式方便我们使用，编译时在进行转换，相当于一种模版。
 
 **所以所有工具类做的事都可以使用扩展来替代**。扩展这功能也有点游戏 mod，浏览器插件的意思，可以将一些非核心功能划分出去实现。
 
-* 顶层定义扩展：能被全局访问，使用于通用的扩展。
-* 类内部定义扩展：作用域被限制在声明类中，仅能被 声明时所在的类中使用。对一些特定场景下扩展方法可以通过这个方式进行限制。
-
-扩展的使用场景有：
+**扩展的使用场景**有：
 
 * 扩展三方类的功能。
 * 以前用Java实现的工具类，以及常用的模版代码。
@@ -421,12 +414,11 @@ fun AppCompatActivity.setupActionBar(
         action(toolbar)
     }
 }
-
 ```
 
 #### 扩展属性
 
-和普通属性写法类似，也是多了一个接收者类型，它的本质实际是扩展函数，并且它并不能存储状态。
+和普通属性写法类似，也是多了一个接收者类型，它的**本质实际是扩展函数**，并且它并不能存储状态。
 
 ```kotlin
 val ApplicationInfo.isSystemApp: Boolean
@@ -438,7 +430,50 @@ val ApplicationInfo.isSystemApp: Boolean
 //}
 ```
 
+#### 扩展的作用域
 
+* **顶层定义扩展**：能被**全局访问**，使用于通用的扩展。
+* **类内部定义扩展**：作用域被限制在声明类中，**仅能被声明时所在的类中使用**。对一些特定场景下扩展方法可以通过这个方式进行限制。
+
+> Notes：object 的拓展可以直接使用类名访问，且object 内的拓展的作用域是全局的。
+
+```kotlin
+fun main() {
+    doExt(todo = {
+        println("todo".append(" ext"))
+    })
+    // 这里调用的是 object 内部的拓展，它的作用域是全局的
+    // 若将 object ExtScopeInstance注释则会报错, class内部的拓展仅能在class内访问
+    "".append("")
+}
+
+fun doExt(todo: ExtScope.() -> Unit) {
+    // object 可以直接访问
+    ExtScopeInstance.todo()
+    // class 需要创建实例访问
+    ExtScopeClass().todo()
+}
+
+interface ExtScope {
+    /**
+     * 指定这个 String.doSome的作用域为 ExtScope
+     */
+    fun String.append(append: String): String
+}
+object ExtScopeInstance : ExtScope {
+    override fun String.append(append: String) = this.let {
+        "ExtScopeInstance.append: $it$append"
+    }
+}
+
+class ExtScopeClass : ExtScope {
+    override fun String.append(append: String) = this.let {
+        "ExtScopeClass.append: $it$append"
+    }
+}
+```
+
+---
 
 ## 类型系统
 

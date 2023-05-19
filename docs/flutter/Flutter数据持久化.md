@@ -31,9 +31,8 @@ flutter pub add file_picker
 > 若需要获取所有文件管理权限
 
 ```xml
-<!-- 以下两个配置在 Android 11 之后需要声明，以便管理所有文件-->
+<!-- 以下配置在 Android 11 之后需要声明，以便管理所有文件-->
 <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
-<uses-permission android:name="android.permission.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION" />
 ```
 
 ### 权限请求流程

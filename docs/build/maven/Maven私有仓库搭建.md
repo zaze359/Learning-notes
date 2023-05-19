@@ -33,6 +33,8 @@ docker run -d -p 8081:8081 --name nexus --restart=always sonatype/nexus3
 
 ## 发布到 Maven中央仓库sonatype
 
+[OSSRH Guide - The Central Repository Documentation (sonatype.org)](https://central.sonatype.org/publish/publish-guide/#releasing-to-central)
+
 ### 1. 注册sonatype账号
 
 [sonatype注册地址]([https://issues.sonatype.org/secure/Dashboard.jspa)
@@ -58,6 +60,8 @@ docker run -d -p 8081:8081 --name nexus --restart=always sonatype/nexus3
 
 
 ## 项目配置Gradle上传脚本
+
+[使用 Maven Publish 插件  | Android 开发者  | Android Developers (google.cn)](https://developer.android.google.cn/studio/build/maven-publish-plugin?hl=zh-cn)
 
 >  [maven.gradle参考](https://github.com/zaze359/test/blob/master/maven.gradle)
 

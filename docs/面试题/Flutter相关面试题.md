@@ -38,11 +38,9 @@ Widget build() => (widget as StatelessWidget).build(this);
 
 Widget相当于视图的配置信息。
 
-StatelessWidget表示无状态组件，所以直接创建所需Widget即可。
+StatelessWidget表示无状态组件，它是不变的，所以直接创建所需Widget即可。
 
-StatefullWidget是状态感知的。状态发生变化相当于配置更新，此时需要更新Widget。
-
-所以State和Widget是相关联的，由State来创建Widget在逻辑上更清晰，同时这也是一种数据驱动视图更新的模式。
+StatefullWidget是状态感知的，状态发生变化相当于配置更新，此时需要更新Widget，所以State和Widget是由关联性的，由State来创建Widget在逻辑上更清晰，同时这也是一种数据驱动视图更新的模式。
 
 **为什么有createState()方法？**
 

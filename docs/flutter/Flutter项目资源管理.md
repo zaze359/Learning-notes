@@ -52,7 +52,10 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   adaptive_breakpoints: ^0.1.1
-  # 依赖包：^版本
+  # 依赖包：
+  # ^ 会匹配最新的大版本依赖包: ^2.0.2 等价 >= 2.0.2 < 3.0.0
+  # 不写版本 或 any，表示任意版本，优先使用最新
+  # > 、 >=、<、<=
   animations: ^2.0.2
   collection: ^1.16.0
 
@@ -310,6 +313,8 @@ Future<String> loadFile() async {
 #### 4. 字体图标
 
 > 字体图标：将位码对应字形做成了图标。
+
+[Material Symbols and Icons - Google Fonts](https://fonts.google.com/icons)
 
 *   yaml中开启Material Design的字体图标
 
