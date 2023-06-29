@@ -675,11 +675,35 @@ class BoxTest extends StatelessWidget {
 
 *   Flow
 
-### 5.6 层叠布局
+### 5.6 层叠布局 Stack
 
 > 相当于Android的FrameLayout
 
-*   Stack
+结合 Positioned 使用。
+
+```dart
+ Widget buildLeft(BuildContext context, Size parentSize) {
+    return Stack(
+      children: [
+        Positioned(
+          left: 50, // 左偏移 50
+          width: 100, // 指定布局的宽度。不指定时为子部分大小
+          height: 100, // 指定布局的高度。不指定时为子部分大小
+          top: 50, // 顶部偏移 50
+          child: Container(
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(30),
+                color: kBackgroundGrey),
+            child: Text("123123123"),
+          ),
+        )
+      ],
+    );
+ }
+```
+
+
 
 ### 5.7 布局对齐
 
@@ -708,8 +732,8 @@ class BoxTest extends StatelessWidget {
       child: const Align(
         // 以父组件的左上角为原点， 向右偏移 100 * 0.1, 向下偏移 100 * 0.1
         alignment: FractionalOffset(0.1, 0.1),
-        widthFactor: 2,
-        heightFactor: 2,
+        widthFactor: 2, // 宽度是childWidget的 2倍
+        heightFactor: 2, // 高度是childWidget的 2倍
         child: FlutterLogo(
           size: 100,
         ),
@@ -856,6 +880,8 @@ _controller.animateTo(0, duration: Duration(milliseconds: 200), curve: Curves.ea
 > 数据流向：父 > 子
 
 ```dart
+// _BookContainer 当作正常的 widget使用即可，
+// 它的数据发生变化时，会使 建立绑定的子widget 发生更新。
 class _BookContainer extends InheritedWidget {
   _BookContainer(
       {
@@ -863,20 +889,20 @@ class _BookContainer extends InheritedWidget {
       required super.child});
   Book book;
 
-  // 建立了绑定关系，发生变化时会调用子Widget的didChangeDependencies()
+  // 其他Widget 这里的数据时通过这个 of() 函数来获取数据。
   static _BookContainer? of(BuildContext context) =>
-      context.dependOnInheritedWidgetOfExactType<_BookContainer>();
+      context.dependOnInheritedWidgetOfExactType<_BookContainer>(); // 建立了绑定关系，发生变化时会调用子Widget的didChangeDependencies()
 
   // 仅获取，不建立绑定关系
   // static _BookContainer? of(BuildContext context) =>
   //     context.getElementForInheritedWidgetOfExactType<_BookContainer>()?.widget as _BookContainer;
-
   
   @override
   bool updateShouldNotify(covariant _BookContainer oldWidget) {
     return book != oldWidget.book;
   }
 }
+
 ```
 
 
@@ -965,9 +991,10 @@ bus.fire(Event.next);
 flutter pub add provider 
 ```
 
-定义一个Model，定义共享的数据和操作：
+定义一个Model，共享数据和操作：
 
 ```dart
+// 继承 ChangeNotifier，以便调用 notifyListeners 通知变更
 class ReadCache with ChangeNotifier, DiagnosticableTreeMixin {
   Future<PageState?>? pageFuture;
   bool menuVisible = false;
@@ -996,6 +1023,14 @@ class ReadCache with ChangeNotifier, DiagnosticableTreeMixin {
 构建一个Provider：
 
 ```dart
+// Provider的使用方式和 普通的Widget相同
+ChangeNotifierProvider(
+    create: (_) => ReadCache(),  // 创建共享的数据
+    child: const BookReaderPage(), // 创建子组件
+),
+```
+
+```dart
 // 多个Provider组合注入
 MultiProvider(
   providers: [
@@ -1010,19 +1045,19 @@ MultiProvider(
 
 > Provider扩展了BuildContext,新增 `watch`和`read`两个api来获取共享数据。
 
-- `watch`同`dependOnInheritedWidgetOfExactType`将建立绑定关系。变化时会重新build。
+- **watch**：同`dependOnInheritedWidgetOfExactType`将建立绑定关系。变化时会重新build。
 
   ```dart
   context.watch<ReadCache>().pageFuture
   ```
   
-- `read`同`getElementForInheritedWidgetOfExactType`仅获取数据。
+- **read**：同`getElementForInheritedWidgetOfExactType`仅获取数据。
 
   ```dart
   context.read<ReadCache>().pageFuture
   ```
   
-- Consumer包裹获取，并控制UI刷新粒度
+- **Consumer**：获取数据并会在数据变化时触发重组，可以控制UI刷新粒度
 
   ```dart
   Consumer<_BookSearchMode>(

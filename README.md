@@ -74,7 +74,7 @@
 
 [JVM学习笔记](./docs/language/javaJVM学习笔记.md)
 
-[JVM内存模型](./docs/language/java/JVM内存模型.md)
+[JVM内存结构](./docs/language/java/JVM内存结构.md)
 
 [线程局部变量(ThreadLocal)](./docs/language/java/ThreadLocal.md)
 
@@ -192,7 +192,7 @@
 
 [Android分区和文件系统](./docs/android/file-system/android分区和文件系统)
 
-[电量优化](./docs/android/性能/电量优化.md)
+[Android电量优化](./docs/android/性能/电量优化.md)
 
 ---
 
@@ -323,13 +323,3 @@
 [Shadowsocks](./docs/科学魔法/Shadowsocks)
 
 [Just My Socks + ClashX](./docs/科学魔法/JMS和Clash.md)
-
-## 面试
-
-[Java相关面试题](./docs/面试题/Java相关面试题.md)
-
-[Android相关面试题](./docs/面试题/Android面试题.md)
-
-[Flutter相关面试题](./docs/面试题/Flutter相关面试题.md)
-
-[数据结构与算法相关面试题](./docs/面试题/数据结构与算法相关面试题.md)

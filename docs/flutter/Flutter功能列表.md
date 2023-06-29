@@ -100,7 +100,33 @@ Column(
 
 #### Stack
 
-> 和Android的FrameLayout相似。
+> 和Android的FrameLayout相似。层叠布局 
+
+结合 Positioned 使用。
+
+```dart
+ Widget buildLeft(BuildContext context, Size parentSize) {
+    return Stack(
+      children: [
+        Positioned(
+          left: 50, // 左偏移 50
+          width: 100, // 指定布局的宽度。不指定时为子部分大小
+          height: 100, // 指定布局的高度。不指定时为子部分大小
+          top: 50, // 顶部偏移 50
+          child: Container(
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(30),
+                color: kBackgroundGrey),
+            child: Text("123123123"),
+          ),
+        )
+      ],
+    );
+ }
+```
+
+
 
 #### Container
 

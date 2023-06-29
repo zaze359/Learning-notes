@@ -36,7 +36,7 @@
 
 Channel 主要用于**协程间的传递数据**。用法类似Java的`BlockQueue`。
 
-* 使用`send()`**发送数据后默认会挂起当前协程**。可以通过指定`capacity`和`onBufferOverflow`修改行为。
+* 使用`send()`**发送数据后默认会挂起当前协程**。可以通过指定`capacity`和`onBufferOverflow` 来修改行为。
 * 使用`receive()`**接收数据会后挂起当前协程**。
 
 > 需要注意的是Channel是一种生成者消费者模式。产生的元素仅能被一方消费。即有任意一方接收后，其他消费者都无法再接收到，直到产生新的数据。
@@ -48,9 +48,8 @@ Channel 主要用于**协程间的传递数据**。用法类似Java的`BlockQueu
 | 属性                                   |                                                              |                                                              |
 | -------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
 | `capacity: Int`                        | 指定通道类型；默认为`RENDEZVOUS`                             | RENDEZVOUS：无buffer，send后就会挂起，必须等待接收。<br />CONFLATED：send不会挂起。仅保留最新数据，即 receiver获得的永远是新数据。<br />BUFFERED：当元素超过buffer大小（默认为64），send会被挂起。<br />UNLIMITED：无限制, send不会挂起。 |
-| `onBufferOverflow: BufferOverflow`     | 指定buffer溢出的行为，当capacity为`BUFFERED`或`RENDEZVOUS`时生效;默认为`SUSPEND` | SUSPEND：挂起。<br />DROP_OLDEST：删除最旧元素。<br />DROP_LATEST：删除最新元素。 |
+| `onBufferOverflow: BufferOverflow`     | 指定buffer溢出的行为，当capacity为`BUFFERED`或`RENDEZVOUS`时生效; | SUSPEND：默认，挂起。<br />DROP_OLDEST：删除最旧元素。<br />DROP_LATEST：删除最新元素。 |
 | `onUndeliveredElement: ((E) -> Unit)?` | 元素发送了但是没有被接收时会调用。                           | 例如`capacity = Channel.CONFLATED`仅保留最新数据，其他被替换的数据会通过这个方法回调给我们。 |
-|                                        |                                                              |                                                              |
 
 测试案例：
 
@@ -61,7 +60,8 @@ Channel 主要用于**协程间的传递数据**。用法类似Java的`BlockQueu
  */
 fun main() = runBlocking {
     var channel = Channel<Int>()
-//    channel = Channel<Int>(onBufferOverflow = BufferOverflow.DROP_OLDEST) // 效果等同 capacity = Channel.CONFLATED
+    // 效果等同 capacity = Channel.CONFLATED
+//    channel = Channel<Int>(onBufferOverflow = BufferOverflow.DROP_OLDEST) 
     channel = Channel(capacity = Channel.CONFLATED,  onUndeliveredElement = { i ->
         println("channel onUndeliveredElement $i")
     })

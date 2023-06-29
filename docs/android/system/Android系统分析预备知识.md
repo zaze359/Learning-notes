@@ -9,6 +9,7 @@
 * [Linux 的虚拟文件系统][Linux 的虚拟文件系统]
 * [设备与驱动的关系以及设备号、设备文件][设备与驱动的关系以及设备号、设备文件]
 * [线程局部存储](http://www.cppblog.com/Tim/archive/2012/07/04/181018.html )
+* [Handler消息机制——消息循环休眠、唤醒的实现原理及native层源码分析（Android Q） | 码农家园 (codenong.com)](https://www.codenong.com/cs106241075/)
 
 ## Unix/Linux 一切皆是文件
 
@@ -16,15 +17,17 @@
 
 Linux的内核中大量使用"注册+回调"机制进行驱动程序的编写。
 
-### 设备驱动和设备文件
+## 设备、设备驱动以及设备文件
+
+![image-20230301203221532](./Android%E7%B3%BB%E7%BB%9F%E5%88%86%E6%9E%90%E9%A2%84%E5%A4%87%E7%9F%A5%E8%AF%86.assets/image-20230301203221532.png)
+
+### 设备
 
 设备可以分为以下三类：对于字符设备和块设备来说，在`/dev`目录下都有对应的设备文件，通过这些设备文件来操作设备。
 
 - **字符设备(无缓冲)**：只能一个字节一个字节的读写的设备，不能随机读取设备内存中的某一数据，读取数据需要按照先后顺序进行。字符设备是面向流的设备。常见的字符设备如鼠标、键盘、串口、控制台、LED等外设。
 - **块设备(有缓冲)**：是指可以从设备的任意位置读取一定长度的数据设备。块设备如硬盘、磁盘、U盘和SD卡等存储设备。
 - **网络设备**：网络设备比较特殊，不在是对文件进行操作，而是由专门的网络接口来实现。应用程序不能直接访问网络设备驱动程序。在/dev目录下也没有文件来表示网络设备。
-
-![image-20230301203221532](./Android%E7%B3%BB%E7%BB%9F%E5%88%86%E6%9E%90%E9%A2%84%E5%A4%87%E7%9F%A5%E8%AF%86.assets/image-20230301203221532.png)
 
 ### 设备驱动
 
@@ -82,13 +85,25 @@ Linux的内核中大量使用"注册+回调"机制进行驱动程序的编写。
 
 ---
 
+
+
+## 中断
+
+一般情况下硬件产生的信号优先级很高，所以cpu会中断正在执行的程序，去响应硬件信号，完成硬件的响应后，会再继续执行用户程序。
+
+例如 我们操作键盘时，按键时键盘会向cpu发起一个中断信号，cpu捕获后就会去执行键盘的中断程序。还有网卡接收到数据后会先将数据保存到内存中，然后也会发送一个中断信号，接着cpu就会执行网卡的中断程序。
+
+
+
 ## I/O多路复用
 
 多路复用是指：**多个I/O请求 复用一个进程或线程来处理**。
 
-即当一个连接发生阻塞就立刻切换，去处理其他的请求。从而消除了I/O阻塞，从而充分利用CPU。
+即当一个连接发生阻塞就立刻切换，去处理其他的请求。从而消除了I/O阻塞，并充分利用CPU。
 
-## BIO（Block IO）
+> 下面的socket 就是一个包含输入、输出缓冲区的fd。
+
+### BIO（Block IO）
 
 同步阻塞IO，默认的Socket编程就是阻塞IO。每个客户端连接都需要一个线程来接收数据，十分浪费。
 
@@ -97,31 +112,31 @@ Linux的内核中大量使用"注册+回调"机制进行驱动程序的编写。
 * 开启一个循环，在循环中调用 `read` 读取或 `listener`监听事件，但是是阻塞的。
 * 有客户端连接 或者消息发送过来时会被唤醒。
 
-## NIO（NONBLOCK IO）
+### NIO（NONBLOCK IO）
 
-同步非阻塞IO。和BIO的区别主要是无需阻塞等待。**等待事件时线程是挂起的，处理事件还是阻塞的**。
+同步非阻塞IO，和BIO的区别主要是无需阻塞等待。**等待事件时线程是挂起的，处理事件时线程还是阻塞的**。
 
 NIO的大致流程如下：
 
 * 创建 Socket 接口。
-* 通过 `bind` 函数 将接口号和端口号进行绑定。
+* 通过 `bind` 函数socket和端口号进行绑定。
 * 监听事件，同时**将Socket标记为非阻塞**。
 * 遍历检查所有socket，有事件就处理。
 
-### select
+#### select和poll
 
-首先进程会把所有的Socket告诉内核（此时内核相当于多路复用器），当有I/O事件发生时内核**会遍历所有Socket**，当某个socket有事件发生时，就去该socket上处理事件。
+实现是基于对文件流I/O的监控，首先进程会把所有的Socket告诉内核（此时内核相当于多路复用器），空闲时会阻塞当前线程，当有一个或多个I/O事件发生时就会被唤醒，但是内核并不知道事件属于谁，所以**会遍历所有Socket**来处理事件。
 
 * 会拷贝所有用户空间的fd_set 到 内核中。
 * 仅知道有I/O事件，不知道是哪些I/O，所以每次都要遍历所有socket，效率很低。
 
-### poll
+> poll 和 select原理基本相同。主要区别是poll是基于链表存储，没有最大连接数的限制，而select存在限制，默认1024个。
+>
+> 当活跃的socket数和监听的socket数之间的数量越接近，select/poll的效率也会越高，由于select/poll 实现简单，有时效率还会优于epoll
 
-poll 和 select原理基本相同。主要区别是poll是基于链表存储，没有最大连接数的限制。
+#### epoll
 
-### epoll
-
-epoll **不需要遍历**所有的socket， 仅**管理活跃的连接**。只当连接真正可读、可写时才会处理，若发生阻塞就立刻切换，处理其他的请求。
+epoll **不需要遍历**所有的socket， 仅**管理活跃的连接**。只当连接真正可读、可写时才会处理（使用红黑树维护了一张事件和文件流的注册表），若发生阻塞就立刻切换，处理其他的请求。
 
 epoll大量的连接管理是在操作系统内核里做的，应用程序负担小，可以建立大量的连接而仅消耗不多的内存。（几十万连接 = 几百M内存）。
 
@@ -130,7 +145,15 @@ epoll 的大致流程如下：
 * 调用 `epoll_create()` 创建一个文件，返回一个fd。
 * 创建Socket、绑定端口号、监听事件，同时标记为非阻塞。
 * 调用 `epoll_ctl()` 将socket 和 监听事件写入 fd。
-* 开启循环 调用 `epoll_wait()`函数进行监听，此函数返回已经就绪事件的长度（0表示没有）。
+* 开启循环 调用 `epoll_wait()`一直等待直到有注册的事件发生，此函数返回已经就绪事件的长度（0表示没有）。
+
+| 函数                     |                                                              |                                                              |
+| ------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| `epoll_create(int size)` | 创建一个epoll对象，并会返回一个epollFd，size指的这个epoll能监听的fd数量。 | 其实就是向内核申请了一块内存，数据就是发生的事件。           |
+| `epoll_ctl()`            | 用于操作epoll。                                              | 包括EPOLL_CTL_ADD（注册）、EPOLL_CTL_MOD（修改）、EPOLL_CTL_DEL（删除）这三类操作。 |
+| `epoll_wait()`           | 线程等待直到有注册的事件发生                                 |                                                              |
+
+
 
 ---
 
@@ -252,7 +275,146 @@ Usap 是 Android 10之后引入的一种 快速创建应用进程 的新机制�
 * 它会通过 prefork 的方式将进程提前创建，并保存到 一个 Usap pool 中。
 * 当有应用需要启动时，直接从池子中取出已经创建好的进程分配给它。而不必再重新fork。
 
-## RefBase、sp和wp
+
+
+## 同步技术
+
+### 并发问题
+
+例如我们常见的 `i++`操作, i 是全局变量，一般分为三个步骤：
+
+1. 从内存读取数据到寄存器。
+2. 将寄存器中的数据递增。
+3. 将寄存器的结果写回内存。
+
+这三个步骤在单线程中顺序执行是没有问题的，但是在多线程中则可能由于线程调度的问题导致出现问题。
+
+* 线程A 执行了 步骤 1，读取了数据。
+* 然后调度到线程B，B执行了 1、2、3修改了i。
+* 调度回线程A，此时继续执行2、3。注意此时A中的数据还是之前读取的旧数据。
+* 最终结果就是执行了2次++，但是 i 仅增加了1。
+
+### Mutex：互斥锁
+
+用于多线程访问同一个资源的时候，**保证一次只有一个线程能访问该资源**。锁的使用将导致从用户态转入内核态。
+
+内部使用 type 来控制是否支持跨进程的线程同步，SHARE表示支持跨进程的场景。
+
+* `Mutex.lock()`：调用后锁定资源，系统保证一次只有一个线程能lock。若之前已经被lock，则会等待，直到unlock。
+* `Mutex.unlock()`：释放资源，其他人能够访问。
+* `Mutex.trylock()`：尝试锁定资源，更加返回值来判断是否锁定成功。
+
+> `lock()` 和 `unlock()`需要一一对应以免发生死锁。
+
+内部提供了 `AutoLock`来方便的使用Mutex。
+
+* 构造时调用 `lock()`。
+* 析构时调用 `unlock()`。
+
+### Condition：条件锁
+
+用于 **某一个线程需要满足一定条件后才能执行**的场景。内部使用 type 来控制是否支持跨进程的线程同步，SHARE表示支持跨进程的场景。
+
+* 等待者：需要满足一定条件才能执行的线程。
+  * `wait(mutex)`：等待触发条件。内部会先调用 `mutex.unlock()`，然后等待条件触发，触发后再调用 `mutex.lock()`。
+  * `waitRelative(mutex,reltime)`：等待触发并设置超时。
+* 触发者：触发这个条件的线程。
+  * `signal()`：通知条件满足，仅一个会被唤醒。
+  * `broadcast()`：唤醒所有。
+
+### 原子操作
+
+**原子操作是最小的执行单位，也就是说这个操作绝不会在执行完毕前被任何事情打断**。
+
+> 原子操作可以避免锁的使用从而提供效率，但是**需要CPU的支持**。
+
+原子操作使用的是 CAS，它是基于乐观锁来设计并不会发生阻塞。
+
+
+
+## TLS
+
+TLS 是为每个线程提供了一块空间，用以 `kv`的格式存储变量，并且这块空间线程间是不共享的，是每个线程所私有的存储空间，所以多线程访问也不存在数据竞争，不会相互影响。
+
+为什么要用TLS?
+
+主要是因为在Linux的进程和线程模型中，同一个进程内的多个线程共享进程的地址空间，因此不同线程间共享一个全局变量和静态变量。所以一个线程修改后也会影响到其他线程，并且使用全局变量是为了保证安全，往往需要锁来控制，成本也比较高。
+
+但是一个模块中我们可能会需要一些全局变量来存储数据，但是又不希望线程之间互相影响，基于这个场景操作系统就提供了 TLS机制。
+
+TLS 将数据和线程关联起来，提供了一个全局的索引表存储线程局部数据的地址，可以通过 `pthread_key_t` 去查询数据。
+
+
+
+## JNI类型系统
+
+### 类型对应表
+
+在阅读源码的过程中会经常涉及 JNI，我们需要先了解下 JNI 中的类型是表述的，以及它们和C/C++、Java 之间对应关系。
+
+| 符号                                            | C/C++              | Java    |      |
+| ----------------------------------------------- | ------------------ | ------- | ---- |
+| V                                               | void               | void    |      |
+| I                                               | jint               | int     |      |
+| J                                               | jlong              | long    |      |
+| F                                               | jfloat             | float   |      |
+| D                                               | jdouble            | double  |      |
+| Z                                               | jboolean           | boolean |      |
+| S                                               | jshort             | short   |      |
+| C                                               | jchar              | char    |      |
+| B                                               | jbyte              | byte    |      |
+| -                                               |                    |         |      |
+| `[`：表示数组。例如 `[I`表示 int数组            | jintArray          | int[]   |      |
+| `L`: 表示class类型。例如 `Ljava/lang/String;`。 | 都是 `jobject`类型 | String  |      |
+
+> * class 以 `;` 结尾。
+>
+> * 包名使用 `/` 分割。
+>   * 弱存在内部类，使用 `$` 来作为分隔符。
+>
+> * 参数都包裹在 `()` 中。
+> * 最后的符号表示返回值。例如这里的 `J` 。
+
+### JNINativeMethod
+
+使用动态注册时会使用到 `JNINativeMethod` 。
+
+```cpp
+typedef struct {
+    const char* name; // 方法名
+    const char* signature; // 方法签名：参数类型+返回类型
+    void*       fnPtr; // 指向调用的方法。
+} JNINativeMethod;
+```
+
+```cpp
+// 定义一个 nativeLockCanvas JNI函数，它指向 nativeLockCanvas() 这个函数。
+// 参数 J: jlong
+// 参数 Landroid/graphics/Canvas; : jobject
+// 参数 Landroid/graphics/Rect; : jobject
+// 返回值J: jlong
+static const JNINativeMethod gSurfaceMethods[] = {
+	{"nativeLockCanvas", "(JLandroid/graphics/Canvas;Landroid/graphics/Rect;)J", (void*)nativeLockCanvas}
+}
+```
+
+它对应下面的函数：
+
+```cpp
+static jlong nativeLockCanvas(JNIEnv* env, jclass clazz, jlong nativeObject, jobject canvasObj, jobject dirtyRectObj)
+```
+
+`JNIEnv* env`, `jclass clazz`, 这两个参数是固定在JNI函数开头的，不需要我们定义，它们的值也是自动填充的。
+
+* JNIEnv：表示java本地接口环境。
+
+* jclass/joject：第二个参数，若是静态方法 则是jclass类型，表示对应类。否则是 jobject类型，指向具体的对象。
+
+
+
+## Android 源码中比较重要的一些类
+
+### RefBase、sp和wp
 
 * RefBase： 是Android中所有对象的始祖，类似Java的Object。内部包含一个影子对象mRefs，管理了强弱引用计数。
 * sp (strong pointer)：将实际对象 sp化后，强弱引用计数各加1，sp析构后 引用计数都 减1。
@@ -260,7 +422,7 @@ Usap 是 Android 10之后引入的一种 快速创建应用进程 的新机制�
 * wp (weak pointer)：将实际对象 wp 化后，弱引用计数各加1，sp析构后 弱引用计数减1。
   * 弱引用计数为0 会使影子对象被delete。
 
-### RefBase
+#### RefBase
 
 Android中所有对象的始祖，类似Java的Object。
 
@@ -346,7 +508,7 @@ RefBase::~RefBase()
 
 ```
 
-### sp
+#### sp
 
 表示强引用，将实际对象 sp化后，强弱引用计数各加1，sp析构后 引用计数都 减1。默认情况下 强引用计数为0 会使实际对象被delete。
 
@@ -398,7 +560,8 @@ void RefBase::incStrong(const void* id) const
     check_not_on_stack(this);
     // 减去初始值，得到真实的引用计数
     int32_t old __unused = refs->mStrong.fetch_sub(INITIAL_STRONG_VALUE, std::memory_order_relaxed);
-    // 第一次引用时调用。默认空实现，可以重载用于初始化。
+    // 第一次引用时调用。默认空实现。
+    // 这里可以重载用于初始化。后面阅读源码时很多类就是在这里做的初始化。
     refs->mBase->onFirstRef();
 }
 
@@ -430,7 +593,7 @@ void RefBase::decStrong(const void* id) const
 }
 ```
 
-### wp
+#### wp
 
 表示弱引用，将实际对象 wp 化后，弱引用计数各加1，sp析构后 弱引用计数减1。弱引用计数为0 会使影子对象被delete。
 
@@ -507,61 +670,56 @@ void RefBase::weakref_type::decWeak(const void* id)
 
 
 
-## 同步技术
+### Singleton
 
-### Mutex：互斥
+这是一个单例构造器，在源码中被频繁使用，在native 和 Java 都存在一个相同功能的实现。
 
-用于多线程访问同一个资源的时候，保证一次只有一个线程能访问该资源。锁的使用将导致从用户态转入内核态。
+一般看到 `xxx::getInstance()` 就是使用的这个单例构造器来实现单例模式。
 
-内部使用 type 来控制是否支持跨进程的线程同步，SHARE表示支持跨进程的场景。
+[Singleton.h - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:system/core/libutils/include/utils/Singleton.h;drc=7346c436e5a11ce08f6a80dcfeb8ef941ca30176;l=51)
 
-* `Mutex.lock()`：调用后锁定资源，系统保证一次只有一个线程能lock。若之前已经被lock，则会等待，直到unlock。
-* `Mutex.unlock()`：释放资源，其他人能够访问。
-* `Mutex.trylock()`：尝试锁定资源，更加返回值来判断是否锁定成功。
+```cpp
+namespace android {
 
-> `lock()` 和 `unlock()`需要一一对应以免发生死锁。
+template <typename TYPE>
+class ANDROID_API Singleton
+{
+public:
+    static TYPE& getInstance() {
+        Mutex::Autolock _l(sLock);
+        TYPE* instance = sInstance;
+        if (instance == nullptr) {
+            instance = new TYPE();
+            sInstance = instance;
+        }
+        return *instance;
+    }
 
-内部提供了 `AutoLock`来方便的使用Mutex。
+    static bool hasInstance() {
+        Mutex::Autolock _l(sLock);
+        return sInstance != nullptr;
+    }
+    
+protected:
+    ~Singleton() { }
+    Singleton() { }
 
-* 构造时调用 `lock()`。
-* 析构时调用 `unlock()`。
+private:
+    Singleton(const Singleton&);
+    Singleton& operator = (const Singleton&);
+    static Mutex sLock;
+    static TYPE* sInstance;
+};
 
-### Condition：条件
 
-用于 某一个线程需要满足一定条件后才能执行的场景。内部使用 type 来控制是否支持跨进程的线程同步，SHARE表示支持跨进程的场景。
+#define ANDROID_SINGLETON_STATIC_INSTANCE(TYPE)                 \
+    template<> ::android::Mutex  \
+        (::android::Singleton< TYPE >::sLock)(::android::Mutex::PRIVATE);  \
+    template<> TYPE* ::android::Singleton< TYPE >::sInstance(nullptr);  /* NOLINT */ \
+    template class ::android::Singleton< TYPE >;
+// ---------------------------------------------------------------------------
+}  // namespace android
 
-* 等待者：需要满足一定条件才能执行的线程。
-  * `wait(mutex)`：等待触发条件。内部会先调用 `mutex.unlock()`，然后等待条件触发，触发后再调用 `mutex.lock()`。
-  * `waitRelative(mutex,reltime)`：等待触发并设置超时。
-* 触发者：触发这个条件的线程。
-  * `signal()`：通知条件满足，仅一个会被唤醒。
-  * `broadcast()`：唤醒所有。
 
-### 原子操作
+```
 
-原子操作是最小的执行单位，也就是说这个操作绝不会在执行完毕前被任何事情打断。原子操作可以避免锁的使用从而提供效率，但是需要CPU的支持。
-
-例如我们常见的 `i++`操作, i 是全局变量，一般分为三个步骤：
-
-1. 从内存读取数据到寄存器。
-2. 将寄存器中的数据递增。
-3. 将寄存器的结果写回内存。
-
-这三个步骤在单线程中顺序执行是没有问题的，但是在多线程中则可能由于线程调度的问题导致出现问题。
-
-* 线程A 执行了 步骤 1，读取了数据。
-* 然后调度到线程B，B执行了 1、2、3修改了i。
-* 调度回线程A，此时继续执行2、3。注意此时A中的数据还是之前读取的旧数据。
-* 最终结果就是执行了2次++但是，i仅增加了1。
-
-## TLS
-
-TLS 是为每个线程提供了一块空间，用以 `kv`的格式存储变量，并且这块空间线程间是不共享的，是每个线程所私有的存储空间，所以多线程访问也不存在数据竞争，不会相互影响。
-
-为什么要用TLS?
-
-主要是因为在Linux的进程和线程模型中，同一个进程内的多个线程共享进程的地址空间，因此不同线程间共享一个全局变量和静态变量。所以一个线程修改后也会影响到其他线程，并且使用全局变量是为了保证安全，往往需要锁来控制，成本也比较高。
-
-但是一个模块中我们可能会需要一些全局变量来存储数据，但是又不希望线程之间互相影响，基于这个场景操作系统就提供了 TLS机制。
-
-TLS 将数据和线程关联起来，提供了一个全局的索引表存储线程局部数据的地址，可以通过 `pthread_key_t` 去查询数据。

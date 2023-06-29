@@ -137,7 +137,9 @@ service servicemanager /system/bin/servicemanager
     task_profiles ServiceCapacityLow
     shutdown critical
 ```
-### 程序入口
+## 三、ServiceManager 中的Binder流程
+
+### ServiceManager 程序入口
 
 `main()` 是 ServiceManager 程序入口。
 
@@ -1851,9 +1853,11 @@ static int binder_thread_read(struct binder_proc *proc,
 
 ### BBinder
 
-BBinder 继承自IBinder，它主要负责处理binder通讯相关的逻辑。业务相关的接口实现在它的子类 `BnXXX`中实现。
+BBinder 继承自IBinder，**负责 binder通讯相关的逻辑**。
 
-向ServiceManger注册服务时的IBinder 就是 BBinder，例如`BnServiceManager`、`BnMediaPlayService`等。
+BnInterface 就是继承自BBbinder，并将 Binder通信接口和相关的业务接口相结合。
+
+例如各种系统 向ServiceManger注册服务时传入的IBinder 就是 BBinder，例如`BnServiceManager`、`BnMediaPlayService`等。
 
 > [Binder.h - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/libs/binder/include/binder/Binder.h;drc=7346c436e5a11ce08f6a80dcfeb8ef941ca30176;l=30)
 
@@ -2009,13 +2013,18 @@ status_t BBinder::onTransact(
 
 ### BpBinder
 
-BpBinder 继承自IBinder 是客户端用来与Server交互的代理类，p表示 Proxy。
+BpBinder 继承自IBinder 是**客户端用来与Server交互的代理类**，p表示 Proxy。
 
 #### BpBinder::PrivateAccessor::create(handle)
 
 > [BpBinder.h - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/libs/binder/include/binder/BpBinder.h;drc=7346c436e5a11ce08f6a80dcfeb8ef941ca30176;l=135)
 
 ```cpp
+// 定义
+class BpBinder : public IBinder {
+    
+}
+
 // 调用 BpBinder::create()
 static sp<BpBinder> create(int32_t handle) { return BpBinder::create(handle); }
 
@@ -2030,14 +2039,9 @@ sp<BpBinder> BpBinder::create(int32_t handle) {
 > [BpBinder.cpp - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/libs/binder/BpBinder.cpp;bpv=0;bpt=1;l=221)
 
 ```cpp
-// 定义
-class BpBinder : public IBinder {
-    
-}
 
 // 调用了 BpBinder::BpBinder(Handle&& handle)
-BpBinder::BpBinder(BinderHandle&& handle, int32_t trackedUid) : BpBinder(Handle(handle)) {
-    if constexpr (!kEnableKernelIpc) {
+BpBinder::BpBinder(BinderHandle&& handle, int32_t trackedUid) : BpBinder(HandBpBinder
         LOG_ALWAYS_FATAL("Binder kernel driver disabled at build time");
         return;
     }
@@ -2174,6 +2178,8 @@ protected:
 
 客户端访问服务的代理对象接口，通用是一个类模板。
 
+使用的代理模式，继承自 `BpRefBase`，内部持有的 `mRemote` 成员变量就是 BpBinder。
+
 > [IInterface.h - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/libs/binder/include/binder/IInterface.h;l=84;)
 
 ```cpp
@@ -2181,11 +2187,11 @@ template<typename INTERFACE>
 class BpInterface : public INTERFACE, public BpRefBase
 {
 public:
-    explicit                    BpInterface(const sp<IBinder>& remote);
+    explicit                    BpInterface(const sp<IBinder>& remote); // 赋值给成员变量 mRemote
     typedef INTERFACE BaseInterface;
 
 protected:
-    virtual IBinder*            onAsBinder();
+    virtual IBinder*            onAsBinder(); // 返回 mRemote: BpBinder。
 };
 ```
 
@@ -2347,7 +2353,9 @@ public:
 
 `DO_NOT_DIRECTLY_USE_ME_IMPLEMENT_META_INTERFACE` 这个宏就是定义 `DECLARE_META_INTERFACE`宏中接口的**具体实现**的。
 
-它用于服务的实现类中，这里以 `INTERFACE=ServiceManager` 来解读，发现和使用aidl时自动生成的IBinder类内的实现很相似。
+它用于服务的实现类中，这里以 `INTERFACE=ServiceManager` 来解读，会发现和使用aidl时自动生成的IBinder类内的实现很相似。
+
+
 
 > [IInterface.h - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/native/libs/binder/include/binder/IInterface.h;drc=7346c436e5a11ce08f6a80dcfeb8ef941ca30176;bpv=0;bpt=1;l=127;)
 
@@ -2375,6 +2383,7 @@ public:
 // Macro to be used by both IMPLEMENT_META_INTERFACE and IMPLEMENT_META_NESTED_INTERFACE
 // 这里就是 DECLARE_META_INTERFACE 的具体实现
 // ITYPE=IServiceManager, INAME=IServiceManager, BPTYPE=BpServiceManager
+// 这里 通过 BpBinder创建了 对应的 BpServiceManager
 #define DO_NOT_DIRECTLY_USE_ME_IMPLEMENT_META_INTERFACE0(ITYPE, INAME, BPTYPE)                     \
     // 返回描述符
     const ::android::String16& ITYPE::getInterfaceDescriptor() const { return ITYPE::descriptor; } \

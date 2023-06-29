@@ -4,6 +4,8 @@ MediaServer 是一个由 C++编写的一个可执行程序，它包含了 MediaP
 
 查看本篇前可以首先阅读 [Android之Binder机制](./Android之Binder机制.md) 了解一下 binder驱动的具体流程。
 
+这里主要 会分析 MediaServer 和 ServiceManager的Binder通讯过程，以及将服务注册到 ServiceManager并启动Binder线程池的过程。
+
 ## MediaServer程序入口：main()
 
 这个函数是MediaServer程序的入口，它主要做了以下几件事：

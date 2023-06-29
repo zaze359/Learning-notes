@@ -4,7 +4,7 @@
 
 * **可以保存要在界面中显示的数据**。ViewModel 将数据保留在内存中，且系统会自动将 ViewModel 与发生配置更改后产生的新 activity 实例相关联。
 * **用于封装相关的业务逻辑**。
-* **ViewModel 和 ViewModelStoreOwner.lifecycle 的生命周期绑定**。在owner销毁时会调用`ViewModel.clear()`清理所有缓存的ViewModel，并回调 `ViewModel.onCleared()`。
+* **ViewModel 和 ViewModelStoreOwner.lifecycle 的生命周期绑定**。在owner 销毁时会调用`ViewModel.clear()`清理所有缓存的ViewModel，并回调 `ViewModel.onCleared()`。
 
 ![说明 ViewModel 随着 activity 状态的改变而经历的生命周期。](./ViewModel.assets/viewmodel-lifecycle.png)
 
@@ -49,7 +49,7 @@ ComponetActivity是一个ViewModelStoreOwner的实现类。同样的还有Fragme
 * **ViewModelProvider.Factory**：它是**真正创建ViewModel实例的地方**。
   * 内部通过`modelClass.newInstance()/modelClass.getConstructor(Application::class.java).newInstance(app)`的方式创建ViewModel实例。
   * 默认实现为`SavedStateViewModelFactory`，还实现了状态的保存和恢复逻辑。
-* **NonConfigurationInstances**：负责保存ViewModelStore
+* **NonConfigurationInstances**：负责保存 `ViewModelStore`。
 
 ```java
 public class ComponentActivity extends androidx.core.app.ComponentActivity implements 
@@ -144,7 +144,7 @@ public class ComponentActivity extends androidx.core.app.ComponentActivity imple
     @SuppressWarnings("WeakerAccess") /* synthetic access */
     void ensureViewModelStore() {
         if (mViewModelStore == null) {
-            // 这里会优先尝试获取之前保存在NonConfigurationInstances的ViewModel
+            // 这里会优先尝试获取之前保存在NonConfigurationInstances的 ViewModelStore
             NonConfigurationInstances nc =
                     (NonConfigurationInstances) getLastNonConfigurationInstance();
             if (nc != null) {
@@ -429,11 +429,12 @@ public open class AndroidViewModelFactory private constructor(
 
 [保存界面状态  | Android 开发者  | Android Developers (google.cn)](https://developer.android.google.cn/topic/libraries/architecture/saving-states?hl=zh-cn)
 
-* 
-* 通过`getLastNonConfigurationInstance()`，获取到ComponentActivity中的 mLastNonConfigurationInstances。
-* `ComponentActivity.mLastNonConfigurationInstances` 中包含了之前的ViewModelStore，ViewModelStore中缓存了之前的ViewModel实例。这样ViewModel就会恢复了。
+#### ensureViewModelStore()
 
 分析此流程时，先从`ComponentActivity.ensureViewModelStore()` 看起，因为这里是 `mViewModelStore`赋值的地方。
+
+* 通过`getLastNonConfigurationInstance()`，获取到ComponentActivity中的 mLastNonConfigurationInstances。
+* `ComponentActivity.mLastNonConfigurationInstances` 中包含了之前的`ViewModelStore`，ViewModelStore中缓存了之前的ViewModel实例。这样ViewModel就会恢复了。
 
 ```kotlin
 public class ComponentActivity extends androidx.core.app.ComponentActivity implements 
@@ -471,12 +472,16 @@ public class ComponentActivity extends androidx.core.app.ComponentActivity imple
 }
 ```
 
+
+
+#### getLastNonConfigurationInstance()
+
 接着就可以来看看Activity中`getLastNonConfigurationInstance()`的实现，发现是获取的就是 `Activity.mLastNonConfigurationInstances.activity`，它的赋值在`retainNonConfigurationInstances()`中，发现这个函数的作用就是构建NonConfigurationInstances对象来保存数据。然后接着找mLastNonConfigurationInstances赋值的地方，发现是在`attach()`中通过参数赋值的。
 
 此时得到了2个关键信息：
 
-* **保存数据的时机**：寻找 retainNonConfigurationInstances() 调用处。
-* **恢复数据的时机**：寻找 attach() 的调用处。
+* **保存数据的时机**：寻找 `retainNonConfigurationInstances()` 调用处。
+* **恢复数据的时机**：寻找 `attach()` 的调用处。
 
 ```java
 public class Activity ... {
@@ -545,133 +550,104 @@ public class Activity ... {
 }
 ```
 
-先从`attach()`的调用处找起，它是在 `ActivityThread`中被调用的，这里涉及到了[Android的启动流程](../system/Android启动流程.md)。
+#### 保存数据的时机
 
-搜索发现 `retainNonConfigurationInstances()` 的调用处也在 ActivityThread中。
+搜索发现 `retainNonConfigurationInstances()` 的调用处在 `ActivityThread.performDestroyActivity()`中，它会被赋值给ActivityClientRecord，而ActivityClientRecord 时保存在ActivityThread中的，只要进程不被杀死就会一直存在。
+
+所以 NonConfigurationInstances 会在 Activity销毁时保存到 Activity对应的ActivityClientRecord中。
+
+```java
+public final class ActivityThread ... {	
+	final ArrayMap<IBinder, ActivityClientRecord> mActivities = new ArrayMap<>();
+
+	void performDestroyActivity(ActivityClientRecord r, boolean finishing,
+            int configChanges, boolean getNonConfigInstance, String reason) {
+        Class<? extends Activity> activityClass = null;
+        if (localLOGV) Slog.v(TAG, "Performing finish of " + r);
+        activityClass = r.activity.getClass();
+        r.activity.mConfigChangeFlags |= configChanges;
+        if (finishing) {
+            r.activity.mFinished = true;
+        }
+
+        performPauseActivityIfNeeded(r, "destroy");
+
+        if (!r.stopped) {
+            callActivityOnStop(r, false /* saveState */, "destroy");
+        }
+        // 保存 NonConfigurationInstances
+        if (getNonConfigInstance) {
+            try {
+                r.lastNonConfigurationInstances = r.activity.retainNonConfigurationInstances();
+            } catch (Exception e) {
+                if (!mInstrumentation.onException(r.activity, e)) {
+                    throw new RuntimeException("Unable to retain activity "
+                            + r.intent.getComponent().toShortString() + ": " + e.toString(), e);
+                }
+            }
+        }
+        try {
+            r.activity.mCalled = false;
+            mInstrumentation.callActivityOnDestroy(r.activity);
+            if (!r.activity.mCalled) {
+                throw new SuperNotCalledException("Activity " + safeToComponentShortString(r.intent)
+                        + " did not call through to super.onDestroy()");
+            }
+            if (r.window != null) {
+                r.window.closeAllPanels();
+            }
+        } catch (SuperNotCalledException e) {
+            throw e;
+        } catch (Exception e) {
+            if (!mInstrumentation.onException(r.activity, e)) {
+                throw new RuntimeException("Unable to destroy activity "
+                        + safeToComponentShortString(r.intent) + ": " + e.toString(), e);
+            }
+        }
+        // 置为 ON_DESTROY
+        r.setState(ON_DESTROY);
+        mLastReportedWindowingMode.remove(r.activity.getActivityToken());
+        schedulePurgeIdler();
+        synchronized (this) {
+            if (mSplashScreenGlobal != null) {
+                mSplashScreenGlobal.tokenDestroyed(r.token);
+            }
+        }
+        // updatePendingActivityConfiguration() reads from mActivities to update
+        // ActivityClientRecord which runs in a different thread. Protect modifications to
+        // mActivities to avoid race.
+        synchronized (mResourcesManager) {
+            mActivities.remove(r.token);
+        }
+        StrictMode.decrementExpectedActivityCount(activityClass);
+    }
+}
+```
+
+
+
+
+
+#### 恢复数据的时机
+
+`Activity.attach()` 是在 `ActivityThread`中被调用的，这里涉及到了[Android的启动流程](../system/Android启动流程.md)。
 
 ```java
 public final class ActivityThread ... {
     
     private Activity performLaunchActivity(ActivityClientRecord r, Intent customIntent) {
-        ActivityInfo aInfo = r.activityInfo;
-        if (r.packageInfo == null) {
-            r.packageInfo = getPackageInfo(aInfo.applicationInfo, r.compatInfo,
-                    Context.CONTEXT_INCLUDE_CODE);
-        }
-
-        ComponentName component = r.intent.getComponent();
-        if (component == null) {
-            component = r.intent.resolveActivity(
-                mInitialApplication.getPackageManager());
-            r.intent.setComponent(component);
-        }
-
-        if (r.activityInfo.targetActivity != null) {
-            component = new ComponentName(r.activityInfo.packageName,
-                    r.activityInfo.targetActivity);
-        }
-
-        ContextImpl appContext = createBaseContextForActivity(r);
-        Activity activity = null;
+		// ...
         try {
-            java.lang.ClassLoader cl = appContext.getClassLoader();
-            activity = mInstrumentation.newActivity(
-                    cl, component.getClassName(), r.intent);
-            StrictMode.incrementExpectedActivityCount(activity.getClass());
-            r.intent.setExtrasClassLoader(cl);
-            r.intent.prepareToEnterProcess(isProtectedComponent(r.activityInfo),
-                    appContext.getAttributionSource());
-            if (r.state != null) {
-                r.state.setClassLoader(cl);
-            }
-        } catch (Exception e) {
-            if (!mInstrumentation.onException(activity, e)) {
-                throw new RuntimeException(
-                    "Unable to instantiate activity " + component
-                    + ": " + e.toString(), e);
-            }
-        }
-
-        try {
-            Application app = r.packageInfo.makeApplicationInner(false, mInstrumentation);
-
-            if (localLOGV) Slog.v(TAG, "Performing launch of " + r);
-            if (localLOGV) Slog.v(
-                    TAG, r + ": app=" + app
-                    + ", appName=" + app.getPackageName()
-                    + ", pkg=" + r.packageInfo.getPackageName()
-                    + ", comp=" + r.intent.getComponent().toShortString()
-                    + ", dir=" + r.packageInfo.getAppDir());
-
-            // updatePendingActivityConfiguration() reads from mActivities to update
-            // ActivityClientRecord which runs in a different thread. Protect modifications to
-            // mActivities to avoid race.
-            synchronized (mResourcesManager) {
-                mActivities.put(r.token, r);
-            }
-
             if (activity != null) {
-                CharSequence title = r.activityInfo.loadLabel(appContext.getPackageManager());
-                Configuration config =
-                        new Configuration(mConfigurationController.getCompatConfiguration());
-                if (r.overrideConfig != null) {
-                    config.updateFrom(r.overrideConfig);
-                }
-                if (DEBUG_CONFIGURATION) Slog.v(TAG, "Launching activity "
-                        + r.activityInfo.name + " with config " + config);
-                Window window = null;
-                if (r.mPendingRemoveWindow != null && r.mPreserveWindow) {
-                    window = r.mPendingRemoveWindow;
-                    r.mPendingRemoveWindow = null;
-                    r.mPendingRemoveWindowManager = null;
-                }
-
-                // Activity resources must be initialized with the same loaders as the
-                // application context.
-                appContext.getResources().addLoaders(
-                        app.getResources().getLoaders().toArray(new ResourcesLoader[0]));
-
-                appContext.setOuterContext(activity);
+                // ...
+                // 传入 r.lastNonConfigurationInstances。这个就是之前我们上一个Activity保存的Configuration
+                
                 activity.attach(appContext, this, getInstrumentation(), r.token,
                         r.ident, app, r.intent, r.activityInfo, title, r.parent,
                         r.embeddedID, r.lastNonConfigurationInstances, config,
                         r.referrer, r.voiceInteractor, window, r.activityConfigCallback,
                         r.assistToken, r.shareableActivityToken);
-
-                if (customIntent != null) {
-                    activity.mIntent = customIntent;
-                }
-                r.lastNonConfigurationInstances = null;
-                checkAndBlockForNetworkAccess();
-                activity.mStartedActivity = false;
-                int theme = r.activityInfo.getThemeResource();
-                if (theme != 0) {
-                    activity.setTheme(theme);
-                }
-
-                if (r.mActivityOptions != null) {
-                    activity.mPendingOptions = r.mActivityOptions;
-                    r.mActivityOptions = null;
-                }
-                activity.mLaunchedFromBubble = r.mLaunchedFromBubble;
-                activity.mCalled = false;
-                // Assigning the activity to the record before calling onCreate() allows
-                // ActivityThread#getActivity() lookup for the callbacks triggered from
-                // ActivityLifecycleCallbacks#onActivityCreated() or
-                // ActivityLifecycleCallback#onActivityPostCreated().
-                r.activity = activity;
-                if (r.isPersistable()) {
-                    mInstrumentation.callActivityOnCreate(activity, r.state, r.persistentState);
-                } else {
-                    mInstrumentation.callActivityOnCreate(activity, r.state);
-                }
-                if (!activity.mCalled) {
-                    throw new SuperNotCalledException(
-                        "Activity " + r.intent.getComponent().toShortString() +
-                        " did not call through to super.onCreate()");
-                }
-                mLastReportedWindowingMode.put(activity.getActivityToken(),
-                        config.windowConfiguration.getWindowingMode());
+				// ...
             }
             r.setState(ON_CREATE);
 
@@ -691,8 +667,6 @@ public final class ActivityThread ... {
     
 }
 ```
-
-
 
 
 

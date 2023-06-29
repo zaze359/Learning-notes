@@ -10,9 +10,9 @@ Android提供了AIDL工具 帮我们快速构建一套基于Binder的跨进程�
 
 我们先从 `IRemoteService.java` 来开始分析Binder在Java层的实现机制。
 
-> in表示输入参数
+> in：表示输入参数
 >
-> out表示输出参数：它会在binder调用的返回过程中新建一个对象，并写入到 reply 中返回给我们。
+> out：表示输出参数，它会在binder调用的返回过程中新建一个对象，并写入到 reply 中返回给我们。
 
 ```java
 // IRemoteService.aidl

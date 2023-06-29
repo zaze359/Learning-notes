@@ -241,28 +241,55 @@ a = ++b;
 
 ## 线程相关
 
-### 线程池
+### synchronized 关键字修饰静态方法和非静态方法的区别？
 
-### ThreadLocal有哪些内存泄漏问题
+区别：
 
-查看Entry类的结构可以知道，它继承自WeakReference。对于Thread对象来说,**key值ThreadLocal实例是弱引用关系，而value实质是一个强引用关系**。 所以当这个线程没有销毁时，就会出现泄漏问题。特别是使用线程池时。
+* 修饰静态方法：锁的是 `类.class`，这个**类对象**。
+* 修饰非静态方法：锁的时 具体的**类实例**。
 
-如何处理：可以显示调用``ThreadLocal.remove()``
+一个类中有一个静态方法 A 和非静态方法 B，都被 synchronized 修饰。两个线程分别去调用同一个实例的方法 A 和方法 B，会产生竞争吗？ 
 
----
+**不会**
 
-### Daemon线程和User线程
+由于锁的不是同一个对象，所以两个线程可以同时分别访问 都被synchronized修饰的静态方法和非静态方法，不会发生竞争。
 
-User线程
 
-> `new Thread`默认创建的就是User线程。
+
+
+
+### volatile 关键字的作用？
+
+volatile 相比 synchronized、Lock更加轻量级，常在双重检测中配合synchronized 一起使用。
+
+* 内存可见性：直接从主存存取这个变量，修改后会立即保存到主存中。
+* 禁止指令重排：保证有序性。
+  * volatile 的重排规则是：若一个线程先去写，另一个线程去读，则一定时写入完成后 才能读取。
+* **volatile 无法保证原子性**。所以双重检测时需要配合 synchronized  一起使用
+
+
+解释一下“立即对所有线程可见”和“禁止指令重排”？
+
+* 立即对所有线程可见：总是能读取到最新值。直接从主存存取这个变量。
+  * 在java的内存模型中，每个线程拥有自己的工作内存（栈 和 寄存器）。线程启动时会从主存将变量加载到工作内存中，操作结束后再同步回主内存中。由于这个模式从而产生了常见的并发问题。
+* 禁止指令重排：Java允许编译进行指令重排， 当语句之间不存在关联时，它们的执行顺序不一定就是我们代码的编写顺序，这在多线程中可能发生问题。禁用编译器的重排，也是为了防止出现常见的并发问题。
+
+
+
+### Daemon线程和User线程的区别？
+
+**User线程**：
+
+`new Thread`默认创建的就是User线程。
 
 ```java
 Thread threadA = new Thread(new Runnable(){...});
 threadA.start();
 ```
 
-如何创建`Daemon线程`：
+**Daemon线程**：
+
+需要 通过 `thread.setDaemon(true)` 将线程设置为 守护线程。
 
 ```java
 Thread threadA = new Thread(new Runnable(){...});
@@ -273,17 +300,81 @@ threadA.start();
 // 可以通过 threadA.isDaemon()判断。
 ```
 
-User线程 和 Daemon线程的差异：
+**User线程 和 Daemon线程的差异**：
 
-* 当JVM中所有的User线程退出后，所有的Daemon线程也会马上退出执行，并且JVM进程也会退出。JVM进程退出的条件是：不存在User线程，即**仅存在守护线程时虚拟机会直接退出**。
-* main函数所在线程的退出，不影响其他User线程的运行，也不影响JVM进程是否退出执行。
+* 当JVM中所有的User线程退出后，所有的Daemon线程也会马上退出执行，并且JVM进程也会退出。
+  * JVM进程退出的条件是：不存在User线程。所以即使还存在守护线程，但是没有User线程时虚拟机也依然会直接退出。
+  * main函数所在线程的退出，不影响其他User线程的运行，也不影响JVM进程是否退出。
 
 
 
 
+### 阿里编程规范为什么不建议使用Executors创建线程池？
+
+最主要原因就是通过 Executors 创建的线程池，它的阻塞队列一般都是没有限制大小的，理论上能无限添加，永远不会触发拒绝策略，可能导致内存爆炸。况且直接通过 `ThreadPollExecutor` 创建线程池也并不复杂。
+
+例如  `newFixedThreadPool` 和 `
+
+``new LinkedBlockingQueue<Runnable>()``
+
+
+
+### TLS
+
+#### 什么是TLS？
+
+TLS 就是 **线程局部变量存储空间**。
+
+它是每个线程所私有的一块存储空间，这块空间线程间是不共享的，以 `kv`的格式来存储线程内内部的全局变量，这样可以避免多线程访问的数据竞争。TLS 在Java、C++ 都中都有对应的实现，它将数据和线程关联起来，提供了一个全局的索引表存储线程局部数据的地址。
+
+#### 为什么要用TLS?
+
+主要是因为在Linux的进程和线程模型中，同一个进程内的多个线程共享进程的地址空间，因此不同线程间共享一个全局变量和静态变量。所以一个线程修改后也会影响到其他线程，并且使用全局变量是为了保证安全，往往需要锁来控制，成本也比较高。
+
+但是一个模块中我们可能会需要一些全局变量来存储数据，但是又不希望线程之间互相影响，基于这个场景操作系统就提供了 TLS 机制。
+
+#### ThreadLocal 
+
+[ThreadLocal分析](../language/java/ThreadLocal.md)
+
+#### ThreadLocal 有哪些内存泄漏问题
+
+内存泄露问题 主要是由于 我们 ThreadLocalMap的存储单位 `ThreadLocalMap.Entity` 导致的。
+
+* **key：ThreadLocal<?>是弱引用关系。**
+* **value：实质是一个强引用关系**。 
+
+所以当这个线程没有销毁时，就会出现泄漏问题，value无法被回收。特别是使用线程池时，由于线程复用，这个泄露现象更容易发生。
+
+如何处理：我们可以显示调用``ThreadLocal.remove()`` 来将 value移除。
+
+```java
+static class Entry extends WeakReference<ThreadLocal<?>> {
+    // 注意这个 value 是强引用
+    Object value;
+    Entry(ThreadLocal<?> k, Object v) {
+        // 这里传入的 key 是弱引用
+        super(k);
+        // 强
+        value = v;
+    }
+}
+```
+
+
+
+---
 
 ## 动态代理
 
 > 主要考察反射机制。
 >
 > 动态代理解决了什么问题。
+
+
+
+
+
+### JDK动态代理为什么设计成只支持接口 ?
+
+在使用 JDK动态代理时，会生成一个继承了 Proxy的增强代理类，但是由于 Java只支持单继承，所以只能它能继续实现接口，但是无法再继承类。

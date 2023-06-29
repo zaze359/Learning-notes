@@ -76,3 +76,35 @@ SNAPSHOT_REPOSITORY_URL="snapshot仓库地址"
 NEXUS_USERNAME="账号"
 NEXUS_PASSWORD="密码"
 ```
+
+## 本地Maven：MavenLocal
+
+> * debug：对应 SNAPSHOT 版本。
+> * release：对应正式版本。
+>
+> 需要注意的是 上传的 release编译产物时，需要注意 中不能存在debug版本依赖库，否则无法上传。
+
+```shell
+# 将 debug 产物，上传到 MavenLocal
+./gradlew :util:publishDebugPublicationToMavenLocal --info
+# 将 release 产物，上传到 MavenLocal
+./gradlew :util:publishReleasePublicationToMavenLocal --info
+# 同时上传debug、release产物
+./gradlew :util:publishToMavenLocal --info
+```
+
+
+
+#### 如何引用MavenLocal
+
+```groovy
+buildscript {
+    repositories {
+		// 添加 mavenLocal() 即可
+        mavenLocal()
+        google()
+        mavenCentral()
+    }
+}
+```
+

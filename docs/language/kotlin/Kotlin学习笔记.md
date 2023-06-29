@@ -4,6 +4,8 @@
 
 [关于本书 · Kotlin 官方文档 中文版 (kotlincn.net)](https://book.kotlincn.net/)
 
+
+
 ## 函数
 
 ### 代码块函数
@@ -130,8 +132,8 @@ public final class Red implements Color {
 
 不同于Java的地方:
 
-* Kotlin 中的类默认为public，而Java为Default。
-* Kotlin 中的类默认不可继承必须声明 `open`关键字，java则是默认开放继承。
+* Kotlin 中的可见性默认为public，而Java为Default。
+* Kotlin 中的类默认不可继承，必须声明 `open`关键字，java则是默认开放继承。
 * Kotlin 中的嵌套类默认为 `static`，防止了非静态内部类持有外部引用可能导致的泄漏问题。Java则需要我们自己声明static。
 
 ### 普通类
@@ -176,13 +178,21 @@ enum class Month constructor(var cn: String, var en: String, var number: Int) {
 }
 ```
 
+### 可见性修饰符
 
+> kotlin没有了包可见的概念，增加了模块内可见的概念。
+
+* 默认是public：所有可见。
+* private：私有，仅类内可见。若是顶层函数，则是在同文件下可见。
+* protected：类内以及子类可见，所以使用protected是会提示将类设为open，否则和private没有区别。不能用于顶层函数。
+  * 注意kotlin的protected不是包内可见的，这点和java不同。
+* internal：模块内可见，常用于封装SDK时。
 
 ## 密封类/接口
 
 ### 密封类
 
-在普通类前面添加 `sealed` 关键字，可以说是枚举的增强类型，拥有枚举类的**逻辑完备性**。不过 密封类能拥有多个实例。
+在普通类前面添加 `sealed` 关键字，可以说是枚举的增强类型，拥有枚举类的**逻辑完备性**。同时 密封类能拥有多个实例。
 
 `sealed class` 是抽象类，无法被实例化，。（`Sealed types cannot be instantiated`）
 
@@ -214,9 +224,7 @@ class B(s: String) : A()
 
 ### 密封接口
 
-和 密封类 具有相同的功能。它的优势在于 **能帮助密封类、枚举类等类实现多继承和复杂的扩展性**。
-
-* 通过密封接口 可以使不同的枚举建立一定的联系。
+和 密封类 具有相同的功能。它的优势在于 **能帮助密封类、枚举类等类实现多继承和复杂的扩展性**，通过密封接口 可以使不同的枚举建立一定的联系。
 
 ```kotlin
 sealed interface A {
@@ -234,10 +242,10 @@ enum class D : A{
 fun deal(a : A) {
     when(a) {
         is A.B -> {
-            //
+            // 
         }
         is C -> {
-					// 可以继续根据 枚举C 来处理逻辑
+          // 可以继续根据 枚举C 来处理逻辑
           when(a) {
                 C.CC -> {
 
@@ -265,7 +273,12 @@ fun deal(a : A) {
 `object` 关键字在 Kotlin中主要有以下作用：
 
 * 单例模式：以`object XXClass{}` 的形式出现，标明这个类是单例模式，此时不必写 `class` 关键字。
-* 匿名内部类：以`object: View.OnClickListener{}`的形式出现，等同于 java中的 `new View.OnClickListener() {}`。Kotlin中定义匿名内部类时，支持实现多个接口，例如`object: A(), B, C {}`。
+  * 转为java代码后可以知道，实际是使用静态代码块实现的单例，利用了类的初始化锁来保证线程安全。
+  * 不支持初始化入参。
+
+* 匿名内部类：以`object: View.OnClickListener{}`的形式出现，等同于 java中的 `new View.OnClickListener() {}`。
+  * Kotlin中定义匿名内部类时，支持实现多个接口，例如`object: A(), B, C {}`。
+
 * 伴生对象：以`companion object {}`形式出现，用于实现java中的静态变量和静态方法、工厂模式等。
 
 
@@ -274,7 +287,7 @@ fun deal(a : A) {
 
 ### 委托类
 
-Kotlin 的委托常用于实现委托模式，通过 `by` 关键字实现委托，相比于 java 省略了很多模版代码。
+Kotlin 的委托常用于实现委托模式，通过 `by` 关键字实现委托，可以直接委托相同名称和入参的函数，相比于 java 省略了很多模版代码。
 
 ```kotlin
 // 将 Derived 的接口实现委托给 传入的参数 b，
@@ -285,18 +298,16 @@ class Derived(b: Base) : Base by b {
 
 ### 委托属性
 
-委托属性委托的是属性的  `getter、setter` 方法。
-
-
+委托属性实际上委托的是属性的  `getter`和`setter` 方法。
 
 ### 标准委托
 
 Kotlin 提供了好几种标准委托，
 
-* 两个属性之间的直接委托
-* `by lazy` 懒加载委托
-* `Delegates.observable` 观察者委托
-*  `by map` 映射委托。
+* 直接委托：两个属性之间的直接委托
+* 懒加载委托：`by lazy` 
+*  观察者委托：`Delegates.observable`
+*  映射委托：`by map` 
 
 #### 属性间的直接委托
 
@@ -313,15 +324,38 @@ class Item {
 
 ### 懒加载委托
 
-就是常用的 `by lazy` 懒加载。
+一般会和委托 `by` 一起使用，也就是常见的 `by lazy` 懒加载。
+
+它有三种加载模式：
+
+* `LazyThreadSafetyMode.SYNCHRONIZED`：互斥锁，内部会加锁保证仅有一个线程执行初始化函数进行初始化，发生并发时其他线程需要等待。
+* `LazyThreadSafetyMode.PUBLICATION`：利用的CAS机制，发生并发时只要当前值还没有被初始化就都能执行初始化函数，初始化的值是第一个返回的值。
+* `LazyThreadSafetyMode.NONE`：不加锁，所以并发时不保证结果。
+
+它的实现类都是单例模式，值被初始化后就不会再修改。
+
+```kotlin
+public interface Lazy<out T> {
+	// 实现类 会重写 getValue() 方法
+    public val value: T
+	// 表示是否以及实例化。
+    public fun isInitialized(): Boolean
+}
+```
+
+
+
+
 
 
 
 ### 自定义委托
 
-* val 使用 ReadOnlyProperty 重写 getValue()
-* var 使用 ReadWriteProperty 重写 getValue 和 getValue()
-* provideDelegate() 函数是在提供委托时调用，即先被调用，此处可以做一些特殊处理，比如根据参数 派发给其他委托。
+我们可以使用自定义委托的方式来重新定义变量值的读取和赋值。
+
+* ReadOnlyProperty：用于 val 修饰的变量，可以重写 `getValue()`
+* ReadWriteProperty：用于var修饰的变量，可以重写 `setValue()` 和 `getValue()`
+* `provideDelegate()` 函数是在提供委托时调用，即最先被调用，此处可以做一些特殊处理，比如根据参数 派发给其他委托。
 
 ```kotlin
 class Derived(b: Base) : Base by b {
@@ -886,7 +920,7 @@ listOf(1, 2, 3).forEach { // 闭包：访问了 sum
 
 > Kotlin的高阶函数转为 Java 时是以匿名内部类的方式存在的，每次调用都会创建一个对象，可以通过 `inline`	内联函数的方式来进行优化，在编译时会将代码嵌入到每一个的地方。
 
-**高阶函数就是以其他函数作为参数或者返回值的函数**。所以只有存在普通函数的复合使用它就是一个高阶函数。
+**高阶函数就是以其他函数作为参数或者返回值的函数**。所以只要存在普通函数的复合使用它就是一个高阶函数。
 
 函数既然可以作为参数和返回值，那么必然是具有类型的，先来看看函数的类型。
 
@@ -926,6 +960,22 @@ public inline fun <T> T.apply(block: T.() -> Unit): T {
 // block 函数体内部使用 this 获取到 i 对象。
 i.apply {
   println("apply this: $this")
+}
+```
+
+kotlin的协程 suspend lambda 也是一个高阶函数：
+
+```kotlin
+@kotlin.internal.InlineOnly
+@SinceKotlin("1.2")
+@Suppress("INVISIBLE_MEMBER", "INVISIBLE_REFERENCE")
+public inline fun <R> suspend(noinline block: suspend () -> R): suspend () -> R = block
+
+
+
+// 使用
+suspend {
+    MyLog.i(TAG, "In Coroutine 1")
 }
 ```
 
