@@ -282,9 +282,8 @@
 
 ### Activity.attach()
 
-* 关联了 Context。
-
-* Activity **创建了PhoneWindow**，并赋值给了 `mWindow`，从而将 Activity 和 Window 关联了起来。
+* **关联了 Context**。
+* **Activity 和 PhoneWindow 关联**：Activity 初始化了 mWindow 变量，它是一个**PhoneWindow**，并将Activity自身 作为 Window.Callback 传给 PhoneWindow， 后续 window 收到事件就能传递给 Activity。
 * 给 PhoneWindow 设置了 WindowManager，从而 Activity 、Window、WindowManager建立了关联。 
   * WindowManager 是访问Window的入口，常用的功能包括： 添加View、更新View和删除View。
 
@@ -322,6 +321,8 @@ public class Activity extends ... {
         mWindow = new PhoneWindow(this, window, activityConfigCallback);
         // 配置window的属性
         mWindow.setWindowControllerCallback(mWindowControllerCallback);
+        // 将Activity 作为 Window.Callback 传给 PhoneWindow。
+        // 后续window 收到事件就能传递给 Activity
         mWindow.setCallback(this);
         mWindow.setOnWindowDismissedCallback(this);
         mWindow.getLayoutInflater().setPrivateFactory(this);

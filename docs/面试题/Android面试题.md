@@ -389,7 +389,9 @@ protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
 
 
 
-### LayoutInflater中root、attachToRoot参数的作用？
+### LayoutInflater
+
+#### root、attachToRoot参数的作用？
 
 root 会影响 创建的布局最外层的LayoutParams：
 
@@ -401,6 +403,45 @@ attachToRoot 表示是否和root关联：
 * attachToRoot  == true：被创建View会作为 root的子布局，且`inflater()`返回给我们的是root。
 * attachToRoot == false：被创建的View不会和root关联，`inflater()`返回给我们的就是创建的View。
   * root为空时 attachToRoot这个属性就没什么用了，`inflater()`返回的也是创建的View。
+
+#### setFactory和setFactory2有什么区别？
+
+它们都是供开发者来设置自定义加载布局的接口。
+
+Factory2 继承子 Factory，factory2提供的接口多了一个parent参数，LayoutInflater 在加载布局过程中，会优先使用Factory2 来加载布局，然后才使用Factrory，都没有设置时默认时用自带的 privateFactory。
+
+
+
+### LinearLayout
+
+#### LinearLayout如何测量自己的child
+
+| Child \ Parent | EXACTLY | AT_MOST | UNSPECIFIED |                                  |
+| -------------- | ------- | ------- | ----------- | -------------------------------- |
+| dp             | EXACTLY | EXACTLY | EXACTLY     | 不受父容器影响                   |
+| match_parent   | EXACTLY | AT_MOST | UNSPECIFIED | 父容器是模式，子View就是什么模式 |
+| wrap_content   | AT_MOST | AT_MOST | UNSPECIFIED | 一般情况下就是 AT_MOST           |
+
+LinearLayout会在 onMeasure() 中遍历所有子View，依次进行测量，以纵向为例
+
+正常的布局流程，没有weiget权重布局：
+
+* 计算出当前已使用的高度空间 mTotalLength，子View占用高度，以及padding、margining等。
+* 测量子View,根据不同的测量模式处理，获取到子View的宽高。会将mTotalLength传入进去，再测量时使用。
+* 将子View占用的空间，更新到 mTotalLength。
+
+子View设置了 weiget，通过权重来进行布局。
+
+* 每一个子View的 weiget 都被会记录。
+* weiget>0 && height == 0，表示高度占满空闲空间。
+  * LinearLayout 的heightMode 是MeasureSpec.EXACTLY，即 match_parent，此时会先标记 skippedMeasure，最后再重新测量。
+  * LinearLayout heightMode 不是MeasureSpec.EXACTLY, 此时child 会按照 WRAP_CONTENT 来进行测量。并记录占用的高度。
+* weiget>0 && height !=0，表示按照权重来分配高度。
+* 重新遍历一遍child，根据所占的权重，重新分配空间。
+
+### TextView
+
+
 
 
 
@@ -489,8 +530,6 @@ View动画则是会不断进行重绘，对GPU资源消耗比较大。
 那么过去 10ms，插值器就是返回 0.1，接着这个值会返回给估值器，估值器就会根据 `0 + (100 - 0) * 0.1` 计算得到当前需要将进度变化到 10。
 
 ### 属性动画更新回调onDraw()
-
-## TextView
 
 
 

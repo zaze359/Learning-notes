@@ -245,15 +245,15 @@ View 的 MeasureSpec 由  父容器的MeasureSpec  以及  自身的LayoutParams
 
 View的创建规则 和 父容器MeasureSpec 间的关系如下：
 
-| Child.LayoutParams \ Parent.MeasureSpec | EXACTLY | AT_MOST | UNSPECIFIED |
-| --------------------------------------- | ------- | ------- | ----------- |
-| dp                                      | EXACTLY | EXACTLY | EXACTLY     |
-| match_parent                            | EXACTLY | AT_MOST | UNSPECIFIED |
-| wrap_content                            | AT_MOST | AT_MOST | UNSPECIFIED |
+| Child.LayoutParams \ Parent.MeasureSpec | EXACTLY | AT_MOST | UNSPECIFIED |                                  |
+| --------------------------------------- | ------- | ------- | ----------- | -------------------------------- |
+| dp                                      | EXACTLY | EXACTLY | EXACTLY     | 不受父容器影响                   |
+| match_parent                            | EXACTLY | AT_MOST | UNSPECIFIED | 父容器是模式，子View就是什么模式 |
+| wrap_content                            | AT_MOST | AT_MOST | UNSPECIFIED | 一般情况下就是 AT_MOST           |
 
 * View是固定数值：此时不受父容器的MeasureSpec  影响，固定为 EXACTLY 精确模式，View的大小为给定的大小。
 * View是match_parent：此时View的MeasureSpec  由父容器的MeasureSpec 决定，View的大小为父控件剩余空间` (parsent.size - parent.padding - view.margin)`
-* View是wrap_content：固定为 AT_MOST 最大模式，View的大小不会超过父容器的剩余空间。
+* View是wrap_content：固定为 AT_MOST 最大模式（除UNSPECIFIED外），View的大小不会超过父容器的剩余空间。
 
 #### onMeasure()
 
@@ -717,10 +717,12 @@ public void setZ(float z) {
 ### requestLayout()
 
 * 给所有的View 设置了 `PFLAG_FORCE_LAYOUT` 和 `PFLAG_INVALIDATED` 这两个 flag。
-* 调用 `mParent.requestLayout();` 最终调用到 `ViewRootImpl.requestLayout()`，将 `mLayoutRequested` 置为true，接着内部调用了 `performTraversals()` ，触发了View的渲染流程。
-* measure()：由于 `PFLAG_FORCE_LAYOUT`  这个标志，重新执行了 `onMeasure()`。同时又 添加了 `PFLAG_LAYOUT_REQUIRED`这个标记。
-* layout()：由于 `mLayoutRequested == true` 并且 `PFLAG_LAYOUT_REQUIRED` 标记，重写执行了 `onLayout()`。
-* onDraw() 不一定会被调用。只有在布局发生变化，即 layout的结果和上次之前不同，才会触发 `invalidate()` 从而调用 onDraw()。
+* 调用 `mParent.requestLayout()` ;最终调用到 `ViewRootImpl.requestLayout()`，将 `mLayoutRequested` 置为true，接着ViewRootImpl 内部调用了 `performTraversals()` ，触发了View的渲染流程。
+  * mParent 在addView()时被赋值，指向 父容器，层层向上传递到DecorView，而DecorView的 parent是 ViewRootImpl。
+
+* `measure()`：由于 `PFLAG_FORCE_LAYOUT`  这个标志，重新执行了 `onMeasure()`。同时又 添加了 `PFLAG_LAYOUT_REQUIRED`这个标记。
+* `layout()`：由于 `mLayoutRequested == true` 并且 `PFLAG_LAYOUT_REQUIRED` 标记，重写执行了 `onLayout()`。
+* `onDraw()` 不一定会被调用。只有在布局发生变化，即 layout的结果和上次之前不同，才会触发 `invalidate()` 从而调用 onDraw()。
 
 ```java
 public void requestLayout() {
@@ -747,8 +749,7 @@ public void requestLayout() {
     
     if (mParent != null && !mParent.isLayoutRequested()) {
         // 是正常流程的逆向过程。
-        // mParent 在addView时被赋值，指向 父容器，最终指向 DecorView。
-        // 而DecorView的 parent是 ViewRootImpl，
+        // mParent 在addView时被赋值，指向 父容器，层层向上传递到DecorView，而DecorView的 parent是 ViewRootImpl
         // 所以最终会调用 ViewRootImpl.requestLayout()，内部调用了 performTraversals()
         // 也就是执行渲染流程的入口，所以三个流程都会被调用。
         mParent.requestLayout();
@@ -818,7 +819,7 @@ void invalidateInternal(int l, int t, int r, int b, boolean invalidateCache,
             p.invalidateChild(this, damage);
         }
 
-        // Damage the entire projection receiver, if necessary.
+        // Damage the entire projection receiver, if necessary. 
         if (mBackground != null && mBackground.isProjected()) {
             final View receiver = getProjectionReceiver();
             if (receiver != null) {
@@ -903,6 +904,121 @@ public AddImageLayout(Context context, AttributeSet attrs, int defStyleAttr) {
 ```
 
 
+
+## LayoutInflater
+
+LayoutInflater 是一个系统服务，用于加载布局，我们 xml 中定义的布局最终都是通过它来加载的。
+
+我们一般会调用 `inflate()`来加载布局：
+
+```java
+LayoutInflater.from(parent.context).inflate(R.layout.item_test, parent, false)
+```
+
+内部经历 xml加载、解析后最终会调用到 `tryCreateView()` 来创建View，具体的创建实现则是交给了 Factory/Factory2 来实现，不过一般都是通过反射的方式创建View的。
+
+```java
+	public final View tryCreateView(@Nullable View parent, @NonNull String name,
+        @NonNull Context context,
+        @NonNull AttributeSet attrs) {
+        if (name.equals(TAG_1995)) {
+            // Let's party like it's 1995!
+            return new BlinkLayout(context, attrs);
+        }
+
+        View view;
+        // 布局创建优先级：mFactory2 > mFactory > mPrivateFactory
+        if (mFactory2 != null) {
+            view = mFactory2.onCreateView(parent, name, context, attrs);
+        } else if (mFactory != null) {
+            view = mFactory.onCreateView(name, context, attrs);
+        } else {
+            view = null;
+        }
+
+        if (view == null && mPrivateFactory != null) {
+            view = mPrivateFactory.onCreateView(parent, name, context, attrs);
+        }
+
+        return view;
+    }
+```
+
+###  Factory/Factory2
+
+> 一般使用Factory2 它继承子 Factory。需要注意的是 factory 只能设置一次，反复添加会报错。
+
+提供给我们开发者使用的自定义加载View的接口。
+
+我们可以通过设置 Factory2 来 统一进行**统一配置（字体、背景等）**，或者将 TextView **统一替换**成 我们增强过的一个 CustomTextView等。
+
+Android提供的 AppCompatActivity 就会通过设置 Factory的方式来统一将空间替换成 AppCompatXXX （AppCompatButton）这些控件。
+
+```java
+@ContentView
+    public AppCompatActivity(@LayoutRes int contentLayoutId) {
+        super(contentLayoutId);
+        initDelegate();
+    }
+
+    private void initDelegate() {
+        // TODO: Directly connect AppCompatDelegate to SavedStateRegistry
+        getSavedStateRegistry().registerSavedStateProvider(DELEGATE_TAG,
+                new SavedStateRegistry.SavedStateProvider() {
+                    @NonNull
+                    @Override
+                    public Bundle saveState() {
+                        Bundle outState = new Bundle();
+                        getDelegate().onSaveInstanceState(outState);
+                        return outState;
+                    }
+                });
+        // 设置监听，会在onCreate() 时被调用。
+        addOnContextAvailableListener(new OnContextAvailableListener() {
+            @Override
+            public void onContextAvailable(@NonNull Context context) {
+                final AppCompatDelegate delegate = getDelegate();
+                // AppCompatDelegate 自身就是 Factory2
+                // 设置 Factory2，已存在Factory2时内部无法再添加
+                delegate.installViewFactory();
+                delegate.onCreate(getSavedStateRegistry()
+                        .consumeRestoredStateForKey(DELEGATE_TAG));
+            }
+        });
+    }
+```
+
+需要注意，若我们先设置了自定义 Factory后，AppCompatActivity 的Factory 就不生效了。
+
+若我们后设置 Factory，那么就会报错，我们的就无法使用了。
+
+所有我们需要在 onCreate() 之前设置，并且兼容 AppCompatDelegate。方法很简单：
+
+* 我们直接获取到 delegate，然后主动调用它即可。
+* 还有一种方式就是设置 `AppCompatDelegate.mAppCompatViewInflater` ，它是 AppCompatDelegate 提供的给我们自定义用的。
+
+```java
+	@Override
+    protected void onCreate(Bundle savedInstanceState) {
+        getLayoutInflater().setFactory2(new LayoutInflater.Factory2() {
+            @Nullable
+            @Override
+            public View onCreateView(@Nullable View parent, @NonNull String name, @NonNull Context context, @NonNull AttributeSet attrs) {
+                // 做一些我们自己的配置
+                // 不需要处理时传给 delegate 处理
+                return getDelegate().createView(parent, name, context, attrs);
+            }
+
+            @Nullable
+            @Override
+            public View onCreateView(@NonNull String name, @NonNull Context context, @NonNull AttributeSet attrs) {
+                return onCreateView(null, name, context, attrs);
+            }
+        });
+
+        super.onCreate(savedInstanceState);
+    }
+```
 
 
 

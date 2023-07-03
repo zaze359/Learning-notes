@@ -12,7 +12,7 @@
 
 ### Activity.startActivityForResult()
 
-当我们通过 `startActivity()`  启动一个应用时，最终会调用到 `startActivityForResult()` 中。
+在Android中启动一个应用 是通过 `Activity.startActivity()` 这个函数，Activity中存在多个 启动Activity 的方法，不过无论调用哪一个，最终都会调用到 `startActivityForResult()` 中。接着就会通过 Instrumentation 向ATMS 发起启动请求。
 
 ```java
 public void startActivityForResult(@RequiresPermission Intent intent, int requestCode,
@@ -20,6 +20,7 @@ public void startActivityForResult(@RequiresPermission Intent intent, int reques
     if (mParent == null) {
         options = transferSpringboardActivityOptions(options);
         // 调用 Instrumentation.execStartActivity 并 获取返回值。
+        // 传入了  ApplicationThread，是一个Binder接口，用作回调
         Instrumentation.ActivityResult ar =
             mInstrumentation.execStartActivity(
             this, mMainThread.getApplicationThread(), mToken, this,
@@ -39,18 +40,20 @@ public void startActivityForResult(@RequiresPermission Intent intent, int reques
 }
 ```
 
-### Instrumentation.execStartActivity()：Binder调用
+### Instrumentation.execStartActivity()
 
 > Instrumentation 可以监控应用与系统交互。
 
-向ATMS 发起 Binder调用，请求启动Activity。
+`Instrumentation.execStartActivity()` 会向ATMS 发起 Binder调用，请求启动Activity。
 
 [Instrumentation.java - Android Code Search](https://cs.android.com/android/platform/superproject/+/master:frameworks/base/core/java/android/app/Instrumentation.java;l=1797)
 
 ```java
-public ActivityResult execStartActivity(
+	
+	public ActivityResult execStartActivity(
             Context who, IBinder contextThread, IBinder token, Activity target,
             Intent intent, int requestCode, Bundle options) {
+        // 转为 IApplicationThread，作为回调使用
         IApplicationThread whoThread = (IApplicationThread) contextThread;
         Uri referrer = target != null ? target.onProvideReferrer() : null;
         if (referrer != null) {
@@ -64,6 +67,7 @@ public ActivityResult execStartActivity(
             intent.migrateExtraStreamToClipData(who);
             intent.prepareToLeaveProcess(who);
             // 调用ATMS的 startActivity()，这里发起的Binder请求
+            // whoThread 是作为回调使用，后续ATMS会通过它来回调请求进程中。
             int result = ActivityTaskManager.getService().startActivity(whoThread,
                     who.getOpPackageName(), who.getAttributionTag(), intent,
                     intent.resolveTypeIfNeeded(who.getContentResolver()), token,
@@ -97,11 +101,13 @@ public class ActivityTaskManager {
 }
 ```
 
-### ATMS.startActivity()
+## 2. 进入ATMS进程
 
-这里以及通过Binder请求 到了 ATMS 中，`startActivity()`会调用到内部的 `startActivityAsUser()`。
+### ActivityTaskManagerService.startActivity()
 
-主要是创建了一个 `ActivityStarter`，交由它来处理请求。
+此时进入到ATMS所在的进程中，ATMS 收到Binder请求后，会调用到内部的 `startActivityAsUser()`。
+
+然后是创建了一个 `ActivityStarter`实例，交由它来处理请求。
 
 > [ActivityTaskManagerService.java - startActivity()](https://cs.android.com/android/platform/superproject/+/master:frameworks/base/services/core/java/com/android/server/wm/ActivityTaskManagerService.java;l=1204)
 
@@ -117,6 +123,7 @@ public class ActivityTaskManagerService extends IActivityTaskManager.Stub {
     // 后面启动进程会用到, AMS启动时注册到了 LocalService中。 
     ActivityManagerInternal mAmInternal;
     
+    // IApplicationThread caller 用于回调回请求进程
     @Override
     public final int startActivity(IApplicationThread caller, String callingPackage,
             String callingFeatureId, Intent intent, String resolvedType, IBinder resultTo,
@@ -171,7 +178,7 @@ public class ActivityTaskManagerService extends IActivityTaskManager.Stub {
 
 ### ActivityStarter
 
-* 根据intent 解析出 resolveInfo、activityInfo。
+* 根据请求 Intent 解析出 resolveInfo、activityInfo。
 * 创建 ActivityRecord。
 * 权限校验。
 * Task的创建/复用等逻辑。
@@ -302,6 +309,7 @@ public class ActivityTaskManagerService extends IActivityTaskManager.Stub {
         } finally {
             mService.continueWindowLayout();
         }
+        //
         postStartActivityProcessing(r, result, startedActivityRootTask);
 
         return result;
@@ -315,7 +323,10 @@ public class ActivityTaskManagerService extends IActivityTaskManager.Stub {
 > * Task：就是ActivityTask。
 > * TaskDisplayArea：用于存放 ActivityTask的区域。它的最顶部就是当前显示的应用ActivityTask。
 
-获取/创建RootTask，并将 activityTask 放到的 RootTask的顶部，这样后续就能通过topRunningActivity 获取目标ActivityRecord。
+获取/创建RootTask，并将 activityTask 放到的 RootTask的顶部，
+
+* 调用`mTargetRootTask.startActivityLocked()` 将 activityTask 放到的 rootTask的顶部，这样后续就能通过 `topRunningActivity()`来获取目标ActivityRecord。这里面并不是启动Activity。
+* 调用 `RootWindowContainer.resumeFocusedTasksTopActivities()` 恢复最顶部的 Activity，也就是启动 目标Activity。
 
 > [ActivityStarter.java - startActivityInner()](https://cs.android.com/android/platform/superproject/+/master:frameworks/base/services/core/java/com/android/server/wm/ActivityStarter.java;l=1542)
 
@@ -414,7 +425,7 @@ public class ActivityTaskManagerService extends IActivityTaskManager.Stub {
                         && !mRootWindowContainer.isTopDisplayFocusedRootTask(mTargetRootTask)) {
                     mTargetRootTask.moveToFront("startActivityInner");
                 }
-                // 
+                // 主要流程
                 mRootWindowContainer.resumeFocusedTasksTopActivities(
                         mTargetRootTask, mStartActivity, mOptions, mTransientLaunch);
             }
@@ -455,16 +466,14 @@ public class ActivityTaskManagerService extends IActivityTaskManager.Stub {
 ### Task
 
 ```java
-class Task extends TaskFragment {
-    
-}
+class Task extends TaskFragment {}
 ```
 
 #### resumeTopActivityUncheckedLocked()
 
 确保 top activity 被恢复。
 
-> [Task.java - resumeTopActivityUncheckedLocked()](https://cs.android.com/android/platform/superproject/+/master:frameworks/base/services/core/java/com/android/server/wm/Task.java;l=4881)
+> [Task.java - resumeTopActivityUncheckedLocked()](https://cs.android.com/android/platform/superproject/+/master:frameworks/base/services/core/java/com/android/server/wm/Task.java;l=4965)
 
 ```java
 	boolean resumeTopActivityUncheckedLocked(ActivityRecord prev, ActivityOptions options,
@@ -501,7 +510,7 @@ class Task extends TaskFragment {
 
 #### resumeTopActivityInnerLocked()
 
-> [Task.java - resumeTopActivityInnerLocked](https://cs.android.com/android/platform/superproject/+/master:frameworks/base/services/core/java/com/android/server/wm/Task.java;l=4946)
+> [Task.java - resumeTopActivityInnerLocked](https://cs.android.com/android/platform/superproject/+/master:frameworks/base/services/core/java/com/android/server/wm/Task.java;l=5034)
 
 ```java
 	@GuardedBy("mService")
@@ -537,12 +546,14 @@ class Task extends TaskFragment {
 
 ### TaskFragment.resumeTopActivity()
 
-在这里 判断了 Activity是否已经和 app进程关联：
+在这里 判断了 **Activity是否已经和 app进程关联**，即是否已经在应用进程中存在了：
 
-* 已关联：则将activity 设为可见，并且同时生命周期变更为 RESUMED等。
-* 未关联：调用  `mTaskSupervisor.startSpecificActivity()` 继续启动流程。
+* Activity已关联进程：则将activity 设为可见，并且同时生命周期变更为 RESUMED 等。然后ATMS 通过 IApplicationThread这个IBinder 回调给给 目标Activity 所在的进程。
+  * 最终调用的是 `ActivityThread.scheduleTransaction()`，发送 `EXECUTE_TRANSACTION` 消息。从而根据不同生命周期做不同的处理。就是（handleLaunchActivity、handleResumeActivity等函数）
 
-> [TaskFragment.java - Android Code Search](https://cs.android.com/android/platform/superproject/+/master:frameworks/base/services/core/java/com/android/server/wm/TaskFragment.java?l=1135)
+* Activity未关联进程：调用  `mTaskSupervisor.startSpecificActivity()` 继续启动流程。
+
+> [TaskFragment.java - Android Code Search](https://cs.android.com/android/platform/superproject/+/master:frameworks/base/services/core/java/com/android/server/wm/TaskFragment.java?l=1172)
 
 ```java
 	final boolean resumeTopActivity(ActivityRecord prev, ActivityOptions options,
@@ -553,9 +564,17 @@ class Task extends TaskFragment {
        	// ...
         // 判断是否已经和app进程关联
         if (next.attachedToProcess()) {
-           	// 此处是已关联流程。
+           	// 此处目标Activity进程已启动后的流程。
             // 将activity 设为可见, 更新为 RESUMED 状态等。
+            next.setState(RESUMED, "resumeTopActivity");
 			// ...
+            //  next.app.getThread(), 目标Activity所在进程的
+            final ClientTransaction transaction =
+                        ClientTransaction.obtain(next.app.getThread(), next.token);
+            // ...
+            // ATMS 通过IApplicationThread这个IBinder 回调给目标Activity所在进程
+            // 最终就是回触发 ActivityThread.scheduleTransaction
+            mAtmService.getLifecycleManager().scheduleTransaction(transaction);
         } else {
             // Whoops, need to restart this activity!
             if (!next.hasBeenLaunched) {
@@ -576,14 +595,20 @@ class Task extends TaskFragment {
     }
 ```
 
-
+## 3. 准备创建应用进程
 
 ### ActivityTaskSupervisor.startSpecificActivity()
 
-这里判断了  activity所属的应用是否已启动。
+> ActivityTaskSupervisor 是负责 管理 Task的 
 
-* 若进程已死或未启动过：调用`mService.startProcessAsync()` 来启动进程。mService 是 ATMS。不过一开始应用一定是未启动的，主要看这个流程。
-* 已启动：调用 `realStartActivityLocked()` 创建Activity 并返回。
+这里判断了  activity所属的应用进程是否已启动。
+
+* 若应用进程已死或未启动过：调用`mService.startProcessAsync()` 来**启动进程**。mService 是 ATMS。
+  * 不过一开始应用一定是未启动的，先看这个流程。
+
+* 应用进程已启动：调用 `realStartActivityLocked()` **创建并启动Activity** 并结束流程。
+  * 最终通过 IApplicationThread这个IBinder回调给 Activity所在进程，触发`ActivityThread.scheduleTransaction()`，发送 `EXECUTE_TRANSACTION` 消息。
+
 
 > [ActivityTaskSupervisor.java - startSpecificActivity()](https://cs.android.com/android/platform/superproject/+/master:frameworks/base/services/core/java/com/android/server/wm/ActivityTaskSupervisor.java;l=1036)
 
@@ -600,7 +625,7 @@ class Task extends TaskFragment {
         if (wpc != null && wpc.hasThread()) {
             // 这里是app已启动流程
             try {
-                // 启动Activity 并结束流程。
+                // 正在启动Activity的地方，启动后结束流程。
                 realStartActivityLocked(r, wpc, andResume, checkConfig);
                 return;
             } catch (RemoteException e) {
@@ -632,9 +657,7 @@ class Task extends TaskFragment {
 
 ### ActivityTaskManagerService.startProcessAsync()
 
-构建了一个 Message 消息。并通过Handler发送并处理消息。
-
-这个message内部设置了 callback。回调用 `ActivityManagerInternal::startProcess`。
+通过 `PooledLambda` 构建了一个 Message 消息， `ActivityManagerInternal::startProcess()` 作为 callback，具体实例是 `mAmInternal`，然后通过Handler发送并执行消息。最终回调`mAmInternal.startProcess()`
 
 > [ActivityTaskManagerService.java - startProcessAsync()](https://cs.android.com/android/platform/superproject/+/master:frameworks/base/services/core/java/com/android/server/wm/ActivityTaskManagerService.java;l=4876)
 
@@ -642,7 +665,8 @@ class Task extends TaskFragment {
 	void startProcessAsync(ActivityRecord activity, boolean knownToBeDead, boolean isTop,
             String hostingType) {
         try {
-            //  mAmInternal 是在AMS启动时 注册到 LocalServices中的。
+            // callback:ActivityManagerInternal::startProcess
+            // mAmInternal 是 callback的具体实例。是在AMS启动时 注册到 LocalServices中的。
             // PooledLambda返回的 message内部设置了 callback。最终会调用 mAmInternal.startProcess()
             final Message m = PooledLambda.obtainMessage(ActivityManagerInternal::startProcess,
                     mAmInternal, activity.processName, activity.info.applicationInfo, knownToBeDead,
@@ -760,7 +784,7 @@ final class PooledLambdaImpl<R> extends OmniFunction<Object, Object, Object, Obj
 
 位于 `ActivityManagerService.LocalService`中
 
-> [ActivityManagerService.java - Android Code Search](https://cs.android.com/android/platform/superproject/+/master:frameworks/base/services/core/java/com/android/server/am/ActivityManagerService.java;l=17224)
+> [ActivityManagerService.java - Android Code Search](https://cs.android.com/android/platform/superproject/+/master:frameworks/base/services/core/java/com/android/server/am/ActivityManagerService.java;l=17311)
 
 ```java
 public class ActivityManagerService extends IActivityManager.Stub
@@ -833,7 +857,7 @@ public class ActivityManagerService extends IActivityManager.Stub
 
 ### ProcessList
 
-这里主要是处理进行信息相关的代码，它内部维护了一个进程映射表，结构是：`[processName][uid][ProcessRecord]`。
+这里主要是处理进程信息的代码，它内部维护了一个进程映射表，结构是：`[processName][uid][ProcessRecord]`。
 
 #### startProcessLocked()
 
@@ -1297,7 +1321,7 @@ private Process.ProcessStartResult startViaZygote(@NonNull final String processC
 
 ---
 
-## 2. zygote孵化应用进程
+## 4. zygote孵化应用进程
 
 在上面梳理了 发起一个应用启动请求的完整流程，从调用 `startActivity()`开始 到最后通过 socket 向 zygote发送请求。
 
@@ -1607,7 +1631,7 @@ Runnable processCommand(ZygoteServer zygoteServer, boolean multipleOK) {
 
 ---
 
-## 3. 启动应用程序
+## 5. 启动应用程序
 
 zygote 孵化了应用进程之后，最终会调用 `ActivityThread.main()`，这样我们的应用程序就正式启动了。
 
@@ -1644,9 +1668,9 @@ public final class ActivityThread extends ClientTransactionHandler
         // ...
     }
     
-    // ApplicationThread
+    // ApplicationThread，ATMS 会通过它回调到对应应用进程
     private class ApplicationThread extends IApplicationThread.Stub {
-    // ....
+        // ..
 	}
 }
 ```
@@ -1792,163 +1816,69 @@ private void attach(boolean system, long startSeq) {
 
 
 
+## 启动Activity
 
+### ActivityTaskSupervisor.realStartActivityLocked()
 
-
-
-
-
-
+*  创建 启动 activity的事务 clientTransaction。
+  * 触发 `handleLaunchActivity()`
+* 添加了一个后续期望变成的 resume状态的请求，在启动事务执行完成后被会调用。这样生命周期就能自动变为 Resume。
+  * 触发 `handleResumeActivity()`
 
 ```java
-public final class ActivityThread extends ClientTransactionHandler
-        implements ActivityThreadInternal {
-    
-    
-    
-    private Activity performLaunchActivity(ActivityClientRecord r, Intent customIntent) {
-        ActivityInfo aInfo = r.activityInfo;
-        if (r.packageInfo == null) {
-            r.packageInfo = getPackageInfo(aInfo.applicationInfo, r.compatInfo,
-                    Context.CONTEXT_INCLUDE_CODE);
-        }
-
-        ComponentName component = r.intent.getComponent();
-        if (component == null) {
-            component = r.intent.resolveActivity(
-                mInitialApplication.getPackageManager());
-            r.intent.setComponent(component);
-        }
-
-        if (r.activityInfo.targetActivity != null) {
-            component = new ComponentName(r.activityInfo.packageName,
-                    r.activityInfo.targetActivity);
-        }
-
-        ContextImpl appContext = createBaseContextForActivity(r);
-        Activity activity = null;
+	boolean realStartActivityLocked(ActivityRecord r, WindowProcessController proc,
+            boolean andResume, boolean checkConfig) throws RemoteException {
+		//
         try {
-            java.lang.ClassLoader cl = appContext.getClassLoader();
-            activity = mInstrumentation.newActivity(
-                    cl, component.getClassName(), r.intent);
-            StrictMode.incrementExpectedActivityCount(activity.getClass());
-            r.intent.setExtrasClassLoader(cl);
-            r.intent.prepareToEnterProcess(isProtectedComponent(r.activityInfo),
-                    appContext.getAttributionSource());
-            if (r.state != null) {
-                r.state.setClassLoader(cl);
-            }
-        } catch (Exception e) {
-            if (!mInstrumentation.onException(activity, e)) {
-                throw new RuntimeException(
-                    "Unable to instantiate activity " + component
-                    + ": " + e.toString(), e);
-            }
-        }
+            // ...
+            try {
+                // 创建 启动 activity的事务 clientTransaction
+                // Create activity launch transaction.
+                // 
+                final ClientTransaction clientTransaction = ClientTransaction.obtain(
+                        proc.getThread(), r.token);
 
-        try {
-            Application app = r.packageInfo.makeApplicationInner(false, mInstrumentation);
-
-            if (localLOGV) Slog.v(TAG, "Performing launch of " + r);
-            if (localLOGV) Slog.v(
-                    TAG, r + ": app=" + app
-                    + ", appName=" + app.getPackageName()
-                    + ", pkg=" + r.packageInfo.getPackageName()
-                    + ", comp=" + r.intent.getComponent().toShortString()
-                    + ", dir=" + r.packageInfo.getAppDir());
-
-            // updatePendingActivityConfiguration() reads from mActivities to update
-            // ActivityClientRecord which runs in a different thread. Protect modifications to
-            // mActivities to avoid race.
-            synchronized (mResourcesManager) {
-                mActivities.put(r.token, r);
-            }
-
-            if (activity != null) {
-                CharSequence title = r.activityInfo.loadLabel(appContext.getPackageManager());
-                Configuration config =
-                        new Configuration(mConfigurationController.getCompatConfiguration());
-                if (r.overrideConfig != null) {
-                    config.updateFrom(r.overrideConfig);
-                }
-                if (DEBUG_CONFIGURATION) Slog.v(TAG, "Launching activity "
-                        + r.activityInfo.name + " with config " + config);
-                Window window = null;
-                if (r.mPendingRemoveWindow != null && r.mPreserveWindow) {
-                    window = r.mPendingRemoveWindow;
-                    r.mPendingRemoveWindow = null;
-                    r.mPendingRemoveWindowManager = null;
-                }
-
-                // Activity resources must be initialized with the same loaders as the
-                // application context.
-                appContext.getResources().addLoaders(
-                        app.getResources().getLoaders().toArray(new ResourcesLoader[0]));
-
-                appContext.setOuterContext(activity);
-                activity.attach(appContext, this, getInstrumentation(), r.token,
-                        r.ident, app, r.intent, r.activityInfo, title, r.parent,
-                        r.embeddedID, r.lastNonConfigurationInstances, config,
-                        r.referrer, r.voiceInteractor, window, r.activityConfigCallback,
-                        r.assistToken, r.shareableActivityToken);
-
-                if (customIntent != null) {
-                    activity.mIntent = customIntent;
-                }
-                r.lastNonConfigurationInstances = null;
-                checkAndBlockForNetworkAccess();
-                activity.mStartedActivity = false;
-                int theme = r.activityInfo.getThemeResource();
-                if (theme != 0) {
-                    activity.setTheme(theme);
-                }
-
-                if (r.mActivityOptions != null) {
-                    activity.mPendingOptions = r.mActivityOptions;
-                    r.mActivityOptions = null;
-                }
-                activity.mLaunchedFromBubble = r.mLaunchedFromBubble;
-                activity.mCalled = false;
-                // Assigning the activity to the record before calling onCreate() allows
-                // ActivityThread#getActivity() lookup for the callbacks triggered from
-                // ActivityLifecycleCallbacks#onActivityCreated() or
-                // ActivityLifecycleCallback#onActivityPostCreated().
-                r.activity = activity;
-                if (r.isPersistable()) {
-                    mInstrumentation.callActivityOnCreate(activity, r.state, r.persistentState);
+                final boolean isTransitionForward = r.isTransitionForward();
+                final IBinder fragmentToken = r.getTaskFragment().getFragmentToken();
+                clientTransaction.addCallback(LaunchActivityItem.obtain(new Intent(r.intent),
+                        System.identityHashCode(r), r.info,
+                        // TODO: Have this take the merged configuration instead of separate global
+                        // and override configs.
+                        mergedConfiguration.getGlobalConfiguration(),
+                        mergedConfiguration.getOverrideConfiguration(), r.compat,
+                        r.getFilteredReferrer(r.launchedFromPackage), task.voiceInteractor,
+                        proc.getReportedProcState(), r.getSavedState(), r.getPersistentSavedState(),
+                        results, newIntents, r.takeOptions(), isTransitionForward,
+                        proc.createProfilerInfoIfNeeded(), r.assistToken, activityClientController,
+                        r.shareableActivityToken, r.getLaunchedFromBubble(), fragmentToken));
+				// 设置后续期望变成的状态，后续变为resume
+                // Set desired final state.
+                final ActivityLifecycleItem lifecycleItem;
+                if (andResume) {
+                    lifecycleItem = ResumeActivityItem.obtain(isTransitionForward);
                 } else {
-                    mInstrumentation.callActivityOnCreate(activity, r.state);
+                    lifecycleItem = PauseActivityItem.obtain();
                 }
-                if (!activity.mCalled) {
-                    throw new SuperNotCalledException(
-                        "Activity " + r.intent.getComponent().toShortString() +
-                        " did not call through to super.onCreate()");
-                }
-                mLastReportedWindowingMode.put(activity.getActivityToken(),
-                        config.windowConfiguration.getWindowingMode());
-            }
-            r.setState(ON_CREATE);
+                // 这个请求会在事务执行后被调用，这样 Activity启动之后就能继续后续的生命周期，变为 Resume。
+                clientTransaction.setLifecycleStateRequest(lifecycleItem);
+				// 发送事务
+                // Schedule transaction.
+                mService.getLifecycleManager().scheduleTransaction(clientTransaction);
+				// ...
 
-        } catch (SuperNotCalledException e) {
-            throw e;
-
-        } catch (Exception e) {
-            if (!mInstrumentation.onException(activity, e)) {
-                throw new RuntimeException(
-                    "Unable to start activity " + component
-                    + ": " + e.toString(), e);
+            } catch (RemoteException e) {
+               // ...
             }
+        } finally {
+            endDeferResume();
+            proc.resumeConfigurationDispatch();
         }
-
-        return activity;
+		// ...
+        return true;
     }
-    
-}
-
-private class ApplicationThread extends IApplicationThread.Stub {
-    // ....
-}
 ```
+
+
 
 
 
@@ -1976,6 +1906,4 @@ public class ActivityManager {
     }
 }
 ```
-
-
 

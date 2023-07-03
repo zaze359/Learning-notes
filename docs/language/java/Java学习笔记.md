@@ -60,6 +60,52 @@ int j = new Integer(2); // 拆箱：int j = new Integer(2).intValue();
 * 内存占用：基础类型占用空间更小。
 * 比较方式：基础类型直接值比较，包装类型则时`equals`比较，值相同，对象不一定相同。
 
+## 变量和常量
+
+```java
+
+public class TestConst {
+    public String a = "var"; // 变量
+    public static String sa = "static var"; // 静态变量
+    public final String b = "val"; // 常量，需要类实例化才能访问。
+    public static final String sb = "static val"; // 静态常量
+    private static final String sbb = new String("static val"); // 静态常量 编译器间不能确定值，不会被优化，且需要类加载后才能访问
+
+    public TestConst() {
+    }
+
+    public void aa() {
+        System.out.println("a: " + this.a); // 变量需要通过实例化对象访问
+        System.out.println("sa: " + sa); // 静态变量，可以直接访问
+        System.out.println("b: val");	// 常量，被内联优化
+        System.out.println("sb: static val"); // 静态常量，被内联优化
+        System.out.println("sbb: " + sbb);	// 编译时无法确定值的静态常量，不会内优化，但是能直接访问
+    }
+}
+```
+
+### 变量
+
+没有被final 修饰，在运行过程中可以被修改的数据类型。再加上 static 修饰后就是静态变量。
+
+> 静态变量和变量的区别：
+>
+> 变量属于具体的类实例化对象，需要实例化后才能访问。
+>
+> 静态变量属于类对象，只要类加载后就可以访问，不必再实例化对象。
+
+### 常量
+
+指final 修饰的数据类型，一但指确定后，在运行过程中不会被修改。static final 修饰的数据类型 就是静态常量。
+
+对于在编译期间能够确定值的常量，会通过内联的方式优化。
+
+> 静态常量和常量的区别：
+>
+> 常量属于类实例化对象，需要实例化对象后使用。
+>
+> 静态常量属于类对象，能够直接访问，如果在编译时能确定值，那么就被内联到调用处，这样即使类没有加载也是能正常使用的。
+
 
 
 ## 访问修饰符
@@ -158,26 +204,6 @@ synchronized 作用于不同函数：
 * 修饰非静态方法：锁的时 具体的类实例。
 
 因此两个线程可以同时分别访问 都被synchronized修饰的静态方法和非静态方法，且不会发生竞争。
-
-### volatile 关键字
-
-volatile 关键字修饰的变量具有 以下几个特征：
-
-* 可见性：修改会立刻刷新到主存，即直接存取原始内存地址。保证了**不同线程对该变量操作的内存可见性**。
-  * 写入volatile变量：会把该线程对应的本地内存中的共享变量同步到主存中。
-  * 读取volatile变量：该线程对应的本地内存会被置为无效，线程会从主存中直接读取共享变量。
-* 有序性
-  * 禁止了指令重排，防止出现常见的并发问题
-  * 对于一个volatile 修饰的变量，若一个线程先去写，另一个线程去读，则一定时写入完成后 才能读取。
-
-> 需要注意的是**volatile 并不能保证原子性**，因为它虽然能保证读取在写之后，但是并会阻止线程的并发读取，像 i++ 这样的非原子的操作，第一步读取依然会发生并发问题。
->
-> 所以双重检测时会配合 synchronized  一起使用。
-
-**volatile原理**：基于内存屏障 LOCK 前缀指令。
-
-* 保证LOCK后面的只能不能重排到LOCK之前。
-* 使cpu内存写入内存。同时使其他cpu的缓存失效。
 
 
 
@@ -565,7 +591,9 @@ Java中的 Synchronized 关键字、ReentrantLock就是悲观锁。
 
 ### CAS（CompareAndSwap）
 
-> `compareAndSwap`、`compareAndSet` 都是CAS，不同API名字存在一些差异
+> `compareAndSwap`、`compareAndSet` 都是CAS，不同API名字存在一些差异。
+>
+> CAS 需要硬件支持。底层通过CPU的CAS指令对缓存加锁或总线加锁的方式来实现多处理器之间的原子操作。
 
 CAS是基于乐观锁实现的，它主要有三个值：内存中的旧值、期望值、修改的新值。
 
@@ -659,12 +687,126 @@ class Work {
 
 * 两者指向的是同一个对象，所以**任何一方修改都会影响到另一方**。
 
-## Java中实现单例模式的常用方法
+## 单例模式的常用方式
 
-* 静态常量
-* 静态代码块
-* 双重检测
-* 枚举类
+### 静态常量
+
+在类中直接创建一个静态常量的方式实现单例，是一个饿汉式单例。会在类装载的时候实例化这个静态常量，利用了类的初始化锁来保证线程安全。
+
+```java
+class Singleton {
+    private static final Singleton instance = new Singleton();
+    private Singleton(){}
+    public static getInstance() {
+        return instance;
+    }
+}
+```
+
+饿汉式的问题就是 会过早的创建对象，容易造成内存浪费。
+
+### 静态代码块
+
+和静态常量实现单例的方式类似，是一个饿汉式单例。也是利用了类的初始化锁来保证线程安全。
+
+```java
+class Singleton {
+    private static final Singleton instance;
+    static {
+        instance = new Singleton();
+    }
+    private Singleton(){}
+    public static getInstance() {
+        return instance;
+    }
+}
+```
+
+### 静态内部类
+
+类只有在被使用到时才会被加载，静态内部类就是利用这个特性，我们只有在调用 `getInstance()`时才会触发 `_Singleton` 这个静态内部的类加载，同时实例化单例对象，这样就实现了懒汉式单例，并使用类的初始化锁来保证线程安全.
+
+```java
+class Singleton {
+    
+    private Singleton(){}
+    
+    public static getInstance() {
+        return _Singleton.instance;
+    }
+    
+    // 静态内部
+    private static class _Singleton() {
+        private static final Singleton instance = new Singleton();
+    }
+}
+```
+
+### 枚举类
+
+枚举天然就是一个单例模式，还能防止反序列化重新创建新的对象。
+
+```java
+public enum Singleton {
+    INSTANCE;
+    
+    public void doSomething() {
+        
+    }
+}
+```
+
+### 双重检测
+
+双重检测（DCL，double-checked locking）是为了优化 线程安全的懒汉式单例每次访问都需要申请锁的问题。仅在第一次实例化时才会去加锁。第二次检测是防止其他已经在等待锁线程获取到锁后再次实例化。
+
+```java
+class Singleton {
+    private volatile static Singleton instance;
+    private Singleton(){}
+    public static getInstance() {
+        if(instance == null) { // 第一次检测，不加锁。
+            synchronized(Singleton.class) { // 类锁
+                if(instance == null) { // 第二次检测，防止其他已经在等待锁线程获取到锁后再次实例化。
+                    instance = new Singleton();
+                }
+            } 
+        }
+    }
+}
+```
+
+同时会添加 volatile 来修饰instance，禁止指令重排，保证 instance 的内存可见性。
+
+#### volatile 关键字
+
+volatile 关键字修饰的变量具有 以下几个特征：
+
+* 可见性：修改会立刻刷新到主存，即直接存取原始内存地址。保证了**不同线程对该变量操作的内存可见性**。
+  * 写入volatile变量：会把该线程对应的本地内存中的共享变量同步到主存中。
+  * 读取volatile变量：该线程对应的本地内存会被置为无效，线程会从主存中直接读取共享变量。
+* 有序性（禁止指令重排）
+  * 禁止了指令重排，避免出现由于非原子操作而导致的并发问题。
+  * 对于一个volatile 修饰的变量，若一个线程先去写，另一个线程去读，则一定时写入完成后 才能读取。
+
+**禁止指令重排的目的**：主要是由于 单例对象在实例化过程中并不是一个原子操作，`singleton = new Singleton()`分为三个步骤：
+
+1. 给singleton对象分配内存。此时singleton依然是 null
+2. 调用构造函数初始化。
+3. 将singleton指向分配的内存空间地址，这样才使得 singleton != null。
+
+而 2、3 两个步骤顺序即使颠倒 也不会影响 最终的结果，所以可能发生指令重排，导致 singleton 先指向内存空间的地址，但是缺还没有调用构造函数进行初始化。此时若是发生并发，另一个线程在双重检测的第一次检测中发现 `singleton != null`，直接返回并使用的这个还未初始化的对象，那么就会出现问题。
+
+**内存可见性**：主要是由于Java内存模型引起的，线程会从主存中同步内存到本地内存，正常情况都是读写的线程本地内存，然后再同步到主存中，这就会在多线程并发中出现不同线程中内存同步的问题。而这个可见性的作用就是 直接读写主内存。同时volatile 还保证 写在读之前。
+
+> 需要注意的是**volatile 并不能保证原子性**，因为它虽然能保证读取在写之后，但是并不会阻止线程的并发读取，像 i++、对象实例化这样的非原子的操作，第一步读取依然会发生并发问题。所以在双重检测中还需要加锁保证原子性。
+>
+> 所以双重检测时会配合 synchronized  一起使用。
+
+**volatile原理**：基于内存屏障 LOCK 前缀指令。
+
+* 保证LOCK后面的只能不能重排到LOCK之前。
+* 使cpu内存写入内存。同时使其他cpu的缓存失效。
 
 
 
@@ -685,8 +827,4 @@ JVM内存结构描述的是JVM虚拟机的内部存储结构。
 JMM则是和多线程并发编程相关的一个概念。
 
 ![image-20230628005457266](./Java%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.assets/image-20230628005457266.png)
-
-
-
-[JVM学习笔记](./JVM学习笔记.md)
 

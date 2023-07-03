@@ -102,16 +102,16 @@ Class<?> clazz = Class.forName("com.android.okhttp.HttpHandler");
 
 ### final属性值的修改问题
 
-> Notes：对于final修饰的属性，需要修改Field 的 modifiers属性，去除它的final修饰。
->
-> 因为**final修饰的常量（静态、非静态相同）**，本身将被编译器优化，内联到使用处，所以**反射修改无效**，依然还是原来的值。
+对于final修饰的属性，需要修改Field 的 modifiers属性，去除它的final修饰。
+
+因为**final修饰的常量（静态、非静态相同）**，本身将被编译器优化，内联到使用处，所以**反射修改无效**，依然还是原来的值。
 
 ```java
 // 此处以静态常量、变量为例子，非静态相同。
 public class TestJava {
     // 普通的静态变量，可以正常反射修改。
     // private static String name = "张三";
-    // 静态常量，反射修改无效
+    // 静态常量，反射修改无效，会被内联到使用处
     private static final String name = "张三";
     // 区别于上方静态常量，此处为对象，反射修改可以生效
     // private static final String name = new String("张三"); 
