@@ -17,7 +17,11 @@ sudo pacman -S wget git python3
 
 ### Windows上安装Python
 
-[下载python Download Python | Python.org](https://www.python.org/downloads/)
+方式一：直接在微软应用商店下载即可。
+
+
+
+方式二：通过官网下载：[python Download Python | Python.org](https://www.python.org/downloads/)
 
 > 下载完后执行并安装。
 >
@@ -41,8 +45,6 @@ brew install python3
 ### Miniconda
 
 [Miniconda — conda documentation](https://docs.conda.io/en/latest/miniconda.html#windows-installers)
-
-
 
 ## 常用配置
 

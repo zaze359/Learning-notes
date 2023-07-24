@@ -18,9 +18,9 @@
 | :-------- | :--- | :--- | :------ | ------------------------------------------ |
 | `byte`    | 1    | 8    | 0       | -128 ~ 127                                 |
 | `short`   | 2    | 16   | 0       | -32768 ~ 32767                             |
+| `char`    | 2    | 16   | 'u0000' | 0 ~ 65535                                  |
 | `int`     | 4    | 32   | 0       | -2147483648 ~ 2147483647                   |
 | `long`    | 8    | 64   | 0L      | -9223372036854775808 ~ 9223372036854775807 |
-| `char`    | 2    | 16   | 'u0000' | 0 ~ 65535                                  |
 | `float`   | 4    | 32   | 0f      | 1.4E-45 ~ 3.4028235E38                     |
 | `double`  | 8    | 64   | 0d      | 4.9E-324 ~ 1.7976931348623157E308          |
 | `boolean` |      | 1    | false   | true、false                                |
@@ -47,10 +47,11 @@
 ```java
 Integer i = 1; // 装箱：Integer i = Integer.valueOf(1);
 int j = new Integer(2); // 拆箱：int j = new Integer(2).intValue();
-
 ```
 
-
+> Integer 涉及到一个享元模式的问题，对于 -128 ~ 127 的数值，它会优先从缓存中复用，也就是说。
+>
+> 这样就能避免频繁new Integer对象，提升性能。但是也带来了一个问题，那就是由于当触发缓存时，对于两个相同的Integer 例如 Integer(100）使用 `==` 进行判断会返回true。而超出上述的范围时，会重新创建一个新的 Integer对象，例如 Integer(10000)，此时两个相同值的 Integer 使用 `==` 进行判断会返回false。
 
 ### 这两者类型的区别
 
@@ -245,6 +246,8 @@ synchronized 作用于不同函数：
 * 非核心线池也满载后，还有新任务添加就会进入拒绝策略流程。
   * 线程池上限 = workQueue.size() + maximumPoolSize。
 
+> `addWorker()` 的作用就是创建一个线程并执行任务。默认创建核心线程，传入false是创建的就是非核心线程。
+
 ```java
  	public void execute(Runnable command) {
         if (command == null)
@@ -270,13 +273,15 @@ synchronized 作用于不同函数：
          * and so reject the task.
          */
         int c = ctl.get();
-        // 当前工作线程 小于 corePoolSize 尝试创建线程
+        // 当前工作线程数 小于 corePoolSize
+        // 调用 addWorker() 创建线程
         if (workerCountOf(c) < corePoolSize) {
-            if (addWorker(command, true))
-                return;
+            if (addWorker(command, true)) 
+                return; // 线程创建成功，就返回
             c = ctl.get();
         }
-        // 大于corePoolSize 或 核心线程创建失败，加入到 workQueue
+        // 大于corePoolSize 或 核心线程创建失败
+        // 尝试加入到工作队列 workQueue 中。
         if (isRunning(c) && workQueue.offer(command)) {
             int recheck = ctl.get();
             // 重新检查一下
@@ -377,7 +382,7 @@ public static class DiscardOldestPolicy implements RejectedExecutionHandler {
 
 #### CallerRunsPolicy
 
-直接**在调用线程中执行这个被拒绝的任务****。特点就是任务用于不会被丢弃，但是可能会导致一些性能问题。
+直接**在调用线程中执行这个被拒绝的任务**。特点就是任务用于不会被丢弃，但是可能会导致一些性能问题。
 
 > 适用于不允许任务丢失，性能要求不高的场景。
 
@@ -412,9 +417,7 @@ public static class DiscardOldestPolicy implements RejectedExecutionHandler {
 
 常见的就是 LinkedBlockingQueue，它是基于链表的，队列大小无限制，永远不会触发拒绝策略。
 
-注意点：
-
-当队列中的任务都比较耗时时，容易导致队列堆积，进而占用了大量内存。
+> 注意点：当队列中的任务都比较耗时时，容易导致队列堆积，进而占用了大量内存。
 
 #### 有界队列
 
@@ -428,15 +431,24 @@ public static class DiscardOldestPolicy implements RejectedExecutionHandler {
   * 以数组的方式存储，数据内的元素会进行堆化，使用小顶堆实现优先级。
   * 通过 Comparator 来进行优先级比较。
 
-
-
 #### SynchronousQueue：同步移交队列
 
-SynchronousQueue，它实际上并不是一个队列，而是一个任务调度的作用。它会将需要加入的任务移交到另一个线程中去执行。
+SynchronousQueue，内部是一个不存储元素的BlockingQueue，因为也算不上是一个队列，主要起到任务调度的作用, **将需要加入的任务移交到另一个线程中去执行**。
 
-一般在无界线程池（能无限创建线程）或者有拒绝策略的线程池中使用。
+内部存在两种策略：
 
-例如 `Executors.newCachedThreadPool()` 缓存线程池就是使用的这个阻塞队列。
+* TransferQueue：队列的方式，先进先出，公平策略。头节点指向的是先加入的节点。
+* TransferStack：栈的方式，先进后出，非公平策略，默认是这种策略。头节点指向的是后加入的节点。
+
+原理：
+
+主要逻辑都是在 `transfer()` 函数中，它会判断根据传入的数据 e 来判断是入队还是出队。
+
+* 默认是不阻塞的。此时 若 e != null 表示入队，直接返回null，表示入队失败，从而就会创建一个新的线程来执行任务。
+
+* 阻塞场景：此时若 e != null 表示入队，此时会阻塞线程。若 e == null 表示出队，会唤醒 头节点中的等待线程。
+
+> 一般在无界线程池（能无限创建线程）或者有拒绝策略的线程池中使用。例如 `Executors.newCachedThreadPool()` 缓存线程池就是使用的这个阻塞队列。
 
 ### 默认提供的四种线程池
 
@@ -500,8 +512,8 @@ public static ExecutorService newSingleThreadExecutor() {
 
 构造函数：
 
-* corePoolSize：核心线程数，这里满了会将任务加入到workQueue中。
-* maximumPoolSize：线程池最大线程数量，允许在workQueue满时 创建额外的线程来帮助消费任务。
+* corePoolSize：核心线程数，表示默认长期在工作的线程。这里满了会将任务加入到workQueue中。
+* maximumPoolSize：线程池最大线程数量，当workQueue满时，动态的创建线程来帮助消费任务。
   * 额外线程数：maximumPoolSize - corePoolSize。
 
 * keepAliveTime：空闲线程（非核心线程）的存活时间
@@ -536,12 +548,6 @@ ThreadPoolExecutor serverExecutor = new ThreadPoolExecutor(1, 1, 0L,
             }
         });
 ```
-
-
-
-### 阻塞队列
-
-待执行的任务
 
 
 
@@ -608,9 +614,24 @@ CAS是基于乐观锁实现的，它主要有三个值：内存中的旧值、�
 
 ### 死锁问题
 
-死锁是在多线程编程中常见的一种问题，发生死锁的场景是两个线程分别等待对方的资源。
+死锁是在多线程并发编程中常见的一种问题。发生死锁的场景是两个线程处于竞争状态，且互相持有对方需要的资源，在相互等待对方释放。
 
-简单概括就是：线程A持有 lock1，同时在等待lock2，但是线程B持有了lock2并且在等待lock1，由于线程A无法获取到lock2，所以就会一直等待且无法释放lock1，这样就发生了死锁。
+- **互斥条件**：一个资源同一时刻只能被一个线程或进程使用。
+- **占用且等待条件**：请求的资源得不到时会一直等待，并且不释放已占有的资源。
+- **不可抢占（不可剥夺）条件**：其他线程/进程无法强制剥夺被被其他线程/进程占有的资源，只能由持有者自己释放。
+- **循环等待条件**：每个线程/进程都在等待下一个线程/进程所持有的资源，导致永远处于等待状态。
+
+解决死锁的方式，根据不同的场景选择处理方式：
+
+* 互斥条件无法被破坏，因为我们加锁的目的就是为了保证一个资源同一时刻只能被一个线程或进程使用。
+
+* **破坏占用且等待**：一次性将所有需要的资源都申请过来，这样就不用等待其他线程释放了。
+* **破坏不可抢占**：当新的资源无法获取到时，将当前已获取到的资源先释放。先让其他线程处理。
+* **破坏循环等待**：必须按照顺序来申请资源，即 先持有了资源1后才能申请资源2，且申请了资源2后不能回头重新去申请资源1，而是应该一直持有1。
+
+
+
+死锁代码案例：线程A持有 lock1，同时在等待lock2，但是线程B持有了lock2并且在等待lock1，由于线程A无法获取到lock2，所以就会一直等待且无法释放lock1，这样就发生了死锁。
 
 ```java
 

@@ -1,5 +1,15 @@
 # Android内存优化
 
+## 应用内存限制
+
+| build.prop                  | 取值     | 说明                                                         |
+| --------------------------- | -------- | ------------------------------------------------------------ |
+| `dalvik.vm.heapstartsize`   | 例如8m   | App启动时分配的内存                                          |
+| `dalvik.vm.heapgrowthlimit` | 例如192m | App最大内存限制。获取代码：`ActivityManager.getMemoryClass()` |
+| `dalvik.vm.heapsize`        | 例如512m | App开启 `android:largeHeap="true"` 后的最大内存限制<br />获取代码：`ActivityManager.getLargeMemoryClass()` |
+
+> android:largeHeap 这个属性一般用于存在大内存的图片或视频的应用。正常情况下不必开启，而应该考虑优化内存。
+
 ## 常见的内存问题
 
 ### 异常

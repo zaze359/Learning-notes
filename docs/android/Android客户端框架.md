@@ -8,9 +8,9 @@ Android中常见的开发框架设计有MVC、MVP、MVVM、MVI等。
 
 MVC 即 Model-View-Control 。是一种将视图、数据、业务逻辑分离的经典开发模式。
 
-* **Model**：负责控制数据相关逻辑的操作。如文件IO，网络IO、数据库等。
-* **View**：负责视图显示以及一些视图相关的逻辑。即XML、View等。
-* **Controller**：负责业务逻辑处理。即Activity、Fragment等，同时持有了View和Model。
+* **Model（数据层）**：负责控制数据相关逻辑的操作。如文件IO，网络IO、数据库等。
+* **View（视图）**：负责视图显示以及一些视图相关的逻辑。即XML、View等。
+* **Controller（控制器）**：负责业务逻辑处理。在Android就是Activity、Fragment等，它同时持有了View和Model。
 
 ![image-20230227191223857](./Android%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%A1%86%E6%9E%B6.assets/image-20230227191223857.png)
 
@@ -26,7 +26,7 @@ MVC 即 Model-View-Control 。是一种将视图、数据、业务逻辑分离�
 
 * Activity即是Controller又是View，随着业务复杂，Activity越来越臃肿，维护将会愈加困难。
 * Activity内的业务逻辑无法复用。
-* View和Model存在交互，会产生耦合。
+* View和Model可以直接交互，它们之间存在耦合。
 
 
 
@@ -47,13 +47,13 @@ MVP（Model-View-Presenter）是基于MVC演进而来，它将Activity中的Cont
 > 优点：
 
 * 将Controller从Activity中分离，解决了Activity臃肿的问题。
-* Model和View分离, 且都只于Presenter交互，降低了耦合度。
+* 将Model和View解耦, 它们都只能和Presenter通过接口交互，降低了耦合度。
 * Presenter可以用于多个视图，适用于UI变化频繁，但业务逻辑变动不大的情况。不过Presenter和View间还是存在一定的依赖关系。
 * 面向接口编程，更易测试。
 
 > 缺点：
 
-* 逻辑较复杂且存在大量的模板代码。虽然可以通过模板生成，但还是比较笨重。
+* 需要手动定义层间的交互接口，逻辑较复杂且存在大量的模板代码。虽然可以通过模板生成，但还是比较笨重。
 * Presenter持有View需要注意内存泄露和view为空等问题。
 * 由于View和Presenter间通过接口通信，View的业务逻辑越复杂，则Presenter和View之间的绑定越紧密，此时Presenter的复用程度就降低了。强行复用会导致其他View需要实现很多不需要的接口，则违背接口隔离。
 
@@ -61,7 +61,7 @@ MVP（Model-View-Presenter）是基于MVC演进而来，它将Activity中的Cont
 
 ### MVVM
 
-MVVM(Model-View-ViewModel) 应该算是基于MVP演化而来，引入了数据驱动和双向绑定。使用ViewModel代替了Presenter，并且Model和View通过ViewModel实现双向绑定。
+MVVM(Model-View-ViewModel) 应该算是基于MVP演化而来，引入了**数据驱动和双向绑定**，将MVP中手动的数据和视图同步改为了自动。使用ViewModel代替了Presenter，并且Model和View通过ViewModel、databinding实现了双向绑定。
 
 当View发生变化时会自动反映在ViewModel上，当数据发送变化时也会自动反应在View上。在Android中是通过 ViewModel将View和Model分离，然后通过LiveData、DataBinding等组件将数据和UI进行绑定。
 

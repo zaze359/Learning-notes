@@ -2,6 +2,12 @@
 
 Spring Boot可帮助我们快速构建基于Spring的应用程序
 
+[https://spring.io](https://spring.io/)
+
+* **Spring Framework**：用于构建企业级应用的轻量级一站式解决方案。
+* **Spring Boot**：快速构建基于Spring的应用程序。
+* **Spring Cloud**：简化分布式系统的开发。
+
 ## 项目生成器
 
 [Spring Initializr - 快速构建](https://start.spring.io/)
@@ -59,6 +65,10 @@ Spring 提供了定义Bean 和 实例化Bean的相关注解：
 | @Value          | 注入常量，或**SpEL**表达式 `#{}`。                           |                |
 | -               |                                                              |                |
 | @RequestMapping | 将方法关联到指定的URL 之下。                                 |                |
+| @ResponseBody   | 将函数的返回放入到响应体的body中。例如 JSON                  | 函数           |
+| @RequestBody    | 接收请求体中的 json格式的body。                              | 参数           |
+| @RequestParam   | 接收请求参数。对应 form格式。                                | 参数           |
+|                 |                                                              |                |
 
 > 代码案例：
 
@@ -485,7 +495,7 @@ xml文件来覆盖它。
 
 ## Spring Data JPA
 
-JPA（Java Persistence API，Java持久层API），它为对象关系映射提供了一种基于POJO 的持久化模型，简化开发工作。
+JPA（Java Persistence API，Java持久层API），它为对象关系映射提供了一种基于 `POJO` 的持久化模型，简化开发工作。
 
 而Spring Data JPA 则是再次增强了抽象，屏蔽了 Hibernate、JDO、EJB等 对象关系映射(O/R Mapping)框架的差异。
 
@@ -546,6 +556,8 @@ public class Showcase {
 * CrudRepository<T, ID>：包含最基础操作，扩展自 `Repository` 类
 * PagingAndSortingRepository<T, ID>：基于CrudRepository，增加分页。
 * JpaRepository<T, ID>：扩展自PagingAndSortingRepository
+* Pageable：分页时用。
+* Sort：排序用。
 
 定义查询
 
@@ -553,8 +565,16 @@ public class Showcase {
 * `...OrderBy...[ASC/DESC]`：排序关键字
 * `And / Or / IgnoreCase`：条件判断关键字
 * `Top / First /Distinct`：特定条件。
-* Pageable：分页时用。
-* Sort：排序用。
+
+```java
+    /**
+     * 使用jpa的查询语法，定义通用函数
+     * 查找前10，按照更新时间降序，id升序排列。
+     */
+    List<T> findTop10ByOrderByUpdateTimeDescIdAsc();
+```
+
+自定义接口：
 
 ```java
 public interface ShowcaseRepository extends JpaRepository<Showcase, Long> {
@@ -677,6 +697,26 @@ class DemoApplication
 | @CachePut    | 方法 | 用于新增。将返回值添加到缓存中。                       |
 | @CacheEvict  | 方法 | 用于更新和删除。会清空缓存。                           |
 | @Caching     |      |                                                        |
+
+### 缓存配置：redis
+
+```properties
+#### 缓存配置
+spring.cache.type=redis
+spring.cache.cache-names=showcases
+# 缓存存活时间
+spring.cache.redis.time-to-live=60000
+spring.cache.redis.cache-null-values=false
+
+#### redis基础配置
+spring.redis.host=192.168.56.21
+spring.redis.port=30379
+spring.redis.password=123456
+spring.redis.lettuce.pool.maxActive=5
+spring.redis.lettuce.pool.maxIdle=5
+```
+
+
 
 
 

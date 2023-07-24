@@ -171,7 +171,12 @@ Activity 默认会交给 PhoneWindow 来分发，若没人处理事件，则最�
 
 ### ViewGroup.dispatchTouchEvent()
 
-> ViewGroup 重写了 View的 `dispatchTouchEvent()` 函数，后续ViewGroup在拦截事件后 调用 `View.dispatchTouchEvent()`。
+ViewGroup 重写了 View的 `dispatchTouchEvent()` 函数，用于处理事件分发，决定给子View还是自身。
+
+* 首先判断父容器自身是否拦截事件。若事件是 ACTION_DOWN 或者 已经有子元素处理事件，则会调用`onInterceptTouchEvent()` 检查是否需要拦截。否则父容器不拦截。
+  * 这里会受到 FLAG_DISALLOW_INTERCEPT 这个标记的影响，作用是禁止父容器拦截事件，是子View通过 `requestDisallowInterceptTouchEvent()`这个函数设置的。
+* 若父容器拦截事件，则 `mFirstTouchTarget` 一定是 Null，不再分发给子View。后续事件由父容器自身处理。
+* 若检测后 父容器不拦截，则会遍历子View，一个个来检测子View是否处理事件，若有则 `mFirstTouchTarget` 会被赋值，并交由这个子元素来处理事件， 且后续也不需要再遍历了。
 
 ```java
 	@Override
@@ -192,15 +197,15 @@ Activity 默认会交给 PhoneWindow 来分发，若没人处理事件，则最�
 
             // Check for interception.
             // 1. 当事件是 ACTION_DOWN
-            // 2. 或者 有子元素处理事件。
+            // 2. 或者 已经有子元素处理事件。
             // 满足其中一个条件时 会调用 onInterceptTouchEvent() 检查是否需要拦截
             final boolean intercepted;
             if (actionMasked == MotionEvent.ACTION_DOWN
                     || mFirstTouchTarget != null) {
-                // 判断是否禁用了父控件拦截, 对于 ACTION_DOWN 是拦截不了的，上面会重置state。
+                // 判断子View是否禁用了父控件拦截, 对于 ACTION_DOWN 是拦截不了的，上面会重置state。
                 final boolean disallowIntercept = (mGroupFlags & FLAG_DISALLOW_INTERCEPT) != 0;
                 if (!disallowIntercept) {
-                    // 允许拦截，检测一下
+                    // 允许父容器拦截，检测一下
                     intercepted = onInterceptTouchEvent(ev);
                     ev.setAction(action); // restore action in case it was changed
                 } else { // 不允许
@@ -285,7 +290,7 @@ Activity 默认会交给 PhoneWindow 来分发，若没人处理事件，则最�
                             }
                             resetCancelNextUpFlag(child);
                             
-                            // 没找到时 判断一下 child 是否消费事件。
+                            // 不存在已消费事件的View，将事件传给child，判断一下child是否消费事件。
                             if (dispatchTransformedTouchEvent(ev, false, child, idBitsToAssign)) {
                                 // Child wants to receive touch within its bounds.
                                 mLastTouchDownTime = ev.getDownTime();
@@ -302,7 +307,7 @@ Activity 默认会交给 PhoneWindow 来分发，若没人处理事件，则最�
                                 }
                                 mLastTouchDownX = ev.getX();
                                 mLastTouchDownY = ev.getY();
-                                // addTouchTarget()内部会将 Child 赋值给 mFirstTouchTarget
+                                // addTouchTarget()内部会将 Child 赋值给 mFirstTouchTarget.child
                                 newTouchTarget = addTouchTarget(child, idBitsToAssign);
                                 alreadyDispatchedToNewTouchTarget = true;
                                 break;
@@ -328,10 +333,10 @@ Activity 默认会交给 PhoneWindow 来分发，若没人处理事件，则最�
             }
 			
             // Dispatch to touch targets.
-            // 一开始 mFirstTouchTarget 一定是空
+            // mFirstTouchTarget为空的场景，表示没有子View消费事件 或者 父容器拦截了事件
             if (mFirstTouchTarget == null) {
                 // No touch targets so treat this as an ordinary view.
-                // 
+                // 调用 dispatchTransformedTouchEvent()
                 handled = dispatchTransformedTouchEvent(ev, canceled, null,
                         TouchTarget.ALL_POINTER_IDS);
             } else {
@@ -385,7 +390,16 @@ Activity 默认会交给 PhoneWindow 来分发，若没人处理事件，则最�
 
 ### ViewGroup.dispatchTransformedTouchEvent()
 
-child：`ViewGroup.onInterceptTouchEvent() `时为null，否则 会传入遍历到的子View。
+* 若 `child != null` 表示**存在子View消费事件，则首先会将事件进行xy坐标转换，然后发送给子View处理**。。
+* 若 `child == null`，表示 **ViewGroup自身拦截事件或没有子View消费事件，由ViewGroup自身处理事件**，调用ViewGroup自身的`super.dispatchTouchEvent()`来分发事件，内部会调用 父容器自身的 `super.onTouchEvent() `来继续处理事件。
+
+> 这里函数中存在 坐标转换的逻辑：即存在子View消费事件时 会将 MotionEvent的x,y进行转换，转换到以child左上角为原点(0, 0)的坐标系上
+>
+> 关于child参数的取值：
+>
+> * `ViewGroup.onInterceptTouchEvent() return true` 时：child == null。
+> * 不存在子View消费事件时：child == null。
+> * 存在子View消费事件时：child == `mFirstTouchTarget.child` 即消费事件的子View 。
 
 ```java
 private boolean dispatchTransformedTouchEvent(MotionEvent event, boolean cancel,
@@ -396,10 +410,9 @@ private boolean dispatchTransformedTouchEvent(MotionEvent event, boolean cancel,
 		// 发送 ACTION_CANCEL 事件
         if (cancel || oldAction == MotionEvent.ACTION_CANCEL) {
             event.setAction(MotionEvent.ACTION_CANCEL);
-            if (child == null) { // 发送给ViewGroup自身
+            if (child == null) {
                 handled = super.dispatchTouchEvent(event);
             } else {
-                // 发送给 子元素处理。
                 handled = child.dispatchTouchEvent(event);
             }
             event.setAction(oldAction);
@@ -432,8 +445,8 @@ private boolean dispatchTransformedTouchEvent(MotionEvent event, boolean cancel,
 
         // Perform any necessary transformations and dispatch.
         if (child == null) {
-            // child==null表示 View Group自身拦截事件，即 onInterceptTouchEvent() return ture。
-            // 调用父类 view.dispatchTouchEvent()，内部会调用 onTouchEvent() 来判断是否处理事件。
+            // child==null表示 View Group自身拦截事件，或没有子View消费事件。
+            // 调用父容器的 view.dispatchTouchEvent()，内部会调用 onTouchEvent() 来判断是否处理事件。
             handled = super.dispatchTouchEvent(transformedEvent);
         } else {
             // child!=null，表示View不拦截，child就是遍历到的子View
@@ -458,6 +471,11 @@ private boolean dispatchTransformedTouchEvent(MotionEvent event, boolean cancel,
 
 
 ### View.dispatchTouchEvent()
+
+View的 `dispatchTouchEvent()` 是处理View自身处理事件分发的入口：
+
+* 优先处理 `onTouchListener` 监听，若返回 true 则会消费事件，那么后面的 `onTouchEvent()` 不会被触发。
+* 若事件未被消费则会调用 `onTouchEvent()`。
 
 ```java
 public boolean dispatchTouchEvent(MotionEvent event) {
@@ -495,7 +513,7 @@ public boolean dispatchTouchEvent(MotionEvent event) {
                     && li.mOnTouchListener.onTouch(this, event)) {
                 result = true;
             }
-			// 
+			// 调用 onTouchEvent().
             if (!result && onTouchEvent(event)) {
                 result = true;
             }
@@ -521,6 +539,12 @@ public boolean dispatchTouchEvent(MotionEvent event) {
 
 
 ### View.onTouchEvent()
+
+View自身真正消费事件地方：
+
+* 首先判断View是否可点击、可用等状态。
+* 根据 MotionEvent，来处理 单击和 长按。
+  * 长按：会 postDelayed一个 longClick的事件。一定事件内未抬起或滑动 则会被触发。
 
 ```java
 public boolean onTouchEvent(MotionEvent event) {

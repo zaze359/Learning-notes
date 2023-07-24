@@ -2273,10 +2273,10 @@ Choreographer 字面意思是编舞者，负责协调绘制，保证vsync到来�
 
 它是一个单例，内部维护了一个使用 mainLooper的Handler。同时它还能接收VSYNC。
 
-Choreographer在ViewRootImpl中被使用，ViewRootImpl 会在构造函数中调用 `Choreographer.getInstance()` 来创建实例。
+Choreographer在ViewRootImpl中被使用，ViewRootImpl 会在构造函数中调用 `Choreographer.getInstance()` 来创建 Choreographer实例。
 
-* **发送请求任务**：在渲染流程中的 `viewRootImpl.scheduleTraversals()` 方法中会通过  `Choreographer.postCallback()` 发送绘制请求 `CALLBACK_TRAVERSAL`。
-* **监听vsync**：Choreographer 接收到请求后会将 callback保存在 callbakc队列中，接着通过 FrameHandler 来发送异步消息，协调执行绘制请求。
+* **viewRootImpl发送请求任务**：在渲染流程中的 `viewRootImpl.scheduleTraversals()` 方法中会通过  `Choreographer.postCallback()` 发送绘制请求 `CALLBACK_TRAVERSAL`。
+* **Choreographer 监听vsync**：Choreographer 接收到 viewRootImpl的请求后会将 callback保存在 callbakc队列中，接着通过 FrameHandler 来发送异步消息，协调执行绘制请求。
   * 4.1后默认开启vsync，此时会调用 `scheduleVsyncLocked()` ，通过 FrameDisplayEventReceiver 注册监听vsync，接收到vsync后会调用 `doFrame()`。
   * 不开启vsync时，则是手动模拟vsync，通过计算得到下一帧时间，不过最终调用的也是 `doFrame()`。
 * **vsync回调执行任务**：`doFrame()` 中会按照一定顺序执行callback队列中的任务，也就是调用了 `callback.run()`，执行完毕后就从callback队列中移除
@@ -2332,7 +2332,9 @@ class Choreographer {
     }
     
     // 所有的postCallback api 最终都是调用的这个。
-    // token 一般都是null, 仅当 CALLBACK_ANIMATION 时有值，会在最终执行callback存在差异，不过不影响分析流程。
+    // callbackType：回调类型，就是传入的CALLBACK_TRAVERSAL,
+    // action：就是callback 是一个 runnable类型
+    // token： 一般都是null, 仅当 CALLBACK_ANIMATION 时有值，会在最终执行callback存在差异，不过不影响分析流程。
     private void postCallbackDelayedInternal(int callbackType,
             Object action, Object token, long delayMillis) {
         synchronized (mLock) {
@@ -2352,6 +2354,7 @@ class Choreographer {
         }
     }
     
+    // 执行请求
     private void scheduleFrameLocked(long now) {
         // 过滤去重
         if (!mFrameScheduled) {

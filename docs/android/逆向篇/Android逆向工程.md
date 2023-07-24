@@ -66,8 +66,19 @@ adb remount
 
 ----------
 
-
 ## 反编译Apk文件
+
+```shell
+# 编译成 .class字节码
+javac Hello.java
+# 反编译字节码
+javap Hello.class
+javap -verbose Hello.class
+```
+
+
+
+
 
 
 ### 1. java文件编译和反编译
@@ -86,15 +97,17 @@ public class Hello {
 
 编译成.class文件
 
-```
+```shell
 javac Hello.java
 ```
 
 反编译.class
 
-```java
+```shell
 javap Hello.class
+```
 
+```java
 Compiled from "Hello.java"
 public class Hello {
   public Hello();
@@ -102,9 +115,11 @@ public class Hello {
   public static void main(java.lang.String[]);
 }
 ```
-```java
+```shell
 javap -c -classpath . Hello
+```
 
+```java
 Compiled from "Hello.java"
 public class Hello {
   public Hello();

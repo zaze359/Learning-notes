@@ -139,6 +139,7 @@ val scroller: Scroller by lazy {
 ```kotlin
  	/**
      * 实现 具体的滚动逻辑。
+     * View重绘在 draw() 中会调用这个函数
      */
     override fun computeScroll() {
         super.computeScroll()
@@ -156,12 +157,13 @@ val scroller: Scroller by lazy {
      * dx, dy: 偏移量
      */
     fun customScrollTo(dx: Int,dy: Int) {
+        // 调用startScroll修改属性
         // 开始滚动的起点坐标：从当前位置开始移动。
         // x 右移 100
         // y 下移 100
         // 滚动耗时 1000，默认250ms
         mScroller.startScroll(scrollX, scrollY, -100, -100, 1000)
-        // 需要调用 invalidate()，触发重绘。
+        // 需要调用 invalidate()，触发重绘，在draw()流程中会调用 computeScroll()
         invalidate()
         //
         // 惯性滚动时 velocityX，velocityY 可以通过使用VelocityTracker获取
@@ -395,7 +397,15 @@ boolean draw(Canvas canvas, ViewGroup parent, long drawingTime) {
     } else {
         // ...
     }
-    
+    // ...
+    int sx = 0;
+    int sy = 0;
+    if (!drawingWithRenderNode) {
+        // 处理滑动
+        computeScroll();
+        sx = mScrollX;
+        sy = mScrollY;
+    }
     // ...
     if (!drawingWithDrawingCache) {
         if (drawingWithRenderNode) {
@@ -915,7 +925,7 @@ LayoutInflater 是一个系统服务，用于加载布局，我们 xml 中定义
 LayoutInflater.from(parent.context).inflate(R.layout.item_test, parent, false)
 ```
 
-内部经历 xml加载、解析后最终会调用到 `tryCreateView()` 来创建View，具体的创建实现则是交给了 Factory/Factory2 来实现，不过一般都是通过反射的方式创建View的。
+内部经历 xml加载、解析后最终会调用到 `tryCreateView()` 来创建View，具体的创建实现则是交给了 Factory/Factory2 来实现，不过默认都是通过反射的方式创建View的。
 
 ```java
 	public final View tryCreateView(@Nullable View parent, @NonNull String name,

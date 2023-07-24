@@ -408,9 +408,11 @@ attachToRoot 表示是否和root关联：
 
 它们都是供开发者来设置自定义加载布局的接口。
 
-Factory2 继承子 Factory，factory2提供的接口多了一个parent参数，LayoutInflater 在加载布局过程中，会优先使用Factory2 来加载布局，然后才使用Factrory，都没有设置时默认时用自带的 privateFactory。
+Factory2 继承子 Factory，factory2提供的接口多了一个parent参数，LayoutInflater 在加载布局过程中，会优先使用Factory2 来加载布局，然后才使用Factrory，这两个都没有设置时 会使用 privateFactory，一般来自使用LayoutInflater创建的LayoutInflater。若都没有则会使用反射的方式构建View。
 
+### 怎么优化xml inflate的时间？
 
+* 使用ViewStub：它默认是不可见的，且一开始也不会被inflate，直到需要时才会被 inflate。避免一次性加载所有布局。
 
 ### LinearLayout
 
@@ -439,11 +441,38 @@ LinearLayout会在 onMeasure() 中遍历所有子View，依次进行测量，以
 * weiget>0 && height !=0，表示按照权重来分配高度。
 * 重新遍历一遍child，根据所占的权重，重新分配空间。
 
+### ViewPager2中嵌套ViewPager怎么处理滑动冲突
+
+ViewPager2 基于 RecyclerView，所以等同 RecyclerView嵌套 ViewPager、RecyclerView
+
+处理方式：自定义一个 `NestedScrollViewHost` 类，类似Google提供的 `NestedScrollView`，将 ViewPager、RecyclerView 等作为 NestedScrollViewHost 的子元素即可。不必修改原先的控件.
+
+NestedScrollViewHost 采用内部拦截法处理滑动冲突。
+
+重写 `dispatchTouchEvent()` 或者 `onInterceptTouchEvent()`来处理事件分发逻辑，并结合 `requestDisallowInterceptTouchEvent()`来控制父容器。
+
+需要事件时禁用 父容器的拦截，并将事件继续向下分发，不需要时则允许父容器拦截。
+
+### ViewPager切换掉帧如何优化？
+
+ViewPager结合Fragment使用时，常常会碰到滑动切换时掉帧的问题。
+
+* 考虑优化 Fragment 中的布局，精简布局永远是最直接有效的方式。
+* 在内存允许的情况下，考虑通过 `setOffScreenPageLimit()`多缓存几个页面。需要结合懒加载使用，用户可见才加载数据，否则一开始加载过多Fragment 也会发生卡顿。懒加载则可以利用 Adapter的 behavior 字段。
+* **延迟加载，优化迅速切换的场景**，切换Fragment时，不立即去加载内容，而是启动延迟任务去加载，若是停留达到指定时间则表示用户想要看当前页面的内容，然后将内容加载处理。若是快速切换了页面则取消这个延迟加载任务。可以通过 `OnPageChangeListener` 来监听页面变化。
+* 利用 FragmentPagerAdapter 中的 behavior  字段进行控制，例如 设置 BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT。仅当前的Fragment 会进入到 RESUME 生命周期，其他的 Fragment 会被限制在 START。
+
+
+
 ### TextView
 
 
 
+### WebView
 
+WebView性能优化有哪些？
+
+* 硬件加速：
 
 ---
 
@@ -630,6 +659,12 @@ Looper.myQueue().removeIdleHandler(idler);
 
 
 
+### Handler 内存泄露问题
+
+在Activity 中使用 Handler时，Handler一般时作为匿名内部类使用，此时会持有外部的Activity。
+
+并且通过 Handler发送消息时 Message 会持有 Handler，Message属于Looper中的MessageQueu，而Looper存储在线程的TLS中的，所以Handler是被线程持有的，无论是主线程还是自定义线程生命周期都比Activity长，也就导致Activity发送了内存泄露。
+
 
 
 ## 跨进程通讯
@@ -676,5 +711,31 @@ Looper.myQueue().removeIdleHandler(idler);
 * **fork机制仅会拷贝当前线程，并不支持多线程，而Binder机制恰恰是多线程的**。当然zygote中也存在很多线程，但是zygote会将这些线程管理起来，在fork前将所有线程停止，fork完后再重新启动。
 
 * Binder的阻塞调用会导致另一边也阻塞。会导致很多不必要的线程开销
+
+
+
+## OkHttp
+
+### OkHttp的连接池？
+
+什么样的连接可以复用？怎么实现连接池？
+
+### OkHttp怎么处理SSL？
+
+### OkHttp里面用到了什么设计模式？
+
+### OKHttp有哪些拦截器，分别起什么作用？
+
+OkHttp网络拦截器，应用拦截器
+
+## 组件化
+
+### ARouter的原理？
+
+ARouter怎么实现接口调用？ARouter怎么实现页面拦截？
+
+### 注解处理器是处理java还是字节码？
+
+### 组件化的接口下沉方案，接口膨胀问题怎么解决 ?
 
 ## 网络流量统计怎么做？

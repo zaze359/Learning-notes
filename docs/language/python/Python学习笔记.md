@@ -7,6 +7,12 @@
 * Python3.X 默认编码为 UTF-8。
 * python根据缩进来判断代码行之间的关系，需要注意缩进。
 
+
+
+## pythod安装
+
+[Python配置](./Python配置.md)
+
 ## 命令中执行python
 
 执行以下命令进入python
@@ -652,9 +658,12 @@ pip3 install -U pip
 
 # 已安装的包
 pip3 list
+pip3 freeze 
+
 # 查看包信息； -f 详情
-pip3 showpackage
-pip3 show -f package
+pip3 show {packageName}
+pip3 show -f {packageName}
+
 ```
 
 ### 镜像

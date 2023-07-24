@@ -8,7 +8,11 @@ RecyclerView 可以实现列表(List)、表格(Grid)、流式布局(StaggeredGri
 
 ## 如何使用
 
-### 1. 创建Adapter
+* ViewHolder：表示一个Item的视图。
+* Adapter：负责将ViewHolder进行数据绑定。
+* LayoutManager：负责视图的测量、布局。
+
+### 1. 创建Adapter 和 ViewHolder
 
 ```kotlin
 class TestAdapter(private val dataList: List<String>) : RecyclerView.Adapter<TestAdapter.TestViewHolder>() {
@@ -42,10 +46,10 @@ class TestAdapter(private val dataList: List<String>) : RecyclerView.Adapter<Tes
 }
 ```
 
-### 2.  配置RecyclerView
+### 2.  绑定 Adapter 和 LayoutManager
 
 ```kotlin
-val adapter = DemoAdapter(list) // 创建Adapter并填充数据
+val adapter = DemoAdapter(list) // 创建 Adapter 并填充数据
 val manager = LinearLayoutManager(context) // 设置布局管理器：列表布局
 binding.demoRecyclerView.layoutManager = manager 
 binding.demoRecyclerView.adapter = adapter
@@ -117,7 +121,7 @@ public final class Recycler {
 
 ### Scrap
 
-scrap 意为废缓存，是重新布局期间的临时缓存，缓存的是在重新布局期间，当前屏幕上显示的ViewHolder，布局完成后这层缓存会被清空。它和滑动时的缓存复用没有关系。其他的Item是保存在 CachedViews 和 RecyclerViewPool中。
+scrap 意为废缓存，是**重新布局期间的临时缓存，缓存的是在重新布局期间位于在屏幕区域的ViewHolder**，布局完成后这层缓存会被清空。它和滑动时的缓存复用没有关系。其他的Item是保存在 CachedViews 和 RecyclerViewPool中。
 
 在 Recycler 类中 声明了两个 scrap，mAttachedScrap 和 mChangedScrap，它们都是 ViewHolder列表：`ArrayList<ViewHolder> ` 
 
@@ -130,7 +134,7 @@ scrap 意为废缓存，是重新布局期间的临时缓存，缓存的是在�
 
 > ``final ArrayList<ViewHolder> mCachedViews = new ArrayList<ViewHolder>();``
 
-CachedView 作用于是RecyclerView滑动期间，会将刚刚离开屏幕的ViewHolder缓存，最多保存2个。若超出限制，则会将最早缓存的ViewHolder加入到 RecyclerViewPool中，然后从CachedViews中移除，最后将再将刚离开屏幕的ViewHolder加入到CachedViews 中。
+**CachedView 作用于是RecyclerView滑动期间，会将刚刚离开屏幕的ViewHolder缓存，最多保存2个**。若超出限制，则会将最早缓存的ViewHolder加入到 RecyclerViewPool中，然后从CachedViews中移除，最后将再将刚离开屏幕的ViewHolder加入到CachedViews 中。
 
 这个缓存是用于优化的经常来回滑动的场景：
 
@@ -198,31 +202,30 @@ public static class RecycledViewPool {
 
 
 
-## 预测Item动画：PredictiveItemAnimations
+---
 
-[RecyclerView animations - AndroidDevSummit write-up – froger_mcs dev blog – Coding with love {❤️} (frogermcs.github.io)](http://frogermcs.github.io/recyclerview-animations-androiddevsummit-write-up/)
+## 添加布局管理器源码分析
 
-这篇文章介绍了这个预测动画的效果，正常情况下，我们删除一个元素时，最底部这个新显示的元素是从屏幕单独顶上来的，并不是和前面的元素一起移动的，而是单独出现，因为最后这个元素之前时不可见的。
+通过 `RecyclerView.setLayoutManager()` 来设置布局管理，它内部流程如下：
 
-开启预测动画后，就会预测这个元素，这样最底部这个新显示的元素会和前面的元素一起移动。
-
-
-
-## 源码分析
-
-### 设置布局管理器
-
-RecyclerView.setLayoutManager()
+* 判断是否和之前的布局管理器一致，是就直接返回，不必处理。是新的布局管理器就继续往下。
+* 若已经存在布局管理器，会先进行初始化重置操作，并且解绑。
+  * 将所有的View解绑(detach)并移除(remove)，然后利用缓存机制回收。
+  * 移除所有 Scrap View 并且清空 mAttachedScrap 和 mChangedScrap 缓存。
+  * 清空 mAttachedScrap和CachedViews 缓存。
+  * 将 当前的LayoutManager 和 RecyclerView 的解绑。
+* 将新的LayoutManager 和 RecyclerView 进行关联。唯一绑定。
+* 调用 `requestLayout()` 重新布局绘制。
 
 ```java
-	
+
 	// 当前布局管理器
 	LayoutManager mLayout;
 	// 
 	final Recycler mRecycler = new Recycler();
 
 	public void setLayoutManager(@Nullable LayoutManager layout) {
-        // 相同的布局管理器之间返回
+        // 相同的布局管理器 直接返回
         if (layout == mLayout) {
             return;
         }
@@ -235,9 +238,9 @@ RecyclerView.setLayoutManager()
             if (mItemAnimator != null) {
                 mItemAnimator.endAnimations();
             }
-            // RecyclerView 解绑并删除所有View，然后使用mRecycler回收到缓存中
+            // RecyclerView 解绑并移除所有View，然后使用mRecycler回收到缓存中
             mLayout.removeAndRecycleAllViews(mRecycler);
-            // 删除所有废弃的View并且清空 Scrap缓存：mAttachedScrap 和 mChangedScrap
+            // 移除所有Scrap View并且清空 Scrap缓存：mAttachedScrap 和 mChangedScrap
             mLayout.removeAndRecycleScrapInt(mRecycler);
             // 清空 mAttachedScrap和CachedViews 缓存
             mRecycler.clear();
@@ -269,33 +272,54 @@ RecyclerView.setLayoutManager()
                 mLayout.dispatchAttachedToWindow(this);
             }
         }
+        // 更新缓存大小
         mRecycler.updateViewCacheSize();
         // 和新的LayoutManager关联后 重新请求绘制。
         requestLayout();
     }
 ```
 
-
+## RecyclerView 测量和布局
 
 ### RecyclerView.onMeasure
 
-RecyclerView的测量过程一般情况下都是通过 LayoutManager进行测量的，并且不仅仅只有测量的功能，还包括布局相关的功能。
+RecyclerView的测量过程 最终都是通过 LayoutManager 来进行测量的（一般会测量2次），并且不仅仅只有测量的功能，还包括布局相关的功能。
 
-* **dispatchLayoutStep1**：更新Adapter，决定运行哪些动画，保存视图信息，尝试执行预测动画等。
-* **dispatchLayoutStep2**：这里执行View的布局，会调用 `LayoutManager.onLayoutChildren()` 执行子View的布局。
+* 若 LayoutManager 为空，执行默认测量方式，就是常见的利用测量模式来获取宽高。
+* 开启了自动测量，默认是开启的。
+  * 首先测量一下RecyclerView 自身的宽高。
+  * 若处理 `State.STEP_START` 阶段则 执行 dispatchLayoutStep1。
+  * 接着执行 dispatchLayoutStep2。
+  * 判断是否需要二次测量，需要就重新执行一次 dispatchLayoutStep2， 并开始测量子元素。
+* 自动测量未开启。
+  * 若是固定尺寸，调用 `mLayout.onMeasure()` 进行测量。
+  * 处理数据更新后，也是调用 `mLayout.onMeasure()` 进行测量。
+
+涉及到 LayoutStep 函数，这里先列一下作用，后面单独分析：
+
+* **dispatchLayoutStep1**：更新Adapter，决定运行哪些动画（只是决定但是并不执行），保存视图信息，尝试执行预测动画等。将 mLayoutState更新为 STEP_LAYOUT。
+* **dispatchLayoutStep2**：这里真正执行了子View的布局，会调用 `LayoutManager.onLayoutChildren()` 执行子View的布局。
+
+> 二次测量的条件：RecyclerView 自身宽高不是 精确模式，或者存在至少一个子元素不是精确模式，也就是自身或者子元素存在 wrap_parent。
+
+| 布局阶段              |                                     |                                                              |
+| --------------------- | ----------------------------------- | ------------------------------------------------------------ |
+| State.STEP_START      | 默认值，开始阶段，还未执行布局。    | 此阶段触发 dispatchLayoutStep1。                             |
+| State.STEP_LAYOUT     | 布局阶段，将要准备开始进行 layout。 | dispatchLayoutStep1阶段结束后会更新为这个值。对应执行dispatchLayoutStep2。 |
+| State.STEP_ANIMATIONS | 动画阶段，将要开始处理动画。        | dispatchLayoutStep2阶段结束后会更新为这个值。对应执行dispatchLayoutStep3。 |
 
 ```java
 	@Override
     protected void onMeasure(int widthSpec, int heightSpec) {
-        if (mLayout == null) { // 为空，执行默认测量方式
+        if (mLayout == null) { // 布局管理器为空，执行默认测量方式，就是常见的利用测量模式来获取宽高。
             defaultOnMeasure(widthSpec, heightSpec);
             return;
         }
-        // 
+        // 开启了自动测量，默认是开启的。
         if (mLayout.isAutoMeasureEnabled()) {
             final int widthMode = MeasureSpec.getMode(widthSpec);
             final int heightMode = MeasureSpec.getMode(heightSpec);
-            // 通过 LayoutManager 进行测量
+            // 通过 LayoutManager 测量一下自身的宽高。
             mLayout.onMeasure(mRecycler, mState, widthSpec, heightSpec);
             final boolean measureSpecModeIsExactly =
                     widthMode == MeasureSpec.EXACTLY && heightMode == MeasureSpec.EXACTLY;
@@ -311,7 +335,7 @@ RecyclerView的测量过程一般情况下都是通过 LayoutManager进行测量
             // 为了保持一致性，应该使用旧尺寸进行布局
             mLayout.setMeasureSpecs(widthSpec, heightSpec);
             mState.mIsMeasuring = true;
-            //
+            // 
             dispatchLayoutStep2();
 			
             // now we can get the width and height from the children.
@@ -319,7 +343,8 @@ RecyclerView的测量过程一般情况下都是通过 LayoutManager进行测量
 
             // if RecyclerView has non-exact width and height and if there is at least one child
             // which also has non-exact width & height, we have to re-measure.
-            if (mLayout.shouldMeasureTwice()) {
+            // 二次测量：RecyclerView 自身宽高不是 或者存在至少一个子元素 不是精确模式，存在 wrap_parent。
+            if (mLayout.shouldMeasureTwice()) { 
                 mLayout.setMeasureSpecs(
                         MeasureSpec.makeMeasureSpec(getMeasuredWidth(), MeasureSpec.EXACTLY),
                         MeasureSpec.makeMeasureSpec(getMeasuredHeight(), MeasureSpec.EXACTLY));
@@ -328,22 +353,83 @@ RecyclerView的测量过程一般情况下都是通过 LayoutManager进行测量
                 // now we can get the width and height from the children.
                 mLayout.setMeasuredDimensionFromChildren(widthSpec, heightSpec);
             }
-        } else {
-            if (mHasFixedSize) {
+        } else { // 关闭自动测量
+            if (mHasFixedSize) { // 固定尺寸直接测量。
                 mLayout.onMeasure(mRecycler, mState, widthSpec, heightSpec);
                 return;
             }
             // custom onMeasure
             // ...
+            // 这里也是通过  mLayout.onMeasure 进行测量
         }
     }
 ```
 
-#### LinearLayoutManager.onLayoutChildren()
+### RecyclerView.onLayout()
 
-* 找到一个锚坐标和一个锚项位置。后续填充时使用。
+这里的布局流程和之前分析 `onMeasure()` 时执行的布局调用的是相同几个函数。
+
+* Adapter 或者 LayoutManager为空时，不执行布局。
+* **dispatchLayoutStep1**：更新适配器，决定运行哪些动画，保存视图信息等。
+* **dispatchLayoutStep2**：View的实际布局，会调用 `LayoutManager.onLayoutChildren()` 执行子View的布局。
+* **dispatchLayoutStep3**：布局的最后一步。保存动画视图的信息，触发动画并做一些清理工作。
+
+```java
+	@Override
+    protected void onLayout(boolean changed, int l, int t, int r, int b) {
+        TraceCompat.beginSection(TRACE_ON_LAYOUT_TAG);
+        // 调用 dispatchLayout()
+        dispatchLayout();
+        TraceCompat.endSection();
+        mFirstLayoutComplete = true;
+    }
+
+	void dispatchLayout() {
+        if (mAdapter == null) { // 若没有 adapter 跳过布局流程，就是什么都不显示
+            Log.e(TAG, "No adapter attached; skipping layout");
+            // leave the state in START
+            return;
+        }
+        if (mLayout == null) { // 没有布局管理器 也跳过，就是什么都不显示
+            Log.e(TAG, "No layout manager attached; skipping layout");
+            // leave the state in START
+            return;
+        }
+        mState.mIsMeasuring = false;
+        if (mState.mLayoutStep == State.STEP_START) {
+            // 1
+            dispatchLayoutStep1();
+            mLayout.setExactMeasureSpecsFrom(this);
+            // 2
+            dispatchLayoutStep2();
+        } else if (mAdapterHelper.hasUpdates() || mLayout.getWidth() != getWidth()
+                || mLayout.getHeight() != getHeight()) {
+            // First 2 steps are done in onMeasure but looks like we have to run again due to
+            // changed size.
+            mLayout.setExactMeasureSpecsFrom(this);
+            // 2
+            dispatchLayoutStep2();
+        } else {
+            // always make sure we sync them (to ensure mode is exact)
+            mLayout.setExactMeasureSpecsFrom(this);
+        }
+        // 3
+        dispatchLayoutStep3();
+    }
+```
+
+---
+
+## LinearLayoutManager执行子布局流程
+
+### LinearLayoutManager.onLayoutChildren()
+
+* 找到一个锚坐标（coordinate）和一个锚位置（position）。后续填充时使用，表示填充的开始位置。
 * 先将当前存在的子View都分离，然后缓存到 Scrap 中。
-* 根据布局方向（纵/横）来重新填充布局，其实就是重新添加子View的过程。
+* 根据布局方向来重新填充（fill）布局，其实就是重新 add 子View的过程。以常见的 垂直布局为例。
+  * LayoutFromEnd：以下方为基准，从下向上填充布局。
+  * LayoutFromStart：以上方为基准，从上往下填充布局。
+
 
 ```java
 	@Override
@@ -382,7 +468,7 @@ RecyclerView的测量过程一般情况下都是通过 LayoutManager进行测量
         // 重新填充布局
         if (mAnchorInfo.mLayoutFromEnd) {
             // fill towards start
-            // 向开始方向填充，从底部堆叠
+            // 向开始方向填充，从下网上堆叠
             updateLayoutStateToFillStart(mAnchorInfo);
             mLayoutState.mExtraFillSpace = extraForStart;
             // 调用 fill() 填充Item填充
@@ -390,7 +476,7 @@ RecyclerView的测量过程一般情况下都是通过 LayoutManager进行测量
             startOffset = mLayoutState.mOffset;
             // ...
             // fill towards end
-            // 向末端填充，从顶部堆叠
+            // 向末端填充，从上往下堆叠
             updateLayoutStateToFillEnd(mAnchorInfo);
             mLayoutState.mExtraFillSpace = extraForEnd;
             mLayoutState.mCurrentPosition += mLayoutState.mItemDirection;
@@ -398,13 +484,13 @@ RecyclerView的测量过程一般情况下都是通过 LayoutManager进行测量
             endOffset = mLayoutState.mOffset;
 			// ...
         } else {
-            // fill towards end  向末端填充，从顶部堆叠
+            // fill towards end  向末端填充，从上往下堆叠
             updateLayoutStateToFillEnd(mAnchorInfo);
             mLayoutState.mExtraFillSpace = extraForEnd;
             fill(recycler, mLayoutState, state, false);
             endOffset = mLayoutState.mOffset;
             // ...
-            // fill towards start 向开始方向填充，从底部堆叠
+            // fill towards start 向开始方向填充，从下网上堆叠
             updateLayoutStateToFillStart(mAnchorInfo);
             mLayoutState.mExtraFillSpace = extraForStart;
             mLayoutState.mCurrentPosition += mLayoutState.mItemDirection;
@@ -416,7 +502,7 @@ RecyclerView的测量过程一般情况下都是通过 LayoutManager进行测量
     }
 ```
 
-#### LinearLayoutManager.detachAndScrapAttachedViews()
+### LinearLayoutManager.detachAndScrapAttachedViews()
 
 遍历所有attaced child，然后调用 `scrapOrRecycleView()` 将child分离并缓存到 Scrap中。
 
@@ -456,9 +542,10 @@ RecyclerView的测量过程一般情况下都是通过 LayoutManager进行测量
 
 
 
-#### LinearLayoutManager.fill()
+### LinearLayoutManager.fill()
 
-* 当前处理滚动中，
+* 当处理滚动中时，会将刚移出屏幕外的View缓存到 CachedViews 中。
+* 循环判断当前可见区域是否存在剩余空间以及存在数据，满足条件就调用layoutChunk填充布局。也就是重新添加一个childView。
 
 ```java
 int fill(RecyclerView.Recycler recycler, LayoutState layoutState,
@@ -470,13 +557,13 @@ int fill(RecyclerView.Recycler recycler, LayoutState layoutState,
             if (layoutState.mAvailable < 0) {
                 layoutState.mScrollingOffset += layoutState.mAvailable;
             }
-            // 处于滚动中，缓存移除屏幕外的View
+            // 处于滚动中，缓存移出屏幕外的View
             recycleByLayoutState(recycler, layoutState);
         }
     
     	int remainingSpace = layoutState.mAvailable + layoutState.mExtraFillSpace;
         LayoutChunkResult layoutChunkResult = mLayoutChunkResult;
-    	// 循环判断当前可见区域是否存在剩余空间以及存在数据，存在就调用layoutChunk填充布局。
+    	// 循环判断当前可见区域是否存在剩余空间以及存在数据，满足条件就调用layoutChunk填充布局。
         while ((layoutState.mInfinite || remainingSpace > 0) && layoutState.hasMore(state)) {
             layoutChunkResult.resetInternal();
             if (RecyclerView.VERBOSE_TRACING) {
@@ -490,7 +577,7 @@ int fill(RecyclerView.Recycler recycler, LayoutState layoutState,
     }
 ```
 
-#### LinearLayoutManager.layoutChunk()
+### LinearLayoutManager.layoutChunk()
 
 在这个函数中 将View重新添加到了 RecyclerView中。
 
@@ -534,81 +621,25 @@ int fill(RecyclerView.Recycler recycler, LayoutState layoutState,
     }
 ```
 
-#### LinearLayoutManager.next()
+### LinearLayoutManager.next()
 
-从 recycler 中获取View。
+从 recycler 中获取 ViewHolder中的 View。
 
 ```java
         View next(RecyclerView.Recycler recycler) {
             if (mScrapList != null) {
                 return nextViewFromScrapList();
             }
+            // 这里就是ViewHolder缓存复用相关逻辑
             final View view = recycler.getViewForPosition(mCurrentPosition);
             mCurrentPosition += mItemDirection;
             return view;
         }
 ```
 
-
-
-
-
-### RecyclerView.onLayout
-
-这里的布局流程和之前分析 `onMeasure()` 时执行的布局调用的是相同几个函数。
-
-* Adapter 或者 LayoutManager为空时，不执行布局。
-* **dispatchLayoutStep1**：更新适配器，决定运行哪些动画，保存视图信息等。
-* **dispatchLayoutStep2**：View的实际布局，会调用 `LayoutManager.onLayoutChildren()` 执行子View的布局。
-* **dispatchLayoutStep3**：布局的最后一步。保存动画视图的信息，触发动画并做一些清理工作。
-
-```java
-	@Override
-    protected void onLayout(boolean changed, int l, int t, int r, int b) {
-        TraceCompat.beginSection(TRACE_ON_LAYOUT_TAG);
-        // 调用 dispatchLayout()
-        dispatchLayout();
-        TraceCompat.endSection();
-        mFirstLayoutComplete = true;
-    }
-
-	void dispatchLayout() {
-        if (mAdapter == null) { // 若没有 adapter 跳过布局流程
-            Log.e(TAG, "No adapter attached; skipping layout");
-            // leave the state in START
-            return;
-        }
-        if (mLayout == null) { // 没有布局管理器 也跳过
-            Log.e(TAG, "No layout manager attached; skipping layout");
-            // leave the state in START
-            return;
-        }
-        mState.mIsMeasuring = false;
-        if (mState.mLayoutStep == State.STEP_START) {
-            // 1
-            dispatchLayoutStep1();
-            mLayout.setExactMeasureSpecsFrom(this);
-            // 2
-            dispatchLayoutStep2();
-        } else if (mAdapterHelper.hasUpdates() || mLayout.getWidth() != getWidth()
-                || mLayout.getHeight() != getHeight()) {
-            // First 2 steps are done in onMeasure but looks like we have to run again due to
-            // changed size.
-            mLayout.setExactMeasureSpecsFrom(this);
-            // 2
-            dispatchLayoutStep2();
-        } else {
-            // always make sure we sync them (to ensure mode is exact)
-            mLayout.setExactMeasureSpecsFrom(this);
-        }
-        // 3
-        dispatchLayoutStep3();
-    }
-```
+## 缓存机制分析
 
 ### 缓存复用(获取)
-
-
 
 #### RecyclerView.getViewForPosition()
 
@@ -699,9 +730,7 @@ ViewHolder tryGetViewHolderForPositionByDeadline(int position,
 
 #### Recycler.scrapView()：布局期间缓存
 
-这些缓存仅在布局期间存在。
-
-将View对应的ViewHolder 缓存到 Scrap 中。
+这些缓存仅在布局期间存在。将View对应的ViewHolder 缓存到 Scrap 中。
 
 ```java
 	void scrapView(View view) {
@@ -781,4 +810,16 @@ ViewHolder tryGetViewHolderForPositionByDeadline(int position,
 ```
 
 
+
+## SnapHelper
+
+## 补充
+
+### 预测Item动画：PredictiveItemAnimations
+
+[RecyclerView animations - AndroidDevSummit write-up – froger_mcs dev blog – Coding with love {❤️} (frogermcs.github.io)](http://frogermcs.github.io/recyclerview-animations-androiddevsummit-write-up/)
+
+这篇文章介绍了这个预测动画的效果，正常情况下，我们删除一个元素时，最底部这个新显示的元素是从屏幕单独顶上来的，并不是和前面的元素一起移动的，而是单独出现，因为最后这个元素之前时不可见的。
+
+开启预测动画后，就会预测这个元素，这样最底部这个新显示的元素会和前面的元素一起移动。
 

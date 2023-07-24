@@ -1,8 +1,8 @@
 # HashMap源码学习
 
+* 底层结构：数组 + 链表 + 红黑树。
+
 > Java 中 HashMap。
->
-> 底层：数组 + 链表 + 红黑树。
 >
 > 长度为 2的幂次，
 
@@ -40,7 +40,7 @@ public class HashMap<K,V> extends AbstractMap<K,V> implements Map<K,V>, Cloneabl
 }
 ```
 
-> hash() 有时被称为 扰动函数
+> hash() 哈希函数有时被称为 扰动函数
 >
 > hashCode返回Int值，最高32位，直接作为下标，近40亿长度的数组，内存中是存不下的。
 >
