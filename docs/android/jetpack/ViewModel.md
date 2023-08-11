@@ -45,10 +45,12 @@ class MainFragment : Fragment() {
 
 ComponetActivity是一个ViewModelStoreOwner的实现类。同样的还有Fragment、NavBackStackEntry等也都是 ViewModelStoreOwner的实现类。
 
-* **ViewModelStore**：负责**缓存ViewModel的实例化对象**。
-* **ViewModelProvider.Factory**：它是**真正创建ViewModel实例的地方**。
+* **ViewModelStore**：负责缓存ViewModel的实例化对象。
+  * ViewModel 会在 onDestroy() 时 被清理。
+
+* **ViewModelProvider.Factory**：它是真正创建ViewModel实例的地方。
   * 内部通过`modelClass.newInstance()/modelClass.getConstructor(Application::class.java).newInstance(app)`的方式创建ViewModel实例。
-  * 默认实现为`SavedStateViewModelFactory`，还实现了状态的保存和恢复逻辑。
+  * 默认实现为`SavedStateViewModelFactory`，**使用Bundle 实现了状态的保存和恢复逻辑**。
 * **NonConfigurationInstances**：负责保存 `ViewModelStore`。
 
 ```java
@@ -67,15 +69,80 @@ public class ComponentActivity extends androidx.core.app.ComponentActivity imple
         
     // 生命周期管理
     private final LifecycleRegistry mLifecycleRegistry = new LifecycleRegistry(this);
+        
     // 界面状态的保存
-    @SuppressWarnings("WeakerAccess") /* synthetic access */
     final SavedStateRegistryController mSavedStateRegistryController =
             SavedStateRegistryController.create(this);
     
-    // ViewModel对象的构建和缓存
+    // 存储ViewModel实例
     private ViewModelStore mViewModelStore;
+        
     private ViewModelProvider.Factory mDefaultFactory;
     
+        
+	public ComponentActivity() {
+        Lifecycle lifecycle = getLifecycle();
+        if (Build.VERSION.SDK_INT >= 19) {
+            getLifecycle().addObserver(new LifecycleEventObserver() {
+                @Override
+                public void onStateChanged(@NonNull LifecycleOwner source,
+                        @NonNull Lifecycle.Event event) {
+                    if (event == Lifecycle.Event.ON_STOP) {
+                        Window window = getWindow();
+                        final View decor = window != null ? window.peekDecorView() : null;
+                        if (decor != null) {
+                            Api19Impl.cancelPendingInputEvents(decor);
+                        }
+                    }
+                }
+            });
+        }
+        // 监听 ON_DESTROY 清理 ViewModel
+        getLifecycle().addObserver(new LifecycleEventObserver() {
+            @Override
+            public void onStateChanged(@NonNull LifecycleOwner source,
+                    @NonNull Lifecycle.Event event) {
+                if (event == Lifecycle.Event.ON_DESTROY) {
+                    // Clear out the available context
+                    mContextAwareHelper.clearAvailableContext();
+                    // And clear the ViewModelStore
+                    if (!isChangingConfigurations()) {
+                        getViewModelStore().clear();
+                    }
+                }
+            }
+        });
+        getLifecycle().addObserver(new LifecycleEventObserver() {
+            @Override
+            public void onStateChanged(@NonNull LifecycleOwner source,
+                    @NonNull Lifecycle.Event event) {
+                // 这里用于初始化 ViewModelStore()，执行一次就移除了
+                ensureViewModelStore();
+                getLifecycle().removeObserver(this);
+            }
+        });
+        mSavedStateRegistryController.performAttach();
+        enableSavedStateHandles(this);
+
+        if (19 <= SDK_INT && SDK_INT <= 23) {
+            getLifecycle().addObserver(new ImmLeaksCleaner(this));
+        }
+        getSavedStateRegistry().registerSavedStateProvider(ACTIVITY_RESULT_TAG,
+                () -> {
+                    Bundle outState = new Bundle();
+                    mActivityResultRegistry.onSaveInstanceState(outState);
+                    return outState;
+                });
+        addOnContextAvailableListener(context -> {
+            Bundle savedInstanceState = getSavedStateRegistry()
+                    .consumeRestoredStateForKey(ACTIVITY_RESULT_TAG);
+            if (savedInstanceState != null) {
+                mActivityResultRegistry.onRestoreInstanceState(savedInstanceState);
+            }
+        });
+    }
+        
+        
     // ------------------ SavedRegisterHandle 保存/恢复
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -103,7 +170,8 @@ public class ComponentActivity extends androidx.core.app.ComponentActivity imple
         mSavedStateRegistryController.performSave(outState);
     } 
     
-    
+
+        
         
         
     // ----------------- 创建ViewModel相关
@@ -317,7 +385,7 @@ public class ViewModelStore {
 
 ComponentActivity中ViewModelProvider.Factory的默认实现。
 
-当需要保存状态时会创建带有SavedStateHandle参数的ViewModel/AndroidViewModel。否则调用默认方式创建ViewModel/AndroidVeiwModel。
+当需要保存状态时会创建带有SavedStateHandle参数的ViewModel/AndroidViewModel。否则调用默认方式创建ViewModel。
 
 ```kotlin
 // SavedStateViewModel
@@ -423,7 +491,7 @@ public open class AndroidViewModelFactory private constructor(
 
 * 配置发生变化场景的状态保存/恢复系统已经自动处理，不需要我们参与。
 
-* 进程意外终止的场景则是提供了 SavedStateHandle 来供我们保存ViewModel中的数据。
+* 进程意外终止的场景则是提供了 SavedStateHandle 来供我们将ViewModel中的数据保存到 Bundle 中。
 
 ### 配置变更后ViewModel的恢复流程
 
@@ -552,9 +620,9 @@ public class Activity ... {
 
 #### 保存数据的时机
 
-搜索发现 `retainNonConfigurationInstances()` 的调用处在 `ActivityThread.performDestroyActivity()`中，它会被赋值给ActivityClientRecord，而ActivityClientRecord 时保存在ActivityThread中的，只要进程不被杀死就会一直存在。
+搜索发现 `retainNonConfigurationInstances()` 的调用处在 `ActivityThread.performDestroyActivity()`中，它会被赋值给ActivityClientRecord，而**ActivityClientRecord 是保存在ActivityThread中的，只要进程不被杀死就会一直存在**。
 
-所以 NonConfigurationInstances 会在 Activity销毁时保存到 Activity对应的ActivityClientRecord中。
+**NonConfigurationInstances 会在 Activity销毁时保存到 Activity对应的ActivityClientRecord中**。
 
 ```java
 public final class ActivityThread ... {	
@@ -682,12 +750,12 @@ public final class ActivityThread ... {
 
 > 可以通过扩展 AbstractSavedStateViewModelFactory 自定义Factory 。
 
-ComponentActivity中ViewModelProvider.Factory的默认实现。它**实现了状态的保存和恢复相关逻辑**。
+它是ComponentActivity中ViewModelProvider.Factory的默认实现。它**实现了状态的保存和恢复相关逻辑**，默认是通过Bundle来保存和恢复数据。
 
 * 查询ViewModel是否存在包含SavedStateHandle的构造函数。
-* 若存在则通过 savedStateRegistry 构造一个 LegacySavedStateHandleController实例 controller。
-* 将controller.handle(SavedStateHandle)， 传给我们需要构造的ViewModel实例。
-* Component会在 `onSaveInstanceState()` 中调用`controller.performSave()` 保存，在 `onCreate()` 中调用`controller.performRestore()` 恢复。
+* 若存在则通过 savedStateRegistry 构造一个 LegacySavedStateHandleController实例：controller。
+* 将SavedStateHandle类型的 controller.handle 作为参数来创建 ViewModel实例。
+* ComponentActivity会在 `onSaveInstanceState()` 中调用`controller.performSave()` 保存，在 `onCreate()` 中调用`controller.performRestore()` 恢复。
 
 ```kotlin
 class SavedStateViewModelFactory : ViewModelProvider.OnRequeryFactory, ViewModelProvider.Factory {

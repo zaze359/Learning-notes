@@ -95,7 +95,7 @@ NEXUS_PASSWORD="密码"
 
 
 
-#### 如何引用MavenLocal
+### 如何引用MavenLocal
 
 ```groovy
 buildscript {
@@ -105,6 +105,15 @@ buildscript {
         google()
         mavenCentral()
     }
+}
+```
+
+### SNAPSHOT更新问题
+
+```groovy
+configurations.all {
+    resolutionStrategy.cacheChangingModulesFor 1, 'seconds'
+    resolutionStrategy.cacheDynamicVersionsFor 1, 'seconds'
 }
 ```
 

@@ -2,63 +2,83 @@
 
 学习资料：[Android Apk 编译打包流程，了解一下~ - 掘金 (juejin.cn)](https://juejin.cn/post/7113713363900694565)
 
-## 编译打包主要流程
-
 > 编译工具主要位于`sdk/build-tools`下
 
 [配置 build  | Android 开发者  | Android Developers](https://developer.android.com/studio/build?hl=zh-cn)
 
-![img](https://developer.android.com/static/images/tools/studio/build-process_2x.png?hl=zh-cn)
+![img](./Android%E7%BC%96%E8%AF%91%E6%89%93%E5%8C%85%E6%B5%81%E7%A8%8B.assets/build-process_2x.png)
 
-### 编译源代码和资源文件
+## 编译源代码和资源文件
 
-Compiler将源代码转换为DEX文件。其他所有内容转换为编译后的资源。
+* 将项目源代码、三方库(jar, aar) 转换为 DEX文件。
 
-#### 源代码编译
+* 其他所有内容转换为编译后的资源（Complied Resources）。
 
-通过`Java Compiler/Kotlin Compiler`将所有`.java/.kt`文件编译成`.class`文件。
+### 1.编译资源文件
 
-注解处理器(`APT/KAPT`)生成代码也在此时，标记为`CLASS`的注解会在编译class文件时生效，生成对应的java代码和class字节码。
+由`AAPT/AAPT2`编译处理资源文件。`AGP3.0.0`之后默认通过`AAPT2`来编译资源。编译生成**针对Android平台进行过优化的二进制文件**。
 
-#### 资源文件
+资源包括：
 
 * `AndroidManifest.xml`配置文件。
 * `res`目录下的所有资源文件。
 * `assets`目录下的所有文件。
 
-这些资源文件由`AAPT/AAPT2`编译处理。`AGP3.0.0`之后默认通过`AAPT2`来编译资源。编译为针对Android平台进行过优化的二进制文件。
+产物：
 
-#### AIDL 文件
+* `R.java` ：**记录了 资源索引ID**，格式：0xpptteeee ；`PackageId(8位) + TypeId（8位） + EntryId(16位)`
+  * 例如`R.drawable.xxx = 0x7f080057`  
 
-通过`aidl.exe`工具，将项目中的aidl文件编译为java文件
+* `resources.arsc`：资源索引表。**根据资源索引ID查询到对应的文件路径或者具体的数据值**。
+  * 例如 0x7f080057 对应 `./res/drawable/xx.png`
+* `res`：drawable、layout、color等资源目录。
 
-#### 将class打包成DEX
+### 2.编译源代码生成class
 
-使用`D8编译器和R8工具`将class文件转换为Dalvik（ART）所需的dex文件。
+通过编译器（Compiler）将所有`.java/.kt`文件编译成`.class`文件。
 
-* Dx：AGP3.0.1之前使用的编译器，将class打包成DEX。
-* ProGuard：用于代码压缩和混淆的工具。
-* D8：AGP3.0.1之后取代Dx,。速度更快、编译时占用内存更少、生成的Dex文件更小，运行时性能得到提升。
-* R8: AGP3.4.0默认使用R8替代了ProGuard,  同时 把 `desugaring`、`shrinking`、`obfuscating`、`optimizing` 和 `dexing` 都合并到一步进行执行。不再像之前先通过ProGuard压缩混淆，在执行`dexing`、`desugaring`等操作。
+注解处理器(`APT/KAPT`)生成代码也在此时，标记为`CLASS`的注解会在编译class文件时生效，生成对应的java代码和class字节码。
 
-### 生成APK包
+* 将R文件编译成class：aapt2 资源打包是生成。
+* 将AIDL编译成class：通过`aidl.exe`工具，将项目中的aidl文件编译为java文件。
+* 将项目源码编译成class。
+* 使用 dex 命令将 上述 class 和 三方库代码。
 
-> 旧版本为`apkbuilder`，AGP3.6.0后为使用`zipflinger`构建apk
+### 3.将class打包成Dex
 
-Packager将DEX文件和编译后的资源组合成APK或AAB。
+使用 `D8`编译器 和 `R8` 工具将 上述**编译生成的class文件** 和 **三方库的class文件** 转换为虚拟机（5.0前是Dalvik，之后为ART）所需的Dex文件。
 
-* dex
-* manifest
-* resources
-* assets
+* ~~Dx~~：AGP3.0.1之前使用的编译器，将class打包成DEX。
+* **D8**：AGP3.0.1之后取代 Dx。
+  * 速度更快、编译时占用内存更少、生成的Dex文件更小，运行时性能得到提升。
 
-### APK签名
+
+* ~~ProGuard~~：用于代码压缩和混淆的工具。
+* **R8**：AGP3.4.0默认使用R8替代了ProGuard。
+  * 把 `desugaring`、`shrinking`、`obfuscating`、`optimizing` 和 `dexing` 都合并到一步进行执行。不再像之前先通过ProGuard压缩混淆，在执行`dexing`、`desugaring`等操作。
+
+## 打包APK
+
+### 1.生成APK文件
+
+APK Packager将 DEX Files 和 Complied Resources 组合成APK或AAB。
+
+旧版本为`apkbuilder`，AGP3.6.0后为使用`zipflinger` 构建 生成 apk 文件
+
+* Dex文件。
+* aapt 生成的 resources.arsc 和 res文件。
+* manifest。
+* assets 资源。
+
+### 2.对应APK签名
 
 [Android开发应该知道的签名知识！ - 掘金 (juejin.cn)](https://juejin.cn/post/7111116047960244254)
 
-> `jarsigner`：v1签名。JDK提供
->
-> `apksigner`：v2、v3、v4签名。Google专门为Android所提供。
+使用签名工具对 APK 进行签名。
+
+* `jarsigner`：v1签名。JDK提供
+
+* `apksigner`：v2、v3、v4签名。Google专门为Android所提供。
 
 | 签名方式 |                                                              | 存在问题                                                     |
 | -------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
@@ -67,18 +87,16 @@ Packager将DEX文件和编译后的资源组合成APK或AAB。
 | v3       | Android 9.0 引入，基于v2, 解决在更新过程中更改签名密钥的问题 |                                                              |
 | v4       | Android 11.0 引入。支持ADB增量APK安装                        | 验证流程：v4不过 -> v3不过 -> v2不过 -> v1不过 ->失败        |
 
-
-
-### zipalign（对齐处理）
+### 3.字节对齐
 
 Packager会使用`zipalign`工具对应用进行优化，以减少其在设备上运行时所占用的内存。
 
 `zipalign`会对apk中未压缩的数据进行**4字节对齐**。保证APK包中的所有资源文件距离文件起始偏移为4字节的整数倍，方便后续使用`mmap`函数直接读取文件，否则需要显示读取文件。
 
-`zipalign`根据不同的签名方式触发时机不同。
+zipalign 在使用不同的签名方式下 触发时机会不同：
 
-* `jarsigner`，在**签名前**执行对齐。
-* `apksigner`，在**签名后**执行对齐。
+* `jarsigner`：在**签名前**执行对齐。
+* `apksigner`：在**签名后**执行对齐。
 
 
 

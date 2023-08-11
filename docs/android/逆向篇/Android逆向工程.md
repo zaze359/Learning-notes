@@ -66,22 +66,8 @@ adb remount
 
 ----------
 
-## 反编译Apk文件
+## java文件编译和反编译
 
-```shell
-# 编译成 .class字节码
-javac Hello.java
-# 反编译字节码
-javap Hello.class
-javap -verbose Hello.class
-```
-
-
-
-
-
-
-### 1. java文件编译和反编译
 ```java
 public class Hello {
 	public int foo(int a, int b) {
@@ -95,16 +81,21 @@ public class Hello {
 }
 ```
 
-编译成.class文件
+### 编译字节码
 
 ```shell
+# 编译成 .class字节码
 javac Hello.java
+# 指定字符集
+javac -encoding GBK Hello.java
 ```
 
-反编译.class
+### 反编译字节码
 
 ```shell
+# 反编译字节码
 javap Hello.class
+javap -verbose Hello.class
 ```
 
 ```java
@@ -155,7 +146,11 @@ public class Hello {
 }
 ```
 
-### 2. dex文件生成和反汇编
+
+
+## 反编译Apk文件
+
+### 1. dex文件生成和反汇编
 
 .class生产dex文件
 
@@ -181,7 +176,7 @@ java -jar baksmali.jar -x classes.odex -d framework
 java -jar ddx.jar -d ddxut Hello.dex
 ```
 
-### 3. 反编译apk命令
+### 2. 反编译apk命令
 
 加载框架
 
@@ -198,16 +193,6 @@ apktool d <file.apk> -f -o <dir>
 
 apktool d demo.apk -o outdir
 ```
-
-反编译目录说明
-
-|目录|说明|备注|
-|:--|:--|:--|
-|res|资源文件|提示信息往往是关键代码的风向标|
-|res\values\public.xml|索引值|相当于R.java|
-|smali|程序所有的反汇编代码||
-|AndroidManifest.xml|||
-|apktool.yml|||
 
 **smali转dex**
 
@@ -228,25 +213,24 @@ build:该命令用于编译修改好的文件，一般用法为:
 apktool b <dir>
 ```
 
-### 4. 签名
+### 3. 签名
 
-[APK手动签名参考文档](../publish/APK手动签名参考.md)
+[APK手动签名参考文档](./APK手动签名参考.md)
 
 **install-framework**
 
-```
 该命令用于为APKTool安装特定的framework-res.apk文件，以方便进行反编译一些与ROM相互依赖的APK文件。具体情况请看常见问题
-```
 
 **aapt**
 
-```
-/Users/zaze/Library/Android/sdk/build-tools/21.1.1/aapt
+位于 ``/Users/zaze/Library/Android/sdk/build-tools/21.1.1/aapt``
+
+```shell
 aapt l -a xx.apk > demo.txt
 ```
 **AXMLPrinter2**
 
-```
+```shell
 java -jar AXMLPrinter2.jar AndroidManifest.xml > AndroidManifest.txt
 ```
 

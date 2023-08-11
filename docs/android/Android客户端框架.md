@@ -57,13 +57,16 @@ MVP（Model-View-Presenter）是基于MVC演进而来，它将Activity中的Cont
 * Presenter持有View需要注意内存泄露和view为空等问题。
 * 由于View和Presenter间通过接口通信，View的业务逻辑越复杂，则Presenter和View之间的绑定越紧密，此时Presenter的复用程度就降低了。强行复用会导致其他View需要实现很多不需要的接口，则违背接口隔离。
 
-
-
 ### MVVM
 
-MVVM(Model-View-ViewModel) 应该算是基于MVP演化而来，引入了**数据驱动和双向绑定**，将MVP中手动的数据和视图同步改为了自动。使用ViewModel代替了Presenter，并且Model和View通过ViewModel、databinding实现了双向绑定。
+MVVM(Model-View-ViewModel) 应该算是基于MVP演化而来，使用ViewModel代替了Presenter，引入了**数据驱动和**，将MVP中需要 手动进行数据和视图同步的操作，改为了自动。
 
-当View发生变化时会自动反映在ViewModel上，当数据发送变化时也会自动反应在View上。在Android中是通过 ViewModel将View和Model分离，然后通过LiveData、DataBinding等组件将数据和UI进行绑定。
+在Android中，ViewModel将View和Model分离，然后通过LiveData、DataBinding 等组件将 数据 和 UI进行绑定。
+
+* **LiveData（Flow）数据驱动**：Activity 等容器监听 LiveData等组件，当数据发生变化时，基于数据驱动更新UI。
+* **DataBinding（双向绑定）**：当View发生变化时会自动反映到ViewModel 中并修改数据，当数据发送变化时也会自动反应在View上。也就是实现了数据的双向绑定。
+
+MVVM 整体结构：
 
 * **Model**：负责控制数据相关逻辑的操作。这部分没有发生变化。
 * **View**：负责视图显示以及一些视图相关的逻辑。
@@ -73,8 +76,8 @@ MVVM(Model-View-ViewModel) 应该算是基于MVP演化而来，引入了**数据
 
 > 优点：
 
-* Model和View完全分离, 降低了耦合度。
-* MVVM框架使得开发可以专注于数据和视图的交互。
+* MVVM框架将Model和View完全分离, 降低了耦合度。
+* 不必像MVP一样定义交互接口，使用 LiveData等组件 通过数据驱动更新UI，同时这些组件具有生命周期感知能力，不必再处理生命周期问题，使得开发可以专注于数据和视图的交互。
 * ViewModel可以包含多个View的逻辑，实现复用，且View也仅关注自己需要的数据，不会因为ViewModel中其他逻辑而需要实现额外的接口。
 
 > 缺点：
@@ -86,15 +89,14 @@ MVVM(Model-View-ViewModel) 应该算是基于MVP演化而来，引入了**数据
 
 ### MVI
 
-MVI（Model-View-Intent）单向数据流，是一种响应式编程思想。它和MVVM类似，不过更加强调数据的流向和唯一数据源。
+MVI（Model-View-Intent）**单向数据流**，是一种响应式编程思想。它和MVVM类似，不过更加强调数据的流向和唯一数据源。
 
 > 不过具体使用单数据流还是多数据流，官方并没有强制规定。我觉得单数据流过大时可以考虑拆分成多个数据流，只要将数据合理的归类即可。
 
-* **Model**：此处的Model是指UI的所有状态。显示的数据，加载的状态等。用ViewState表示Model。
+* **Model（ViewState）**：此处的Model是指UI的所有状态，包括UI中显示的数据，加载的状态等。
 * **View**：视图。和其他框架没有区别。
-* **Intent**：是指用户操作的事件。用ViewEvent表示Intent。
-
-在Android中使用ViewState表示Model，承载UI的状态。ViewEvent表示Intent，代表用户操作。
+* **Intent（ViewEvent）**：是指用户操作UI 的事件。
+* ViewModel：和 MVVM 中的ViewModel功能一致，将M、V、I关联起来，接收 ViewEvent处理数据，输出 ViewState更新UI。
 
 ![image-20230227194752185](./Android%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%A1%86%E6%9E%B6.assets/image-20230227194752185.png)
 
@@ -116,7 +118,7 @@ MVI（Model-View-Intent）单向数据流，是一种响应式编程思想。它
 
 ### 技术维度划分
 
-> adapter、ui、util等按照技术类型的方式分包。
+> adapter、ui、util 等按照技术类型的方式分包。
 
 由于业务之间没有设定边界，容易导致不同业务间的横向依赖，代码耦合度高。
 
@@ -144,10 +146,14 @@ MVI（Model-View-Intent）单向数据流，是一种响应式编程思想。它
 
 组件间的依赖规则：
 
-* **上层组件依赖下层组件，但是下层组件不能依赖上层组件**。
-* **业务组件之间不应该存在横向依赖**。
+* 上层组件依赖下层组件，但是**下层组件不能依赖上层组件**。
+* 业务组件之间**不应该存在横向依赖**。
 
+### 组件化的优点
 
+* 由于业务员组件间不存在依赖，开发时互不干扰。
+* 组件职责单一且功能内聚，方便单元测试。
+* 组件开发完毕后，可直接使用打包产物，组件可复用。能提高编译速度和开发效率。
 
 ## 项目重构
 
@@ -173,15 +179,13 @@ Android Studio自带的依赖分析工具。可以分析项目中组件、packag
 
 ![image-20230228160338448](./Android%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%A1%86%E6%9E%B6.assets/image-20230228160338448.png)
 
-Dependency Validation 定义规则进行过滤。
+Dependency Validation 自定义规则进行过滤。
 
 1. 首先添加Scopes。
 
    * 可以根据 `Packages`和`Project`两种方式指定匹配规则。packages是按照包名，Project是按照文件路径。
 
    * 选择`inclulde ..`指定包含哪些文件，`exclude ..` 指定排除哪些文件。
-
-     
 
 2. 使用Scopes来定义检测规则。例如截图中是，apps中的代码不能在utils中的代码依赖。
 

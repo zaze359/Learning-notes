@@ -262,7 +262,7 @@ valueAnimator.addUpdateListener(animation -> {
 ```java
 public final class ObjectAnimator extends ValueAnimator {
     public void start() {
-        // 若存在和this相同动画就先去除。
+        // 若存在和this相同的动画就先去除。
         AnimationHandler.getInstance().autoCancelBasedOn(this);
         // ...
         // 直接调用 super，也就是 ValueAnimator.start()
@@ -285,6 +285,16 @@ public final class ObjectAnimator extends ValueAnimator {
 }
 
 public class AnimationHandler {
+    public final static ThreadLocal<AnimationHandler> sAnimatorHandler = new ThreadLocal<>();
+    
+    // AnimationHandler是单例，保存在 TLS中，这也是会导致内存泄露的根本原因。
+    public static AnimationHandler getInstance() {
+        if (sAnimatorHandler.get() == null) {
+            sAnimatorHandler.set(new AnimationHandler());
+        }
+        return sAnimatorHandler.get();
+    }
+
     
     void autoCancelBasedOn(ObjectAnimator objectAnimator) {
         for (int i = mAnimationCallbacks.size() - 1; i >= 0; i--) {
@@ -298,6 +308,24 @@ public class AnimationHandler {
             }
         }
     }
+    
+    // 导致属性动画内存泄露的原因就是注册监听后没有移除监听，处理方式就是需要及时调用 cancel() 来进行反注册
+    public void addAnimationFrameCallback(final AnimationFrameCallback callback, long delay) {
+        if (mAnimationCallbacks.size() == 0) {
+            // 这里向 Choreographer 注册了回调，监听 vsync 帧回调。
+            getProvider().postFrameCallback(mFrameCallback);
+        }
+        if (!mAnimationCallbacks.contains(callback)) {
+            // AnimationHandler 持有了 AnimationFrameCallback，也就是 ValueAnimation 对象
+            // 而 ValueAnimation 又持有View，View持有Activity 从而会导致泄露。
+            mAnimationCallbacks.add(callback);
+        }
+
+        if (delay > 0) {
+            mDelayedCallbackStartTime.put(callback, (SystemClock.uptimeMillis() + delay));
+        }
+    }
+
 }
 ```
 

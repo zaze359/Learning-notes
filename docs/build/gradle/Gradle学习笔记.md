@@ -10,10 +10,11 @@
 >
 > [What is Gradle?](https://docs.gradle.org/current/userguide/what_is_gradle.html)
 
-`Gradle`是一种基于Groovy的一款强大的构建工具。而`Groovy`语言是一种基于jvm的动态DSL。
-所有我们也可以使java、kotin来开发。
+`Gradle`是一种基于 Groovy 的一款强大的自动化构建工具。
 
-|                   |                                                              |                                |
+而`Groovy`语言是一种基于jvm的动态DSL，所有我们也可以使java、kotin来编写 gradle 脚本。
+
+| 文件              |                                                              |                                |
 | ----------------- | ------------------------------------------------------------ | ------------------------------ |
 | gradlew           | 对gradle脚本的封装，执行对于版本的gradle命令                 |                                |
 | gradle-wapper     | 读取gradle配置文件，自动进行下载和配置gradle                 |                                |

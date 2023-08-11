@@ -10,17 +10,17 @@ date: 2020-07-01 17:05
 
 
 
-## 1. C/C++编译环境配置
+## C/C++编译环境配置
 
-### 1.1 Windows安装C编译器
+### Windows安装C编译器
 
 [GCC配置](./GCC配置.md)
 
-### 1.2 安装需要的插件
+### vscode安装需要的插件
 
 - C/C++
 
-### 1.3 项目配置
+### 编译配置
 
 修改``c_cpp_properties.json``，添加一下include目录。
 
@@ -31,7 +31,8 @@ date: 2020-07-01 17:05
             "name": "Win32",
             "includePath": [
                 "${workspaceFolder}/**",
-                "D:/mingw64/include/**"
+                "D:/mingw64/include/**",
+                "${default}"
             ],
             "defines": [
                 "_DEBUG",
@@ -49,6 +50,57 @@ date: 2020-07-01 17:05
 }
 
 ```
+
+处理联合编译，解决 `undefined reference` 错误。
+
+打开`tasks.json`，将`"${file}"` 改为 `"${fileDirname}\\*.cpp"` ，指定当前目录下的所有cpp一起编译。
+
+```json
+{
+    "tasks": [
+        {
+            "type": "cppbuild",
+            "label": "C/C++: g++.exe 生成活动文件",
+            "command": "D:\\mingw64\\bin\\g++.exe",
+            "args": [
+                "-fdiagnostics-color=always",
+                "-g",
+                // "${file}",
+                "${fileDirname}\\*.cpp",
+                "-o",
+                "${fileDirname}\\${fileBasenameNoExtension}.exe",
+            ],
+            "options": {
+                "cwd": "${fileDirname}"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "detail": "调试器生成的任务。"
+        }
+    ],
+    "version": "2.0.0"
+}
+```
+
+### Code Runner 插件配置
+
+若是使用code Runner运行，则也需要联合编译
+
+```json
+{
+    "code-runner.runInTerminal": true,
+    "code-runner.executorMap": {
+        "cpp": "cd $dir && g++ -std=c++14 *.cpp -o $fileNameWithoutExt && .\\$fileNameWithoutExt"
+    },
+}
+```
+
+
 
 
 

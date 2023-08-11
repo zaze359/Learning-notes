@@ -13,14 +13,24 @@
 * 可被共享的对象文件（Shared Object File）：动态库文件，即`x.so`文件。
 
 ```shell
+# linux
 # 查看ELF文件所有信息
 readelf -a <file>
+# ELF 头信息
+readelf -h <file>
 # 查看ELF文件section信息：
 readelf -S <file>
 # 查看ELF文件符号表：
 readelf -s <file>
+# Program Header Table信息
+readelf -l <file>
 # 查看library的依赖
 readelf -d <library> | grep NEEDED
+
+# 查看静态库定义的函数
+readelf -c xx.a 
+# 查看动态库定义的函数
+readelf -A xx.so
 ```
 
 ![img](./ELF%E6%96%87%E4%BB%B6.assets/181d3fed100b9ca11360a03625db5296.png)

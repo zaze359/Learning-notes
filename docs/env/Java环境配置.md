@@ -2,7 +2,11 @@
 
 ## 下载OpenJDK
 
+[OpenJDK](https://openjdk.org/)
+
 [Java Platform, Standard Edition 13 Reference Implementations](https://jdk.java.net/java-se-ri/13)
+
+
 
 ## 环境变量配置
 

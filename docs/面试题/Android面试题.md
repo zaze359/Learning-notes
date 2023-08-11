@@ -13,11 +13,35 @@
 * BroadcastReceiver：广播接收器
 * ContentProvider：内容提供者，共享数据。
 
+
+
+### Activity 间跳转时的生命周期变化？
+
+#### A Activity打开B Activity
+
+对于 A ：
+
+* 若B是全屏 ： `A.onResume` -> `A.onPause()` -> `A.onStop()`；
+* 若B 非全屏： `A.onResume` -> `A.onPause()`；
+
+对于B：`onCreate()` -> `onStart()` -> `onResume()`。
+
+#### B 返回 A
+
+对于B：`B.onPause()` -> `B.onStop()` -> `B.onDestory()`。
+
+对于A：
+
+* 若B是全屏 ：`A.onResart` -> `A.onResume()`；
+* 若B 非全屏：`A.onResume()`；
+
 ### Fragment
 
 相关问题：
 
 * 你在 Fragment 之间传递数据的时候是怎么做的？为什么不用一个全局的静态变量呢？
+
+
 
 ## 启动流程
 
@@ -661,11 +685,19 @@ Looper.myQueue().removeIdleHandler(idler);
 
 ### Handler 内存泄露问题
 
-在Activity 中使用 Handler时，Handler一般时作为匿名内部类使用，此时会持有外部的Activity。
+在Activity 中使用 Handler 时，如果 Handler 作为匿名内部类使用，那么这个Hander就会持有外部类Activity的实例对象。
 
-并且通过 Handler发送消息时 Message 会持有 Handler，Message属于Looper中的MessageQueu，而Looper存储在线程的TLS中的，所以Handler是被线程持有的，无论是主线程还是自定义线程生命周期都比Activity长，也就导致Activity发送了内存泄露。
+而真正导致泄露的原因是因为使用 Handler 发送了消息。
 
+当我们 通过 Handler发送消息时 **Message 会持有 Handler**，Message属于Looper中的MessageQueue，而Looper存储在线程的TLS中的，所以Handler是被线程持有的，无论是主线程还是自定义线程生命周期都比Activity长，也就导致Activity发送了内存泄露。
 
+``Activity -> Handler -> Message -> MessageQueue -> Looper -> TLS``
+
+可以将这个Handler 定义成 静态内部类，若是需要使用外部的Activity，则应用通过弱引用的方式持有Activity。
+
+也可以在 `onDestory()` 时将消息及时的移除来防止内存泄露。
+
+> 注意慎用 `removeCallbacksAndMessages(null)`，它会将所有消息队列中的消息移除。仅当自定义Looper时可以考虑使用。
 
 ## 跨进程通讯
 

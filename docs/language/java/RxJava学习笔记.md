@@ -52,17 +52,18 @@ observeOn() 指定的是之后的操作所在的线程
 
 ## 操作符
 
-|                 |                                                              |
-| --------------- | ------------------------------------------------------------ |
-| map()           | 主要用于转换数据                                             |
-| flatMap()       | 分发成多个新的Observable对象并转换数据，最后合并为一个Observale。**合并后的结果是无序的**。 |
-| concatMap()     | 基本等同flatMap，区别是 concatMap最后的结果是有序的          |
-| filter()        | 过滤数据； true 继续, false 被过滤。                         |
-| merge()         | 合并 : 多输入，单输出                                        |
-| take()          | 指定最多输出几个结果                                         |
-| firstElement()  | 发射第一个元素或者结束                                       |
-| doOnNext()      | 对每次输出做一定对预处理。调试、缓存网络结果等               |
-| doOnSubscribe() | 在订阅时的回调。即使在之前调用observeOn(), 也以 subscribe() 所在线程中为准；若后面有 subscribeOn(), 则变更线程; |
+|                     |                                                              |
+| ------------------- | ------------------------------------------------------------ |
+| map()               | 主要用于转换数据                                             |
+| flatMap()           | 分发成多个新的Observable对象并转换数据，最后合并为一个Observale。**合并后的结果是无序的**。 |
+| concatMap()         | 基本等同flatMap，区别是 concatMap最后的**结果是有序的**。    |
+| filter()            | 过滤数据； true 继续, false 被过滤。                         |
+| merge()             | 合并 : 多输入，单输出                                        |
+| take()              | 指定最多输出几个结果                                         |
+| firstElement()      | 发射第一个元素或者结束                                       |
+| doOnNext()          | 对每次输出做一定对预处理。调试、缓存网络结果等               |
+| doOnSubscribe()     | 在订阅时会被回调。即使在之前调用observeOn(), 也以 subscribe() 所在线程中为准；若后面有 subscribeOn(), 则变更线程; |
+| onErrorResumeNext() | 处理异常，并可以返回一个新的Observable 继续操作。            |
 
 ## 运行机制
 

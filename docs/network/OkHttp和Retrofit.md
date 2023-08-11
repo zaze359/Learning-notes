@@ -177,7 +177,7 @@ internal inner class AsyncCall() : Runnable{
 
 ### 责任链
 
-OkHttp为了避免将请求和多个请求处理逻辑耦合在一起，使用了责任链模式来进行解耦，每种处理需求都抽象成一个拦截器，并且将这些拦截器组合成一条链Chain，这个请求会在这条链上层层传递，直到某个拦截器消费了请求并且不再传递。（和View的事件分发很相似）。
+OkHttp为了避免将网络请求和请求响应的不同处理逻辑耦合在一起，使用了责任链模式来进行解耦，每种处理需求都抽象成一个拦截器，并且将这些拦截器组合成一条链Chain，这个请求会在这条链上层层传递，直到某个拦截器消费了请求并且不再传递。（和View的事件分发很相似）。
 
 我们可以通过添加自定义拦截器来对请求添加自定义的处理逻辑。自定义拦截器是在最上层请求链的最上层，会被优先调用。
 
@@ -268,7 +268,7 @@ Retrofit 基于 OkHttp，是OkHttp的上层封装，方便使用。
 | ----------------- | ---- | ------------------------------------------------------------ | ---------------- |
 | @GET("/xx/{a}/x") | 函数 | 获取资源，对应SELECT。                                       | 幂等、安全。     |
 | @POST("/xx")      | 函数 | 上传新建资源，一般对应INSERT                                 | 非幂等、不安全。 |
-| @PUT("/xx")       | 函数 | 更新资源，对应UPDATE                                         | 幂等、不安全     |
+| @PUT("/xx")       | 函数 | 新建或更新资源，对应UPDATE。一般是全量更新                   | 幂等、不安全     |
 | @DELETE("/xx")    | 函数 | 删除资源，对应DELETE                                         | 幂等、不安全     |
 | -                 |      |                                                              |                  |
 | @Path("a")        | 参数 | 将修饰的参数值填充到URI Path中被`{}`修饰的同名参数。         |                  |
@@ -282,13 +282,42 @@ Retrofit 基于 OkHttp，是OkHttp的上层封装，方便使用。
 | @Part             | 参数 | 和 @Mutipart 结合使用。                                      |                  |
 | @PartMap          | 参数 | 用于多文件上传。                                             |                  |
 
+### 使用方式
+
+#### 创建 Retrofit 实例
+
+```kotlin
+    fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
+        // 通过 Builder 创建 Retrofit实例
+        return Retrofit.Builder()
+            .baseUrl("http://192.168.56.1:8080/") // 默认的 URL
+            .client(okHttpClient) // 设置okhttpClient
+            .addConverterFactory(GsonConverterFactory.create()) // 请求/响应数据解析转换
+            .addCallAdapterFactory(RxJava2CallAdapterFactory.create()) // 添加Rxjava适配器，支持返回RxJava格式
+            .build()
+    }
+```
+
+#### 定义服务接口
+
+```kotlin
+interface RetrofitService {
+    @GET("/api/v1/app/all")
+    fun get(): Call<ResponseBody>
+}
+```
+
+#### 动态代理服务接口
+
+```kotlin
+val service = retrofit.create(RetrofitService::class.java)
+```
 
 
-### Converter
 
-我们可以通过自定义 `Converter.Factory` 来对 请求/响应数据进行转换。
+### 自定义数据转换Converter
 
-转换的是返回的数据类型，例如 ResponseBody 。
+我们可以通过自定义 `Converter.Factory` 来对 请求/响应数据进行转换。转换的是返回数据的类型。
 
 例如常见的 `GsonConverterFactory` 。
 
@@ -332,7 +361,7 @@ public final class GsonConverterFactory extends Converter.Factory {
 
 
 
-### CallAdapter
+### 自定义CallAdapter
 
 Retrofit 提供给我们了一种自定义Call的适配器的方式，就是传入自定义的 `CallAdapter.Factory `，可以将接口返回自定义成我们需要的形式。转换的是返回值的调用形式，默认是 Call。
 
@@ -420,5 +449,195 @@ public final class RxJava2CallAdapterFactory extends CallAdapter.Factory {
         responseType, scheduler, isAsync, isResult, isBody, isFlowable, isSingle, isMaybe, false);
   }
 }
+```
+
+
+
+### 动态代理机制
+
+#### Retrofit.create()
+
+`create()` 函数是使用的 JDK动态代理的方式创建服务接口实例。
+
+这里有一个关键函数 `loadServiceMethod()` ，这个函数会解析接口上的注解并转换成http请求。
+
+```java
+public <T> T create(final Class<T> service) {
+    validateServiceInterface(service);
+    return (T)
+        Proxy.newProxyInstance(
+            service.getClassLoader(),
+            new Class<?>[] {service},
+            new InvocationHandler() {
+              private final Platform platform = Platform.get();
+              private final Object[] emptyArgs = new Object[0];
+
+              @Override
+              public @Nullable Object invoke(Object proxy, Method method, @Nullable Object[] args)
+                  throws Throwable {
+                // If the method is a method from Object then defer to normal invocation.
+                if (method.getDeclaringClass() == Object.class) {
+                  return method.invoke(this, args);
+                }
+                args = args != null ? args : emptyArgs;
+                // 调用 loadServiceMethod 处理并执行方法,default 修饰的接口单独处理。
+                // 
+                return platform.isDefaultMethod(method)
+                    ? platform.invokeDefaultMethod(method, service, proxy, args)
+                    : loadServiceMethod(method).invoke(args);
+              }
+            });
+  }
+
+```
+
+#### Retrofit.loadServiceMethod()
+
+首先会从 缓存中获取，若缓存未命中，则会根据 接口上的注解执行解析，得到一个加工得到的服务方法 ServiceMethod，然后添加到缓存中。
+
+```java
+  ServiceMethod<?> loadServiceMethod(Method method) {
+    // 首先从缓存中获取
+    ServiceMethod<?> result = serviceMethodCache.get(method);
+    if (result != null) return result;
+
+    synchronized (serviceMethodCache) {
+      result = serviceMethodCache.get(method);
+      if (result == null) {
+        // 解析接口注解得到一个 ServiceMethod
+        result = ServiceMethod.parseAnnotations(this, method);
+        serviceMethodCache.put(method, result);
+      }
+    }
+    return result;
+  }
+```
+
+#### ServiceMethod.parseAnnotations()
+
+最终调用的HttpServiceMethod.parseAnnotations()
+
+```java
+static <T> ServiceMethod<T> parseAnnotations(Retrofit retrofit, Method method) {
+    // 解析
+    RequestFactory requestFactory = RequestFactory.parseAnnotations(retrofit, method);
+
+    Type returnType = method.getGenericReturnType();
+    if (Utils.hasUnresolvableType(returnType)) {
+      throw methodError(
+          method,
+          "Method return type must not include a type variable or wildcard: %s",
+          returnType);
+    }
+    if (returnType == void.class) {
+      throw methodError(method, "Service methods cannot return void.");
+    }
+	// HttpServiceMethod
+    return HttpServiceMethod.parseAnnotations(retrofit, method, requestFactory);
+  }
+```
+
+#### HttpServiceMethod.parseAnnotations()
+
+* 创建符合返回类型的 CallAdapter。之前调用`addCallAdapterFactory()` 添加了对应的工厂类来创建。
+* 创建符合响应数据类型的 ResponseConverter。之前调用`addConverterFactory()` 添加了对应的工厂类来创建。
+* 最终会创建一个 `CallAdapted: HttpServiceMethod`，返回给我们。内部持有上面获取到的 CallAdapter、ResponseConverter以及 RequestFactory
+  * 会首先判断是否是 kotlin的挂起函数，挂起函数会特殊处理。
+
+
+```java
+static <ResponseT, ReturnT> HttpServiceMethod<ResponseT, ReturnT> parseAnnotations(
+      Retrofit retrofit, Method method, RequestFactory requestFactory) {
+    boolean isKotlinSuspendFunction = requestFactory.isKotlinSuspendFunction;
+    boolean continuationWantsResponse = false;
+    boolean continuationBodyNullable = false;
+
+    Annotation[] annotations = method.getAnnotations();
+    Type adapterType;
+    if (isKotlinSuspendFunction) {
+      Type[] parameterTypes = method.getGenericParameterTypes();
+      Type responseType =
+          Utils.getParameterLowerBound(
+              0, (ParameterizedType) parameterTypes[parameterTypes.length - 1]);
+      if (getRawType(responseType) == Response.class && responseType instanceof ParameterizedType) {
+        // Unwrap the actual body type from Response<T>.
+        responseType = Utils.getParameterUpperBound(0, (ParameterizedType) responseType);
+        continuationWantsResponse = true;
+      } else {
+        // TODO figure out if type is nullable or not
+        // Metadata metadata = method.getDeclaringClass().getAnnotation(Metadata.class)
+        // Find the entry for method
+        // Determine if return type is nullable or not
+      }
+
+      adapterType = new Utils.ParameterizedTypeImpl(null, Call.class, responseType);
+      annotations = SkipCallbackExecutorImpl.ensurePresent(annotations);
+    } else {
+      adapterType = method.getGenericReturnType();
+    }
+	// 查找 CallAdapter
+    CallAdapter<ResponseT, ReturnT> callAdapter =
+        createCallAdapter(retrofit, method, adapterType, annotations);
+    Type responseType = callAdapter.responseType();
+    if (responseType == okhttp3.Response.class) {
+      throw methodError(
+          method,
+          "'"
+              + getRawType(responseType).getName()
+              + "' is not a valid response body type. Did you mean ResponseBody?");
+    }
+    if (responseType == Response.class) {
+      throw methodError(method, "Response must include generic type (e.g., Response<String>)");
+    }
+    // TODO support Unit for Kotlin?
+    if (requestFactory.httpMethod.equals("HEAD") && !Void.class.equals(responseType)) {
+      throw methodError(method, "HEAD method must use Void as response type.");
+    }
+	// 查找 ResponseConverter
+    Converter<ResponseBody, ResponseT> responseConverter =
+        createResponseConverter(retrofit, method, responseType);
+
+    okhttp3.Call.Factory callFactory = retrofit.callFactory;
+    
+    // 这里判断是否是 kotlin的挂起函数，挂起函数会特殊处理。
+    if (!isKotlinSuspendFunction) {
+      // 非挂起函数，一般都在这。返回一个 CallAdapted。
+      return new CallAdapted<>(requestFactory, callFactory, responseConverter, callAdapter);
+    } else if (continuationWantsResponse) {
+      //noinspection unchecked Kotlin compiler guarantees ReturnT to be Object.
+      return (HttpServiceMethod<ResponseT, ReturnT>)
+          new SuspendForResponse<>(
+              requestFactory,
+              callFactory,
+              responseConverter,
+              (CallAdapter<ResponseT, Call<ResponseT>>) callAdapter);
+    } else {
+      //noinspection unchecked Kotlin compiler guarantees ReturnT to be Object.
+      return (HttpServiceMethod<ResponseT, ReturnT>)
+          new SuspendForBody<>(
+              requestFactory,
+              callFactory,
+              responseConverter,
+              (CallAdapter<ResponseT, Call<ResponseT>>) callAdapter,
+              continuationBodyNullable);
+    }
+  }
+```
+
+#### HttpServiceMethod.invoke()
+
+在上面创建的代理中 最终调用的是 `CallAdapted.invoke()`，具体实现在父类 HttpServiceMethod 中。
+
+* 创建了一个 OkHttpCall
+* 调用 `adapt()`， CallAdapted实现了这个抽象方法，会调用 `callAdapter.adapt(call)` 来决定返回类型。
+
+```java
+  @Override
+  final @Nullable ReturnT invoke(Object[] args) {
+    // 创建了一个 OkHttpCall，这个Call是 Retrofit中的类，并不是okhttp中的。
+    Call<ResponseT> call = new OkHttpCall<>(requestFactory, args, callFactory, responseConverter);
+    // adapt中调用的是  callAdapter.adapt(call)
+    return adapt(call, args);
+  }
 ```
 

@@ -998,9 +998,11 @@ Android提供的 AppCompatActivity 就会通过设置 Factory的方式来统一�
     }
 ```
 
-需要注意，若我们先设置了自定义 Factory后，AppCompatActivity 的Factory 就不生效了。
+需要注意：
 
-若我们后设置 Factory，那么就会报错，我们的就无法使用了。
+* 若我们先设置了自定义 Factory后，AppCompatActivity 的Factory 就不生效了。
+
+* 若我们后设置 Factory，那么就会报错，我们的就无法使用了。
 
 所有我们需要在 onCreate() 之前设置，并且兼容 AppCompatDelegate。方法很简单：
 

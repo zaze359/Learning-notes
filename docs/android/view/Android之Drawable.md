@@ -68,7 +68,7 @@ Drawable 表示一种可以在Canvas上绘制的概念，并不是一个UI控件
 * **DrawableCache**：管理Drawable缓存，实际上保持的是Drawable的状态 ConstantState。
   * 存在两个DrawableCache，一个是管理ColorDrawable，另一个是管理非ColorDrawable的。
 * **ConstantState**：用于管理Drawable的状态，并且可以通过状态来创建Drawable对象。一般情况下同一个资源生成的Drawable对象是共享同一个状态的。
-  * 最常见的子类有 `BitmapState`，内部持有一个Bitmap对象，所有。
+  * 最常见的子类有 `BitmapState`，内部持有一个Bitmap对象。
 
 ```java
 public class ResourcesImpl {
@@ -83,17 +83,16 @@ public class ResourcesImpl {
         // 这里会判断图片资源的density是否和我们当前的densityDpi 匹配
         // 不过我们加载资源是 density传入的是0，表示密度未定义,此时会启动缓存
         final boolean useCache = density == 0 || value.density == mMetrics.densityDpi;
+        // 这里会给 value.density 赋值成 dpi。
         if (density > 0 && value.density > 0 && value.density != TypedValue.DENSITY_NONE) {
             if (value.density == density) { // 和显示密度相同，直接使用 densityDpi
                 value.density = mMetrics.densityDpi;
-            } else { // 不同，此时按比例缩放
+            } else { // 不同，此时将 dpi 按比例缩放
                 value.density = (value.density * mMetrics.densityDpi) / density;
             }
         }
 
         try {
-    
-
             final boolean isColorDrawable;
             final DrawableCache caches;
             final long key;
@@ -176,6 +175,7 @@ public class ResourcesImpl {
         } catch (Exception e) {
             String name;
             try {
+                
                 name = getResourceName(id);
             } catch (NotFoundException e2) {
                 name = "(missing name)";

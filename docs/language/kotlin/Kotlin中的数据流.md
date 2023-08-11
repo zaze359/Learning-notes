@@ -108,7 +108,7 @@ fun main() = runBlocking {
 
   ```kotlin
   /// 支持以下几种方式构建flow
-  flowOf(...) 
+  flowOf(...)
   asFlow() 
   flow { ... } 
   channelFlow { ... } 
@@ -126,14 +126,13 @@ fun main() = runBlocking {
 
 ### StateFlow
 
-> 是可观察的数据容器类
+> 是可观察的数据容器类。
 >
 > 如果需要更新这个状态，可以使用`MutableStateFlow`
 
-* `StateFlow`是热数据流。
-
-* 通过`value`属性读取当前状态数据。。
-* 当新使用方开始从数据流中收集数据时，它将接收信息流中的**最近一个状态及任何后续状态**。
+* `StateFlow`是热数据流。通过`value`属性读取当前状态数据。
+* 它的作用 和 LiveData 类似，返回最后一个状态给订阅方。
+* 当有新的订阅方开始从 StateFlow 中收集数据时，它将接收信息流中的**最近一个状态及任何后续状态**。
 
 > 官方推荐在页面中使用`repeatOnLifecycle(Lifecycle.State.xxx)`来更新界面。
 >

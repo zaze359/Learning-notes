@@ -1,12 +1,16 @@
-## Android热修复
+# Android热修复
 
 
+
+## 基于类加载实现热修复
+
+* 修改 `DexPathList.dexElements` ，将修复文件放在最前面。
+
+## 简易调试流程
 
 ### dex命令位置
 
 ``../Android/sdk/build-tools/xxxx/dx``
-
-
 
 ### 1. 打包jar
 
@@ -27,7 +31,7 @@
 我们把path_dex文件拷贝到assets目录下
 
 
-### 4. 开始打补丁
+### 4. 应用补丁
 
 - 创建一个私有目录，并把补丁包文件写入到该目录下， 模拟下载
 - 合并数组dexElements

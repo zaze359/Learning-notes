@@ -42,7 +42,7 @@ LifecycleActivity onCreate
 LifecycleActivity onStart
 LifecycleActivity onResume
 ```
-**Activity退出**
+**Activity 退出**
 
 > 用户点击返回等操作。
 
@@ -52,7 +52,7 @@ LifecycleActivity onStop
 LifecycleActivity onDestory
 ```
 
-**Activity 或对话框显示在前台**
+**Activity 或 对话框显示在前台**
 
 > 完全遮罩场景。（设备锁屏/解锁也是此场景）
 
@@ -85,9 +85,9 @@ LifecycleActivity onResume
 ```shell
 MainActivity onPause
 # 注意此处：跳转页面是在onPause后启动的，所以在onPause中不能处理耗时操作。
-BitmapActivity onCreate
-BitmapActivity onStart
-BitmapActivity onResume
+SecondActivity onCreate
+SecondActivity onStart
+SecondActivity onResume
 MainActivity onStop
 ```
 **Activity状态丢失的场景**：

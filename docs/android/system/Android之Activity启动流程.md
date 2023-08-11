@@ -5,9 +5,19 @@
 * zygote孵化了应用进程后 调用 `ActivityThread.main()` 来启动应用程序。
 * 在 `main()` 函数中 启动了 `mainLooper` 来接收消息。
 
-* 这些消息中就包括了Activity 的创建消息，接收到这个消息后会调用 `handleLaunchActivity()` ，创建并启动Activity。
+* 这些消息中就包括了Activity 的启动消息，接收到这个消息后会调用 `handleLaunchActivity()` ，创建并启动Activity。
 
 > 最后的【补充】 中会记录一些 主流程之外的 辅助分析的内容。
+
+
+
+| 核心类 |      |      |
+| ------ | ---- | ---- |
+|        |      |      |
+|        |      |      |
+|        |      |      |
+
+
 
 ## 创建Activity
 
@@ -294,7 +304,7 @@
 public class Activity extends ... {
 
     // 实际是一个 PhoneWindow，docorView 就在这里
-    private Window mWindow; 
+    private Window mWindow; `
     
     // 是 WindowManagerImpl，是访问Window的入口。
     private WindowManager mWindowManager;
@@ -612,7 +622,9 @@ public class PhoneWindow extends Window ... {
 这里主要涉及两个关键函数：
 
 * `generateDecor(-1)`：仅创建了 DecorView 实例，并没加载实际的布局。
-* `generateLayout(mDecor)`：在这个函数中 `mDecor` 加载了相应的布局，并返回mContentParent。mContentParent是mDecor内部的其中一个child。
+* `generateLayout(mDecor)`：在这个函数中 `mDecor` 加载自身的布局资源，并返回mContentParent，作为我们UI布局的父容器。
+  * mContentParent是mDecor 布局内部的一个 child，id是 ` ID_ANDROID_CONTENT` `。
+
 
 > [PhoneWindow.java - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/base/core/java/com/android/internal/policy/PhoneWindow.java;drc=7346c436e5a11ce08f6a80dcfeb8ef941ca30176;l=2730)
 
@@ -1101,12 +1113,12 @@ mTraversalRunnable 这个 Runnable中会调用 `doTraversal()`。
         WindowManager.LayoutParams params = null;
 
         Rect frame = mWinFrame;
-        if (mFirst) {
+        if (mFirst) { // 第一次执行
             mFullRedrawNeeded = true;
             mLayoutRequested = true;
             final Configuration config = getConfiguration();
 			// ...
-            // host是DecorView,
+            // host是 DecorView,
             // 在这里将 mAttachInfo 传给了 DecorView，后续就能从这获取到 ViewRootImpl
             // mAttachInfo 中保存了window相关信息，以及viewRootImpl中的Handler。
             host.dispatchAttachedToWindow(mAttachInfo, 0);
@@ -1117,12 +1129,8 @@ mTraversalRunnable 这个 Runnable中会调用 `doTraversal()`。
             desiredWindowHeight = frame.height();
         }
 
-
         // Execute enqueued actions on every traversal in case a detached view enqueued an action
         getRunQueue().executeActions(mAttachInfo.mHandler);
-
-
-
         if (mFirst || windowShouldResize || viewVisibilityChanged || params != null
                 || mForceNextWindowRelayout) {
 

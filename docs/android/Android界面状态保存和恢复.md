@@ -41,7 +41,7 @@ Activity状态丢失的场景主要有以下两个：
 
 ## 如何保存和恢复界面状态？
 
-当Activity 由于一些系统限制（配置变更或内存压力）导致被而销毁时，系统会保存一组描述 Activity 销毁时状态的数据（这些数据称为**实例状态**，是存储在 Bundle 对象中的键值对集合）。
+当Activity 由于一些系统限制（配置变更或内存压力）导致被而销毁时，系统会保存一组描述 Activity 销毁时状态的数据（这些数据称为**实例状态**，是存储在 **Bundle** 对象中的键值对集合）。
 
 用户尝试回退到该 Activity，系统将使用该数据新建Activity，尝试自动恢复到之前的状态。
 
@@ -156,6 +156,14 @@ class MainFragment : Fragment() {
 ```
 
 > 我们可以使用 `SavedStateRegistry` 处理状态数据。`SavedStateHandle`也是基于`SavedStateRegistry`创建的。
+
+## Bundle 数据保存
+
+Android 会在应用进程之外 将 Bundle数据的序列化副本保留在内存中，若使用的是 PersistableBundle，则将保存在磁盘中（不过一般不推荐使用）。
+
+Bundle 对象并不适合保留大量数据，因为它需要在主线程上进行序列化处理并占用系统进程内存。
+
+如需保存大量数据，需要使用其他持久性本地存储方式。
 
 ## 如何测试
 

@@ -795,6 +795,8 @@ fun ClickableSample() {
 }
 ```
 
+### 自定义手势处理
+
 > pointerInput：提供更详细的事件。
 
 ```kotlin

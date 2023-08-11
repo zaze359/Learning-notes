@@ -116,15 +116,6 @@ configurations.all {
 }
 ```
 
-### SNAPSHOT更新问题
-
-```groovy
-configurations.all {
-    resolutionStrategy.cacheChangingModulesFor 1, 'seconds'
-    resolutionStrategy.cacheDynamicVersionsFor 1, 'seconds'
-}
-```
-
 ### 旧版本gradle项目运行直接报错
 
 gradle版本：4.6-all等版本
@@ -248,6 +239,23 @@ sdk.dir=C\:\\Users\\35963\\AppData\\Local\\Android\\Sdk
 # windows中下载的版本在Sdk\ndk 目录下
 ndk.dir=C\:\\Users\\35963\\AppData\\Local\\Android\\Sdk\\ndk\\16.1.4479499
 ```
+
+新版本 Android Studio 配置 ndk版本的方式发生了变化：
+
+直接在 `build.gradle.kts` 中添加 `android.ndkversion`
+
+```kotlin
+android {
+    compileSdk = libs.versions.compileSdk.get().toInt()
+    defaultConfig {
+        minSdk = libs.versions.minSdk.get().toInt()
+    }
+	//
+    ndkVersion = "16.1.4479499"
+}
+```
+
+
 
 
 
@@ -464,7 +472,22 @@ Failed to attach the network LUN (VERR_INTNET_FLT_IF_NOT_FOUND).
 
 ![image-20221010005144902](./FAQ.assets/image-20221010005144902.png)
 
+## C++编译报错 undefined reference
 
+[“undefined reference to“ 解决方法_daijingxin的博客-CSDN博客](https://blog.csdn.net/daijingxin/article/details/117292473#链接的库文件中又使用了另一个库文件)
+
+存在 **c++ 链接 c 编写的a/so库**时出现 `1` 错误，此时头文件处需要添加 `extern "C"`。
+
+```cpp
+extern "C" {
+#include "./bsdiff/bspatch.h"
+#include "./bsdiff/bsdiff.h"
+}
+```
+
+
+
+---
 
 ## 浏览器相关清理
 

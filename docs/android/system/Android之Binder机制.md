@@ -137,15 +137,15 @@ service servicemanager /system/bin/servicemanager
     task_profiles ServiceCapacityLow
     shutdown critical
 ```
-## 三、ServiceManager 中的Binder流程
+## 三、ServiceManager主要流程
 
 ### ServiceManager 程序入口
 
-`main()` 是 ServiceManager 程序入口。
+ServiceManager 的程序入口  `main()` 主要做了以下几件事。
 
 1. 初始化Binder通信环境，打开Binder设备并映射共享内存。
-2. 将自身注册为上下文管理者
-3. 进入无限循环等待接收并处理IPC通信请求
+2. 将自身注册为上下文管理者。
+3. 进入无限循环等待接收并处理IPC通信请求。
 
 > [main.cpp - Android Code Search](https://cs.android.com/android/platform/superproject/+/master:frameworks/native/cmds/servicemanager/main.cpp;l=113;)
 
@@ -459,7 +459,7 @@ sp<Looper> looper = Looper::prepare(false /*allowNonCallbacks*/);
 
 
 
-### 注册BinderCallback
+### 注册 BinderCallback 监听处理消息
 
 #### BinderCallback
 
@@ -619,7 +619,7 @@ int Looper::addFd(int fd, int ident, int events, const sp<LooperCallback>& callb
 
 
 
-### 开启Looper接收并处理消息
+### 开启Looper循环接收消息
 
 这里开启了looper循环，通过 epoll 机制处理消息。
 
@@ -1184,7 +1184,7 @@ status_t IPCThreadState::executeCommand(int32_t cmd)
 }
 ```
 
-### 发送回执
+### 发送Binder消息回执
 
 #### IPCThreadState::sendReply()
 
@@ -1465,7 +1465,7 @@ status_t IPCThreadState::talkWithDriver(bool doReceive)
 
 
 
-## 三、Binder驱动层（选读）
+## 四、Binder驱动层
 
 在上面分析ServiceManager的过程中，我们已经了解到了 binder通讯的整体流程，大致概况为以下
 

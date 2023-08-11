@@ -302,8 +302,6 @@ class ExampleContentProvider : ContentProvider() {
 }
 ```
 
-
-
 ### 获取实例
 
 提供了 `EntryPointAccessors` 来获取入口点。

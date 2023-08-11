@@ -35,6 +35,13 @@
 
 包含应用的一些基础信息，对应项目``AndroidManifest.xml``文件下 ``<application>``标签中的内容
 
+|                    |                                     |      |
+| ------------------ | ----------------------------------- | ---- |
+| sourceDir          | 应用安装后，APK文件在系统中的路径。 |      |
+| resourceDirs       | overlay Package的路径               |      |
+| nativeLibraryDir   | so库路径。                          |      |
+| sharedLibraryFiles | 资源共享库                          |      |
+
 
 
 ## 应用使用情况统计

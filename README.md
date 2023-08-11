@@ -182,9 +182,7 @@
 
 ## 应用发布
 
-[Android打包流程](./docs/android/publish/Android打包流程.md)
 
-[APK手动签名参考](./docs/android/publish/APK手动签名参考.md)
 
 ---
 
@@ -244,8 +242,6 @@
 
 [Android之Binder机制](./docs/android/system/Android之Binder机制.md)
 
-~~[从AIDL开始分析Binder-Java（草稿）](./docs/android/system/从AIDL开始分析Binder.md)~~
-
 [从MediaServer开始分析Binder-Native](./docs/android/system/从MediaServer分析Binder.md)
 
 
@@ -255,6 +251,10 @@
 ---
 
 ## 逆向研究
+
+[Android编译打包流程](./docs/android/逆向篇/Android编译打包流程.md)
+
+[APK手动签名参考](./docs/android/逆向篇/APK手动签名参考.md)
 
 [Android反编译和重编译](./docs/android/逆向篇/Apk反编译和重编译.md)
 

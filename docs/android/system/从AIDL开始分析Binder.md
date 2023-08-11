@@ -1,6 +1,6 @@
 # 从AIDL开始分析Binder
 
-Binder是Android提供的一种进行间通信的框架，它贯穿整个Android系统，但是直接从看Binder相关源代码来理解Binder容易陷入细节且很难抓不住重点。因此我考虑先从上层如何使用Binder开始分析进而理解Binder。
+Binder是Android提供的一种进行间通信的框架，它贯穿整个Android系统，整个流程比较复杂。因此我考虑先从上层如何使用Binder开始分析进而理解Binder。
 
 Android提供了AIDL工具 帮我们快速构建一套基于Binder的跨进程通信架构。我们可以从AIDL生成的java类中来了解Binder的使用方式、基本结构以及关键的函数。
 
@@ -283,7 +283,7 @@ Android设计的Binder架构包括了Java层和Native层两套，它们的实现
 
 ## 分析Client消息是如何发送给Service的
 
-> 此处需要深入到Binder、IBinder、IInterface、ActivityManagerService、ActiveServices等类/接口的源码中来进行分析。
+> 此处需要深入到Binder、IBinder、IInterface、ActivityManagerService等类/接口的源码中来进行分析。
 >
 > 可以在Android Studio中或者[Android Code Search)](https://cs.android.com/)中查看源码
 
@@ -295,15 +295,13 @@ Android设计的Binder架构包括了Java层和Native层两套，它们的实现
 * 然后我们调用``IRemoteService.Stub.asInterface(IBinder)`` 来获取到Proxy。
 * Proxy在构造函数中将传入的IBinder 赋值给mRemote。
 
-所以`mRemote`就是我们 `bindService()`时获取到的`IBinder`实例，因此这个我们需要了解一下 `bindService()`这个过程，
+所以`mRemote`就是我们 `bindService()`时获取的`IBinder`实例，因此这个我们需要了解一下 `bindService()`这个过程，
 
-
-
-
-
-我将部分重要源码摘录在此处，并将阅读源码过程的个人理解以注解的形式附加在源码内。
+> 我将部分重要源码摘录在此处，并将阅读源码过程的个人理解以注解的形式附加在源码内。
 
 ### ContextImpl
+
+Context的实现类，和AMS通讯来启动Service。
 
 ```java
 class ContextImpl extends Context {
@@ -325,8 +323,719 @@ class ContextImpl extends Context {
         return context;
     }
     
+    @Override
+    public boolean bindService(Intent service, ServiceConnection conn, int flags) {
+        warnIfCallingFromSystemProcess();
+        return bindServiceCommon(service, conn, flags, null, mMainThread.getHandler(), null,
+                getUser());
+    }
+    
+    private boolean bindServiceCommon(Intent service, ServiceConnection conn, int flags,
+            String instanceName, Handler handler, Executor executor, UserHandle user) {
+        // 构建一个Binder 接口，作为回调使用。
+        IServiceConnection sd;
+		// 包装一下
+        if (mPackageInfo != null) {
+            if (executor != null) {
+                sd = mPackageInfo.getServiceDispatcher(conn, getOuterContext(), executor, flags);
+            } else {
+                // 默认使用的 handler
+                sd = mPackageInfo.getServiceDispatcher(conn, getOuterContext(), handler, flags);
+            }
+        } else {
+            throw new RuntimeException("Not supported in system context");
+        }
+        validateServiceIntent(service);
+        try {
+            IBinder token = getActivityToken();
+            if (token == null && (flags&BIND_AUTO_CREATE) == 0 && mPackageInfo != null
+                    && mPackageInfo.getApplicationInfo().targetSdkVersion
+                    < android.os.Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
+                flags |= BIND_WAIVE_PRIORITY;
+            }
+            service.prepareToLeaveProcess(this);
+            // 向 AMS 发送 bindService 请求，这是Binder通讯。
+            int res = ActivityManager.getService().bindServiceInstance(
+                    mMainThread.getApplicationThread(), getActivityToken(), service,
+                    service.resolveTypeIfNeeded(getContentResolver()),
+                    sd, flags, instanceName, getOpPackageName(), user.getIdentifier());
+            if (res < 0) {
+                throw new SecurityException(
+                        "Not allowed to bind to service " + service);
+            }
+            return res != 0;
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
 }
 ```
+
+
+
+### ActivityManagerService.java
+
+此时进入到了 AMS 所在的进程。
+
+```java
+public class ActivityManagerService extends IActivityManager.Stub
+        implements Watchdog.Monitor, BatteryStatsImpl.BatteryCallback, ActivityManagerGlobalLock {
+    
+    /**
+     * The list of bind service event listeners.
+     * 绑定服务事件的监听器
+     * AMS中有很多类似结构类型的监听，它们都负责某处理某一类事件，例如还有广播事件监听器BroadcastEventListener
+     */
+    final CopyOnWriteArrayList<BindServiceEventListener> mBindServiceEventListeners =
+            new CopyOnWriteArrayList<>();
+	// 负责 Activity 相关的逻辑
+    public ActivityTaskManagerService mActivityTaskManager;
+    
+    // 负责 Service 相关的逻辑
+    final ActiveServices mServices;
+
+    
+    // AMS中处理Handler消息逻辑都在这个类中
+	final class MainHandler extends Handler {
+        public MainHandler(Looper looper) {
+            super(looper, null, true);
+        }
+
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+            case GC_BACKGROUND_PROCESSES_MSG: {
+                synchronized (ActivityManagerService.this) {
+                    mAppProfiler.performAppGcsIfAppropriateLocked();
+                }
+            } break;
+            case SERVICE_TIMEOUT_MSG: {
+                mServices.serviceTimeout((ProcessRecord) msg.obj);
+            } break;
+            case SERVICE_FOREGROUND_TIMEOUT_MSG: {
+                mServices.serviceForegroundTimeout((ServiceRecord) msg.obj);
+            } break;
+            case SERVICE_FOREGROUND_TIMEOUT_ANR_MSG: {
+                SomeArgs args = (SomeArgs) msg.obj;
+                mServices.serviceForegroundTimeoutANR((ProcessRecord) args.arg1,
+                        (String) args.arg2);
+                args.recycle();
+            } break;
+            case SERVICE_FOREGROUND_CRASH_MSG: {
+                SomeArgs args = (SomeArgs) msg.obj;
+                mServices.serviceForegroundCrash(
+                        (ProcessRecord) args.arg1,
+                        (String) args.arg2,
+                        (ComponentName) args.arg3);
+                args.recycle();
+            } break;
+        }
+    }
+    
+    // 这个类负责添加各种服务的监听器
+    // 包括但不限于BindServiceEvent，
+    public final class LocalService extends ActivityManagerInternal
+            implements ActivityManagerLocal {
+        @Override
+        public void addBindServiceEventListener(@NonNull BindServiceEventListener listener) {
+            // It's a CopyOnWriteArrayList, so no lock is needed.
+            mBindServiceEventListeners.add(listener);
+        }
+    }
+        
+	/**
+     * Binds to a service with a given instanceName, creating it if it does not already exist.
+     * If the instanceName field is not supplied, binding to the service occurs as usual.
+     */
+    public int bindServiceInstance(IApplicationThread caller, IBinder token, Intent service,
+            String resolvedType, IServiceConnection connection, int flags, String instanceName,
+            String callingPackage, int userId) throws TransactionTooLargeException {
+        return bindServiceInstance(caller, token, service, resolvedType, connection, flags,
+                instanceName, false, 0, null, callingPackage, userId);
+    }
+
+    private int bindServiceInstance(IApplicationThread caller, IBinder token, Intent service,
+            String resolvedType, IServiceConnection connection, int flags, String instanceName,
+            boolean isSdkSandboxService, int sdkSandboxClientAppUid,
+            String sdkSandboxClientAppPackage, String callingPackage, int userId)
+            throws TransactionTooLargeException {
+        try {
+            synchronized (this) {
+                // 调用 ActiveServices 来处理 
+                return mServices.bindServiceLocked(caller, token, service, resolvedType, connection,
+                        flags, instanceName, isSdkSandboxService, sdkSandboxClientAppUid,
+                        sdkSandboxClientAppPackage, callingPackage, userId);
+            }
+        } finally {
+        }
+    }
+}
+```
+
+
+
+### ActiveServices.java
+
+Service相关逻辑基本都在这个类中实现，内部缓存了服务信息，并提供了服务绑定、启动、关闭等功能。
+
+```java
+public final class ActiveServices {
+    // 
+    final ActivityManagerService mAm;
+    // 保存主服务，key是uId
+    final SparseArray<ServiceMap> mServiceMap = new SparseArray<>();
+    // 保存所有当前绑定的服务连接。 key是 客户的IServiceConnection的IBinder。
+    final ArrayMap<IBinder, ArrayList<ConnectionRecord>> mServiceConnections = new ArrayMap<>();
+    // 保存需要启动但还未启动的服务的启动请求。等待对应线程启动。
+    final ArrayList<ServiceRecord> mPendingServices = new ArrayList<>();
+    // 保存在崩溃后需要重启的服务
+    final ArrayList<ServiceRecord> mRestartingServices = new ArrayList<>();
+
+	
+    @GuardedBy("mAm")
+    private void notifyBindingServiceEventLocked(ProcessRecord callerApp, String callingPackage) {
+        final ApplicationInfo ai = callerApp.info;
+        final String callerPackage = ai != null ? ai.packageName : callingPackage;
+        // 通过AMS的Handler发送 DISPATCH_BINDING_SERVICE_EVENT 消息。
+        // 发送服务绑定事件
+        if (callerPackage != null) {
+            mAm.mHandler.obtainMessage(ActivityManagerService.DISPATCH_BINDING_SERVICE_EVENT,
+                                       callerApp.uid, 0, callerPackage).sendToTarget();
+        }
+    }
+    
+}
+```
+
+#### bindServiceLocked()
+
+```java
+
+    int bindServiceLocked(IApplicationThread caller, IBinder token, Intent service,
+                      String resolvedType, final IServiceConnection connection, int flags,
+                      String instanceName, boolean isSdkSandboxService, int sdkSandboxClientAppUid,
+                      String sdkSandboxClientAppPackage, String callingPackage, final int userId)
+        throws TransactionTooLargeException {
+
+        final int callingPid = Binder.getCallingPid();
+        final int callingUid = Binder.getCallingUid();
+        // 从AMS中查询 启动方的进程信息：ProcessRecord
+        final ProcessRecord callerApp = mAm.getRecordForAppLOSP(caller);
+        // 用于追踪与AM端的服务的连接，后面流程中会 记录和Activity相连接的服务的 ConnectionRecord
+        ActivityServiceConnectionsHolder<ConnectionRecord> activity = null;
+        if (token != null) {
+            activity = mAm.mAtmInternal.getServiceConnectionsHolder(token);
+            if (activity == null) {
+                Slog.w(TAG, "Binding with unknown activity: " + token);
+                return 0;
+            }
+        }
+
+        ...
+        // 查询服务信息：ServiceLookupResult 中包含了需要启动的服务信息 ServiceRecord，以及调用方的信息callingPackage
+        ServiceLookupResult res = retrieveServiceLocked(service, instanceName, isSdkSandboxService, sdkSandboxClientAppUid, sdkSandboxClientAppPackage, resolvedType, callingPackage, callingPid, callingUid, userId, true, callerFg, isBindExternal, allowInstant);
+        ...
+        // 提取 ServiceRecord
+        ServiceRecord s = res.record;
+        ...
+        // 这里存在一个请求权限的流程，此时暂不启动服务，等权限审核通过后在启动服务。
+        // 内部通过RemoteCallback接收回调，最终还是通过 bringUpServiceLocked()来启动服务。
+        boolean permissionsReviewRequired = !packageFrozen
+                && !requestStartTargetPermissionsReviewIfNeededLocked(s, callingPackage, null,
+                        callingUid, service, callerFg, userId, true, connection);
+        final long origId = Binder.clearCallingIdentity();
+
+        try {
+            // 从 Service 记录信息中 检索出服务和应用的绑定信息，包括了是Service的IBinder。
+            AppBindRecord b = s.retrieveAppBindingLocked(service, callerApp);
+            // 创建连接信息
+            ConnectionRecord c = new ConnectionRecord(b, activity,
+                                                      connection, flags, clientLabel, clientIntent,
+                                                      callerApp.uid, callerApp.processName, callingPackage, res.aliasComponent);
+            // 获取将 IServiceConnection 回调接口转为 IBinder
+            IBinder binder = connection.asBinder();
+            // 往 s:ServiceRecord 中添加 IServiceConnection 和 ConnectionRecord
+            s.addConnection(binder, c);
+            // 往 b:AppBindRecord 中添加 ConnectionRecord
+            b.connections.add(c);
+            if (activity != null) {
+                // 记录和 Activity相关联的服务的 ConnectionRecord
+                activity.addConnection(c);
+            }
+            // 用于记录进程中所有的服务的状态信息
+            final ProcessServiceRecord clientPsr = b.client.mServices;
+            clientPsr.addConnection(c);
+            c.startAssociationIfNeeded();
+            
+			........
+            //
+            if (s.app != null) {
+                updateServiceClientActivitiesLocked(s.app.mServices, c, true);
+            }
+            // 查询 mServiceConnections 中是否已存在此 binder服务对应的连接记录。
+            ArrayList<ConnectionRecord> clist = mServiceConnections.get(binder);
+            if (clist == null) {
+                // 没有则新建一个连接队列 clist，并保存到mServiceConnections中，和binder进行关联
+                clist = new ArrayList<>();
+                mServiceConnections.put(binder, clist);
+            }
+            // 添加 当前的连接信息 保存在binder对应的连接缓存列表中
+            clist.add(c);
+            
+            boolean needOomAdj = false;
+            if ((flags&Context.BIND_AUTO_CREATE) != 0) {
+                s.lastActivity = SystemClock.uptimeMillis();
+                needOomAdj = true;
+                // ***********************************
+            	// 启动服务入口, 调用来此函数来带起服务
+            	// ***********************************
+                if (bringUpServiceLocked(s, service.getFlags(), callerFg, false,
+                                         permissionsReviewRequired, packageFrozen, true) != null) {
+                    mAm.updateOomAdjPendingTargetsLocked(OomAdjuster.OOM_ADJ_REASON_BIND_SERVICE);
+                    return 0;
+                }
+            }
+            setFgsRestrictionLocked(callingPackage, callingPid, callingUid, service, s, userId,
+                                    false);
+
+            if (s.app != null) {
+                ProcessServiceRecord servicePsr = s.app.mServices;
+                if ((flags&Context.BIND_TREAT_LIKE_ACTIVITY) != 0) {
+                    servicePsr.setTreatLikeActivity(true);
+                }
+                if (s.allowlistManager) {
+                    servicePsr.mAllowlistManager = true;
+                }
+                // This could have made the service more important.
+                mAm.updateLruProcessLocked(s.app, (callerApp.hasActivitiesOrRecentTasks()
+                                                   && servicePsr.hasClientActivities())
+                                           || (callerApp.mState.getCurProcState() <= PROCESS_STATE_TOP
+                                               && (flags & Context.BIND_TREAT_LIKE_ACTIVITY) != 0),
+                                           b.client);
+                needOomAdj = true;
+                mAm.enqueueOomAdjTargetLocked(s.app);
+            }
+
+            if (s.app != null && b.intent.received) {
+                // Service is already running, so we can immediately
+                // publish the connection.
+
+                // If what the client try to start/connect was an alias, then we need to
+                // pass the alias component name instead to the client.
+
+				// 服务已经启动了
+                final ComponentName clientSideComponentName =
+                    res.aliasComponent != null ? res.aliasComponent : s.name;
+                try {
+                    // 回调已连接，在这里回调给应用进程 Service的 IBinder
+                    c.conn.connected(clientSideComponentName, b.intent.binder, false);
+                } catch (Exception e) {
+                    Slog.w(TAG, "Failure sending service " + s.shortInstanceName
+                           + " to connection " + c.conn.asBinder()
+                           + " (in " + c.binding.client.processName + ")", e);
+                }
+
+                // If this is the first app connected back to this binding,
+                // and the service had previously asked to be told when
+                // rebound, then do so.
+                if (b.intent.apps.size() == 1 && b.intent.doRebind) {
+                    // 第一个绑定到Service，触发 BindService
+                    requestServiceBindingLocked(s, b.intent, callerFg, true);
+                }
+            } else if (!b.intent.requested) {
+                requestServiceBindingLocked(s, b.intent, callerFg, false);
+            }
+
+            maybeLogBindCrossProfileService(userId, callingPackage, callerApp.info.uid);
+
+            getServiceMapLocked(s.userId).ensureNotStartingBackgroundLocked(s);
+
+        } finally {
+            Binder.restoreCallingIdentity(origId);
+        }
+        // 以阻塞的方式通知 绑定服务事件
+        notifyBindingServiceEventLocked(callerApp, callingPackage);
+
+        return 1;
+    }
+
+```
+
+
+
+
+
+#### bringUpServiceLocked()
+
+* 若服务已经启动过，会通过 `sendServiceArgsLocked()` 触发 `onStartCommand()`。
+* 服务未启动，会判断是否位于独立进程，服务所在进程是否已启动等。
+* 服务进程已启动：调用`realStartServiceLocked()` 开始启动服务。
+* 服务所在进程未启动：调用 `startProcessLocked()` 去通过zygote fork 一个进程。同时将这次服务请求加入到待启动队列中，这些待启动服务会在应用启动的 `attachApplication()` 流程中被触发。最终也是调用的 `realStartServiceLocked()`。
+
+```java
+	// 负责启动服务
+    private String bringUpServiceLocked(ServiceRecord r, int intentFlags, boolean execInFg,
+            boolean whileRestarting, boolean permissionsReviewRequired, boolean packageFrozen,
+            boolean enqueueOomAdj)
+            throws TransactionTooLargeException {
+        // 有关联的进程信息表示 Service 已启动过
+        if (r.app != null && r.app.getThread() != null) {
+            // **************************************************************
+            // 内部会通过IApplicationThread 回调给应用进程
+            // 触发 onStartCommand()
+            // **************************************************************
+            sendServiceArgsLocked(r, execInFg, false);
+            return null;
+        }
+		// Service 未启动过
+        if (!whileRestarting && mRestartingServices.contains(r)) {
+            // If waiting for a restart, then do nothing.
+            // 不是在重启流程中调用，且包含在重启列表中，那么此时直接跳过不处理。
+            return null;
+        }
+
+        // We are now bringing the service up, so no longer in the
+        // restarting state.
+        // 准备启动服务，将重启状态移除
+        if (mRestartingServices.remove(r)) {
+            clearRestartingIfNeededLocked(r);
+        }
+
+        // Make sure this service is no longer considered delayed, we are starting it now.
+        // 从延迟启动列表中移除，并标记为不延迟。
+        if (r.delayed) {
+            if (DEBUG_DELAYED_STARTS) Slog.v(TAG_SERVICE, "REM FR DELAY LIST (bring up): " + r);
+            getServiceMapLocked(r.userId).mDelayedStartList.remove(r);
+            r.delayed = false;
+        }
+
+        // Make sure that the user who owns this service is started.  If not,
+        // we don't want to allow it to run.
+        // 检测服务对应的app已经启动，没启动就不允许继续
+        if (!mAm.mUserController.hasStartedUserState(r.userId)) {
+            String msg = "Unable to launch app "
+                    + r.appInfo.packageName + "/"
+                    + r.appInfo.uid + " for service "
+                    + r.intent.getIntent() + ": user " + r.userId + " is stopped";
+            Slog.w(TAG, msg);
+            bringDownServiceLocked(r, enqueueOomAdj);
+            return msg;
+        }
+
+        // Report usage if binding is from a different package except for explicitly exempted
+        // bindings
+        // 服务所在 packageName 和当前调用启动服务的packageName 不同时上报信息。
+        if (!r.appInfo.packageName.equals(r.mRecentCallingPackage)
+                && !r.isNotAppComponentUsage) {
+            mAm.mUsageStatsService.reportEvent(
+                    r.packageName, r.userId, UsageEvents.Event.APP_COMPONENT_USED);
+        }
+
+        // Service is now being launched, its package can't be stopped.
+        // 准备启动服务，保证所在应用不能被stop
+        try {
+            AppGlobals.getPackageManager().setPackageStoppedState(
+                    r.packageName, false, r.userId);
+        } catch (RemoteException e) {
+        } catch (IllegalArgumentException e) {
+            Slog.w(TAG, "Failed trying to unstop package "
+                    + r.packageName + ": " + e);
+        }
+		
+        // isolated = true 表示Service运行在独立的进程中。
+        final boolean isolated = (r.serviceInfo.flags&ServiceInfo.FLAG_ISOLATED_PROCESS) != 0;
+        final String procName = r.processName;
+        // HostingRecord 描述启动进行需要的各种信息。
+        HostingRecord hostingRecord = new HostingRecord(
+                HostingRecord.HOSTING_TYPE_SERVICE, r.instanceName,
+                r.definingPackageName, r.definingUid, r.serviceInfo.processName);
+        // Service 所在进程的信息
+        ProcessRecord app;
+
+        if (!isolated) {
+            // **************************************************************
+            // Service 非单独进程走此流程
+            // 了解服务启动流程直接看此处即可
+            // **************************************************************
+            app = mAm.getProcessRecordLocked(procName, r.appInfo.uid);
+			// 判断服务所在进程是否已经启动，
+            if (app != null) { // 启动
+                final IApplicationThread thread = app.getThread();
+                final int pid = app.getPid();
+                final UidRecord uidRecord = app.getUidRecord();
+                if (thread != null) {
+                    try {
+                        app.addPackage(r.appInfo.packageName, r.appInfo.longVersionCode,
+                                mAm.mProcessStats);
+                        // **************************************************************
+                        // 真正启动服务的流程
+                        // **************************************************************
+                        realStartServiceLocked(r, app, thread, pid, uidRecord, execInFg,
+                                enqueueOomAdj);
+                        // 启动成功则 流程结束
+                        return null;
+                    } catch (TransactionTooLargeException e) {
+                        throw e;
+                    } catch (RemoteException e) {
+                        Slog.w(TAG, "Exception when starting service " + r.shortInstanceName, e);
+                    }
+
+                    // If a dead object exception was thrown -- fall through to
+                    // restart the application.	
+                }
+            }
+        } else {
+            // If this service runs in an isolated process, then each time
+            // we call startProcessLocked() we will get a new isolated
+            // process, starting another process if we are currently waiting
+            // for a previous process to come up.  To deal with this, we store
+            // in the service any current isolated process it is running in or
+            // waiting to have come up.
+            // Service位于独立进程 走此流程，此处仅对app和hostingRecord进程了赋值。
+            // 服务中已经保存了服务进程的信息。
+            app = r.isolationHostProc;
+            if (WebViewZygote.isMultiprocessEnabled()
+                    && r.serviceInfo.packageName.equals(WebViewZygote.getPackageName())) {
+                hostingRecord = HostingRecord.byWebviewZygote(r.instanceName, r.definingPackageName,
+                        r.definingUid, r.serviceInfo.processName);
+            }
+            if ((r.serviceInfo.flags & ServiceInfo.FLAG_USE_APP_ZYGOTE) != 0) {
+                hostingRecord = HostingRecord.byAppZygote(r.instanceName, r.definingPackageName,
+                        r.definingUid, r.serviceInfo.processName);
+            }
+        }
+        
+        // Not running -- get it started, and enqueue this service record
+        // to be executed when the app comes up.
+        // **************************************************************
+        // 服务所在进程未启动 或者 服务位于独立进程时 走此流程
+        // 会先启动服务所在进程，然后保存启动服务请求到 mPendingServices
+        // **************************************************************
+        if (app == null && !permissionsReviewRequired && !packageFrozen) {
+            // TODO (chriswailes): Change the Zygote policy flags based on if the launch-for-service
+            //  was initiated from a notification tap or not.
+            if (r.isSdkSandbox) {
+                final int uid = Process.toSdkSandboxUid(r.sdkSandboxClientAppUid);
+                app = mAm.startSdkSandboxProcessLocked(procName, r.appInfo, true, intentFlags,
+                        hostingRecord, ZYGOTE_POLICY_FLAG_EMPTY, uid, r.sdkSandboxClientAppPackage);
+                r.isolationHostProc = app;
+            } else {
+                // **************************************************************
+                // 启动服务所在进程
+                // **************************************************************
+                app = mAm.startProcessLocked(procName, r.appInfo, true, intentFlags,
+                        hostingRecord, ZYGOTE_POLICY_FLAG_EMPTY, false, isolated);
+            }
+            if (app == null) {
+                // 启动进程失败。
+                bringDownServiceLocked(r, enqueueOomAdj);
+                return msg;
+            }
+            if (isolated) {
+                r.isolationHostProc = app;
+            }
+        }
+
+        if (r.fgRequired) {
+            mAm.tempAllowlistUidLocked(r.appInfo.uid,
+                    mAm.mConstants.mServiceStartForegroundTimeoutMs, REASON_SERVICE_LAUNCH,
+                    "fg-service-launch",
+                    TEMPORARY_ALLOW_LIST_TYPE_FOREGROUND_SERVICE_ALLOWED,
+                    r.mRecentCallingUid);
+        }
+		// 将此次请求加入到 待启动服务列表中。
+        // 它们会在应用启动的 `attachApplication()` 中被启动。
+        if (!mPendingServices.contains(r)) {
+            mPendingServices.add(r);
+        }
+
+        if (r.delayedStop) {
+            // 服务被标记未关闭
+            // Oh and hey we've already been asked to stop!
+            r.delayedStop = false;
+            if (r.startRequested) {
+                if (DEBUG_DELAYED_STARTS) Slog.v(TAG_SERVICE,
+                        "Applying delayed stop (in bring up): " + r);
+                stopServiceLocked(r, enqueueOomAdj);
+            }
+        }
+
+        return null;
+    }
+```
+
+
+
+#### realStartServiceLocked()
+
+真正创建服务的地方
+
+```java
+	private void realStartServiceLocked(ServiceRecord r, ProcessRecord app,
+            IApplicationThread thread, int pid, UidRecord uidRecord, boolean execInFg,
+            boolean enqueueOomAdj) throws RemoteException {
+        if (thread == null) {
+            throw new RemoteException();
+        }
+
+        r.setProcess(app, thread, pid, uidRecord);
+        r.restartTime = r.lastActivity = SystemClock.uptimeMillis();
+
+        final ProcessServiceRecord psr = app.mServices;
+        // 这个方法并没有实际启动服务，只是通过ProcessServiceRecord来记录该服务被启动。
+        // 并告诉我们这个服务是不是新起的服务。
+        final boolean newService = psr.startService(r);
+        // 将Service的状态提升到 executing
+        bumpServiceExecutingLocked(r, execInFg, "create", null /* oomAdjReason */);
+        mAm.updateLruProcessLocked(app, false, null);
+        updateServiceForegroundLocked(psr, /* oomAdj= */ false);
+        // Force an immediate oomAdjUpdate, so the client app could be in the correct process state
+        // before doing any service related transactions
+        mAm.enqueueOomAdjTargetLocked(app);
+        mAm.updateOomAdjLocked(app, OomAdjuster.OOM_ADJ_REASON_START_SERVICE);
+
+        boolean created = false;
+        try {
+			...
+            
+            final int uid = r.appInfo.uid;
+            final String packageName = r.name.getPackageName();
+            final String serviceName = r.name.getClassName();
+            FrameworkStatsLog.write(FrameworkStatsLog.SERVICE_LAUNCH_REPORTED, uid, packageName,
+                    serviceName);
+            mAm.mBatteryStatsService.noteServiceStartLaunch(uid, packageName, serviceName);
+            // 通知Package使用，会更新package的最后使用时间。
+            mAm.notifyPackageUse(r.serviceInfo.packageName,
+                                 PackageManager.NOTIFY_PACKAGE_USE_SERVICE);
+            // **************************************************************
+            // 安排创建服务，这里触发 onCreate()
+            // 这个thread就是ActivityThread中的ApplicationThread mAppThread.
+            // **************************************************************
+            thread.scheduleCreateService(r, r.serviceInfo,
+                    mAm.compatibilityInfoForPackage(r.serviceInfo.applicationInfo),
+                    app.mState.getReportedProcState());
+            r.postNotification();
+            // 标记为已创建
+            created = true;
+        } catch (DeadObjectException e) {
+            Slog.w(TAG, "Application dead when creating service " + r);
+            mAm.appDiedLocked(app, "Died when creating service");
+            throw e;
+        } finally {
+            if (!created) {
+                // Keep the executeNesting count accurate.
+                final boolean inDestroying = mDestroyingServices.contains(r);
+                // **************************************************************
+                // 触发 onDestroy()
+                // **************************************************************
+                serviceDoneExecutingLocked(r, inDestroying, inDestroying, false);
+
+                // Cleanup.
+                if (newService) {
+                    // 这里并不是真正的关闭服务，而是在psr中记录 该服务被关闭。
+                    psr.stopService(r);
+                    r.setProcess(null, null, 0, null);
+                }
+                // Retry.
+                if (!inDestroying) {
+                    // 计划重启服务
+                    scheduleServiceRestartLocked(r, false);
+                }
+            }
+        }
+
+        if (r.allowlistManager) {
+            psr.mAllowlistManager = true;
+        }
+
+        requestServiceBindingsLocked(r, execInFg);
+
+        updateServiceClientActivitiesLocked(psr, null, true);
+
+        if (newService && created) {
+            psr.addBoundClientUidsOfNewService(r);
+        }
+
+        // If the service is in the started state, and there are no
+        // pending arguments, then fake up one so its onStartCommand() will
+        // be called.
+        
+        // Service已经被启动，并且客户端端没有设置参数，此处伪造了参数，保证onStartCommand()能被调用。
+        if (r.startRequested && r.callStart && r.pendingStarts.size() == 0) {
+            r.pendingStarts.add(new ServiceRecord.StartItem(r, false, r.makeNextStartId(),
+                    null, null, 0));
+        }
+        
+        // **************************************************************
+		// 发送服务参数 触发 onStartCommand()
+        // **************************************************************
+        sendServiceArgsLocked(r, execInFg, true);
+		
+        if (r.delayed) {
+            // 去除延迟启动标记
+            if (DEBUG_DELAYED_STARTS) Slog.v(TAG_SERVICE, "REM FR DELAY LIST (new proc): " + r);
+            getServiceMapLocked(r.userId).mDelayedStartList.remove(r);
+            r.delayed = false;
+        }
+		
+        if (r.delayedStop) {
+            // 发现服务被关闭，去关闭服务
+            // Oh and hey we've already been asked to stop!
+            r.delayedStop = false;
+            if (r.startRequested) {
+                if (DEBUG_DELAYED_STARTS) Slog.v(TAG_SERVICE,
+                        "Applying delayed stop (from start): " + r);
+                stopServiceLocked(r, enqueueOomAdj);
+            }
+        }
+    }
+```
+
+#### requestServiceBindingLocked()
+
+触发 `onBind()`。
+
+```java
+	private final boolean requestServiceBindingLocked(ServiceRecord r, IntentBindRecord i,
+            boolean execInFg, boolean rebind) throws TransactionTooLargeException {
+        if (r.app == null || r.app.getThread() == null) {
+            // If service is not currently running, can't yet bind.
+            return false;
+        }
+        if (DEBUG_SERVICE) Slog.d(TAG_SERVICE, "requestBind " + i + ": requested=" + i.requested
+                + " rebind=" + rebind);
+        if ((!i.requested || rebind) && i.apps.size() > 0) {
+            try {
+                bumpServiceExecutingLocked(r, execInFg, "bind",
+                        OomAdjuster.OOM_ADJ_REASON_BIND_SERVICE);
+                // 触发 onBind()
+                r.app.getThread().scheduleBindService(r, i.intent.getIntent(), rebind,
+                        r.app.mState.getReportedProcState());
+                if (!rebind) {
+                    i.requested = true;
+                }
+                i.hasBound = true;
+                i.doRebind = false;
+            } catch (TransactionTooLargeException e) {
+                // Keep the executeNesting count accurate.
+                if (DEBUG_SERVICE) Slog.v(TAG_SERVICE, "Crashed while binding " + r, e);
+                final boolean inDestroying = mDestroyingServices.contains(r);
+                serviceDoneExecutingLocked(r, inDestroying, inDestroying, false);
+                throw e;
+            } catch (RemoteException e) {
+                if (DEBUG_SERVICE) Slog.v(TAG_SERVICE, "Crashed while binding " + r);
+                // Keep the executeNesting count accurate.
+                final boolean inDestroying = mDestroyingServices.contains(r);
+                serviceDoneExecutingLocked(r, inDestroying, inDestroying, false);
+                return false;
+            }
+        }
+        return true;
+    }
+```
+
+
 
 
 
@@ -400,712 +1109,60 @@ public class BinderInternal {
 }
 ```
 
+### ApplicationThread
 
-
-### ActivityManagerService.java
-
-> 
+它是 ActivityThread的内部类，是一个Binder接口，AMS通过它将消息回调给应用进程。
 
 ```java
-public class ActivityManagerService extends IActivityManager.Stub
-        implements Watchdog.Monitor, BatteryStatsImpl.BatteryCallback, ActivityManagerGlobalLock {
-    
-    /**
-     * The list of bind service event listeners.
-     * 绑定服务事件的监听器
-     * AMS中有很多类似结构类型的监听，它们都负责某处理某一类事件，例如还有广播事件监听器BroadcastEventListener
-     */
-    final CopyOnWriteArrayList<BindServiceEventListener> mBindServiceEventListeners =
-            new CopyOnWriteArrayList<>();
-	
-    public ActivityTaskManagerService mActivityTaskManager;
+private class ApplicationThread extends IApplicationThread.Stub {
+    // AMS 回调创建Service
+    public final void scheduleCreateService(IBinder token,
+                                            ServiceInfo info, CompatibilityInfo compatInfo, int processState) {
+        updateProcessState(processState, false);
+        CreateServiceData s = new CreateServiceData();
+        s.token = token;
+        s.info = info;
+        s.compatInfo = compatInfo;
 
-    
-    // AMS中处理Handler消息逻辑都在这个类中
-	final class MainHandler extends Handler {
-        public MainHandler(Looper looper) {
-            super(looper, null, true);
-        }
-
-        @Override
-        public void handleMessage(Message msg) {
-            switch (msg.what) {
-            case GC_BACKGROUND_PROCESSES_MSG: {
-                synchronized (ActivityManagerService.this) {
-                    mAppProfiler.performAppGcsIfAppropriateLocked();
-                }
-            } break;
-            case SERVICE_TIMEOUT_MSG: {
-                mServices.serviceTimeout((ProcessRecord) msg.obj);
-            } break;
-            case SERVICE_FOREGROUND_TIMEOUT_MSG: {
-                mServices.serviceForegroundTimeout((ServiceRecord) msg.obj);
-            } break;
-            case SERVICE_FOREGROUND_TIMEOUT_ANR_MSG: {
-                SomeArgs args = (SomeArgs) msg.obj;
-                mServices.serviceForegroundTimeoutANR((ProcessRecord) args.arg1,
-                        (String) args.arg2);
-                args.recycle();
-            } break;
-            case SERVICE_FOREGROUND_CRASH_MSG: {
-                SomeArgs args = (SomeArgs) msg.obj;
-                mServices.serviceForegroundCrash(
-                        (ProcessRecord) args.arg1,
-                        (String) args.arg2,
-                        (ComponentName) args.arg3);
-                args.recycle();
-            } break;
-            case UPDATE_TIME_ZONE: {
-                synchronized (mProcLock) {
-                    mProcessList.forEachLruProcessesLOSP(false, app -> {
-                        final IApplicationThread thread = app.getThread();
-                        if (thread != null) {
-                            try {
-                                thread.updateTimeZone();
-                            } catch (RemoteException ex) {
-                                Slog.w(TAG, "Failed to update time zone for: "
-                                        + app.info.processName);
-                            }
-                            }
-                        });
-                    }
-            } break;
-            case CLEAR_DNS_CACHE_MSG: {
-                synchronized (mProcLock) {
-                    mProcessList.clearAllDnsCacheLOSP();
-                }
-            } break;
-            case UPDATE_HTTP_PROXY_MSG: {
-                mProcessList.setAllHttpProxy();
-            } break;
-            case PROC_START_TIMEOUT_MSG: {
-                ProcessRecord app = (ProcessRecord) msg.obj;
-                synchronized (ActivityManagerService.this) {
-                    handleProcessStartOrKillTimeoutLocked(app, /* isKillTimeout */ false);
-                }
-            } break;
-            case CONTENT_PROVIDER_PUBLISH_TIMEOUT_MSG: {
-                ProcessRecord app = (ProcessRecord) msg.obj;
-                synchronized (ActivityManagerService.this) {
-                    mCpHelper.processContentProviderPublishTimedOutLocked(app);
-                }
-            } break;
-            case KILL_APPLICATION_MSG: {
-                synchronized (ActivityManagerService.this) {
-                    final int appId = msg.arg1;
-                    final int userId = msg.arg2;
-                    Bundle bundle = (Bundle) msg.obj;
-                    String pkg = bundle.getString("pkg");
-                    String reason = bundle.getString("reason");
-                    forceStopPackageLocked(pkg, appId, false, false, true, false,
-                            false, userId, reason);
-                }
-            } break;
-
-                case KILL_APP_ZYGOTE_MSG: {
-                    synchronized (ActivityManagerService.this) {
-                        final AppZygote appZygote = (AppZygote) msg.obj;
-                        mProcessList.killAppZygoteIfNeededLocked(appZygote, false /* force */);
-                    }
-                } break;
-            case CHECK_EXCESSIVE_POWER_USE_MSG: {
-                checkExcessivePowerUsage();
-                removeMessages(CHECK_EXCESSIVE_POWER_USE_MSG);
-                Message nmsg = obtainMessage(CHECK_EXCESSIVE_POWER_USE_MSG);
-                sendMessageDelayed(nmsg, mConstants.POWER_CHECK_INTERVAL);
-            } break;
-            case REPORT_MEM_USAGE_MSG: {
-                final ArrayList<ProcessMemInfo> memInfos = (ArrayList<ProcessMemInfo>) msg.obj;
-                Thread thread = new Thread() {
-                    @Override public void run() {
-                        mAppProfiler.reportMemUsage(memInfos);
-                    }
-                };
-                thread.start();
-                break;
-            }
-            case UPDATE_TIME_PREFERENCE_MSG: {
-                // The user's time format preference might have changed.
-                // For convenience we re-use the Intent extra values.
-                synchronized (mProcLock) {
-                    mProcessList.updateAllTimePrefsLOSP(msg.arg1);
-                }
-                break;
-            }
-            case NOTIFY_CLEARTEXT_NETWORK_MSG: {
-                final int uid = msg.arg1;
-                final byte[] firstPacket = (byte[]) msg.obj;
-
-                synchronized (mProcLock) {
-                    synchronized (mPidsSelfLocked) {
-                        for (int i = 0; i < mPidsSelfLocked.size(); i++) {
-                            final ProcessRecord p = mPidsSelfLocked.valueAt(i);
-                            final IApplicationThread thread = p.getThread();
-                            if (p.uid == uid && thread != null) {
-                                try {
-                                    thread.notifyCleartextNetwork(firstPacket);
-                                } catch (RemoteException ignored) {
-                                }
-                            }
-                        }
-                    }
-                }
-            } break;
-            case POST_DUMP_HEAP_NOTIFICATION_MSG: {
-                mAppProfiler.handlePostDumpHeapNotification();
-            } break;
-            case ABORT_DUMPHEAP_MSG: {
-                mAppProfiler.handleAbortDumpHeap((String) msg.obj);
-            } break;
-            case SHUTDOWN_UI_AUTOMATION_CONNECTION_MSG: {
-                IUiAutomationConnection connection = (IUiAutomationConnection) msg.obj;
-                try {
-                    connection.shutdown();
-                } catch (RemoteException e) {
-                    Slog.w(TAG, "Error shutting down UiAutomationConnection");
-                }
-                // Only a UiAutomation can set this flag and now that
-                // it is finished we make sure it is reset to its default.
-                mUserIsMonkey = false;
-            } break;
-            case IDLE_UIDS_MSG: {
-                idleUids();
-            } break;
-            case HANDLE_TRUST_STORAGE_UPDATE_MSG: {
-                synchronized (mProcLock) {
-                    mProcessList.handleAllTrustStorageUpdateLOSP();
-                }
-            } break;
-                case BINDER_HEAVYHITTER_AUTOSAMPLER_TIMEOUT_MSG: {
-                    handleBinderHeavyHitterAutoSamplerTimeOut();
-                } break;
-                case WAIT_FOR_CONTENT_PROVIDER_TIMEOUT_MSG: {
-                    synchronized (ActivityManagerService.this) {
-                        ((ContentProviderRecord) msg.obj).onProviderPublishStatusLocked(false);
-                    }
-                } break;
-                case DISPATCH_SENDING_BROADCAST_EVENT: {
-                    mBroadcastEventListeners.forEach(l ->
-                            l.onSendingBroadcast((String) msg.obj, msg.arg1));
-                } break;
-                case DISPATCH_BINDING_SERVICE_EVENT: {
-                    mBindServiceEventListeners.forEach(l ->
-                            l.onBindingService((String) msg.obj, msg.arg1));
-                } break;
-            }
-        }
+        sendMessage(H.CREATE_SERVICE, s);
     }
-    
-    // 这个类负责添加各种服务的监听器
-    // 包括但不限于BindServiceEvent，
-    public final class LocalService extends ActivityManagerInternal
-            implements ActivityManagerLocal {
-        @Override
-        public void addBindServiceEventListener(@NonNull BindServiceEventListener listener) {
-            // It's a CopyOnWriteArrayList, so no lock is needed.
-            mBindServiceEventListeners.add(listener);
+    // AMS 回调 bind Service
+    public final void scheduleBindService(IBinder token, Intent intent,
+                                          boolean rebind, int processState) {
+        updateProcessState(processState, false);
+        BindServiceData s = new BindServiceData();
+        s.token = token;
+        s.intent = intent;
+        s.rebind = rebind;
+
+        if (DEBUG_SERVICE)
+            Slog.v(TAG, "scheduleBindService token=" + token + " intent=" + intent + " uid="
+                   + Binder.getCallingUid() + " pid=" + Binder.getCallingPid());
+        sendMessage(H.BIND_SERVICE, s);
+    }
+
+    // AMS 回调 服务被触发启动，调用 onStartCommand()
+    public final void scheduleServiceArgs(IBinder token, ParceledListSlice args) {
+        List<ServiceStartArgs> list = args.getList();
+
+        for (int i = 0; i < list.size(); i++) {
+            ServiceStartArgs ssa = list.get(i);
+            ServiceArgsData s = new ServiceArgsData();
+            s.token = token;
+            s.taskRemoved = ssa.taskRemoved;
+            s.startId = ssa.startId;
+            s.flags = ssa.flags;
+            s.args = ssa.args;
+
+            sendMessage(H.SERVICE_ARGS, s);
         }
     }
 }
 ```
 
-### ActiveServices.java
-
-> Service相关逻辑基本都在这个类中实现，内部缓存了服务信息，并提供了服务绑定、启动、关闭等功能I。
-
-```java
-public final class ActiveServices {
-    
-    final ActivityManagerService mAm;
-    // 保存主服务，key是uId
-    final SparseArray<ServiceMap> mServiceMap = new SparseArray<>();
-    // 保存所有当前绑定的服务连接。 key是 客户的IServiceConnection的IBinder。
-    final ArrayMap<IBinder, ArrayList<ConnectionRecord>> mServiceConnections = new ArrayMap<>();
-    // 保存需要启动但还未启动的服务的启动请求。等待对应线程启动。
-    final ArrayList<ServiceRecord> mPendingServices = new ArrayList<>();
-    // 保存在崩溃后需要重启的服务
-    final ArrayList<ServiceRecord> mRestartingServices = new ArrayList<>();
-
-	
-
-    
-    @GuardedBy("mAm")
-    private void notifyBindingServiceEventLocked(ProcessRecord callerApp, String callingPackage) {
-        final ApplicationInfo ai = callerApp.info;
-        final String callerPackage = ai != null ? ai.packageName : callingPackage;
-        // 通过AMS的Handler发送 DISPATCH_BINDING_SERVICE_EVENT 消息。
-        // 发送服务绑定事件
-        if (callerPackage != null) {
-            mAm.mHandler.obtainMessage(ActivityManagerService.DISPATCH_BINDING_SERVICE_EVENT,
-                                       callerApp.uid, 0, callerPackage).sendToTarget();
-        }
-    }
-    
-}
-```
-
-#### bindServiceLocked()
-
-`Context.bindService()` 会调用此函数
-
-```java
-	// Context.bindService() 会调用此函数
-    int bindServiceLocked(IApplicationThread caller, IBinder token, Intent service,
-                      String resolvedType, final IServiceConnection connection, int flags,
-                      String instanceName, boolean isSdkSandboxService, int sdkSandboxClientAppUid,
-                      String sdkSandboxClientAppPackage, String callingPackage, final int userId)
-        throws TransactionTooLargeException {
-
-        final int callingPid = Binder.getCallingPid();
-        final int callingUid = Binder.getCallingUid();
-        // 从AMS中查询 启动方的进程信息：ProcessRecord
-        final ProcessRecord callerApp = mAm.getRecordForAppLOSP(caller);
-        // 用于追踪与AM端的服务的连接，后面流程中会 记录和Activity相连接的服务的 ConnectionRecord
-        ActivityServiceConnectionsHolder<ConnectionRecord> activity = null;
-        if (token != null) {
-            activity = mAm.mAtmInternal.getServiceConnectionsHolder(token);
-            if (activity == null) {
-                Slog.w(TAG, "Binding with unknown activity: " + token);
-                return 0;
-            }
-        }
-
-        ...
-        // 查询服务：ServiceLookupResult中包含了我们需要启动的服务信息ServiceRecord，以及调用方的信息callingPackage
-        ServiceLookupResult res = retrieveServiceLocked(service, instanceName, isSdkSandboxService, sdkSandboxClientAppUid, sdkSandboxClientAppPackage, resolvedType, callingPackage, callingPid, callingUid, userId, true, callerFg, isBindExternal, allowInstant);
-        ...
-        // 提取服务信息
-        ServiceRecord s = res.record;
-        ...
-        // 这里存在一个请求权限的流程，此时暂不启动服务，等权限审核通过后在启动服务。
-        // 内部通过RemoteCallback接收回调，最终还是通过 bringUpServiceLocked()来启动服务。
-        boolean permissionsReviewRequired = !packageFrozen
-                && !requestStartTargetPermissionsReviewIfNeededLocked(s, callingPackage, null,
-                        callingUid, service, callerFg, userId, true, connection);
-        final long origId = Binder.clearCallingIdentity();
-
-        try {
-			// 此处涉及一些服务连接信息的保存，主要作用是建立IBinder的缓存映射。
-            AppBindRecord b = s.retrieveAppBindingLocked(service, callerApp);
-            ConnectionRecord c = new ConnectionRecord(b, activity,
-                                                      connection, flags, clientLabel, clientIntent,
-                                                      callerApp.uid, callerApp.processName, callingPackage, res.aliasComponent);
-            // 获取将服务连接转为IBinder接口，会再 onServiceConnected 中回调给客户端来访问服务
-            IBinder binder = connection.asBinder();
-            // 往ServiceRecord中添加Connection，包括它的IBinder 和  ConnectionRecord
-            s.addConnection(binder, c);
-            // 往AppBindRecord中添加 ConnectionRecord
-            b.connections.add(c);
-            if (activity != null) {
-                // 记录和Activity相连接的服务的 ConnectionRecord
-                activity.addConnection(c);
-            }
-            // 用于记录进程中所有的服务的状态信息
-            final ProcessServiceRecord clientPsr = b.client.mServices;
-            clientPsr.addConnection(c);
-            c.startAssociationIfNeeded();
-            
-			........
-            //
-            if (s.app != null) {
-                updateServiceClientActivitiesLocked(s.app.mServices, c, true);
-            }
-            // 查询 mServiceConnections 中是否已存在此 binder服务对应的连接记录。
-            ArrayList<ConnectionRecord> clist = mServiceConnections.get(binder);
-            if (clist == null) {
-                // 没有则新建一个连接队列 clist，并保存到mServiceConnections中，和binder进行关联
-                clist = new ArrayList<>();
-                mServiceConnections.put(binder, clist);
-            }
-            // 添加 当前的连接信息 保存在binder对应的连接缓存列表中
-            clist.add(c);
-            
-            boolean needOomAdj = false;
-            if ((flags&Context.BIND_AUTO_CREATE) != 0) {
-                s.lastActivity = SystemClock.uptimeMillis();
-                needOomAdj = true;
-                // ***********************************
-            	// 启动服务入口, 调用来此函数来带起服务
-            	// ***********************************
-                if (bringUpServiceLocked(s, service.getFlags(), callerFg, false,
-                                         permissionsReviewRequired, packageFrozen, true) != null) {
-                    mAm.updateOomAdjPendingTargetsLocked(OomAdjuster.OOM_ADJ_REASON_BIND_SERVICE);
-                    return 0;
-                }
-            }
-            setFgsRestrictionLocked(callingPackage, callingPid, callingUid, service, s, userId,
-                                    false);
-
-            if (s.app != null) {
-                ProcessServiceRecord servicePsr = s.app.mServices;
-                if ((flags&Context.BIND_TREAT_LIKE_ACTIVITY) != 0) {
-                    servicePsr.setTreatLikeActivity(true);
-                }
-                if (s.allowlistManager) {
-                    servicePsr.mAllowlistManager = true;
-                }
-                // This could have made the service more important.
-                mAm.updateLruProcessLocked(s.app, (callerApp.hasActivitiesOrRecentTasks()
-                                                   && servicePsr.hasClientActivities())
-                                           || (callerApp.mState.getCurProcState() <= PROCESS_STATE_TOP
-                                               && (flags & Context.BIND_TREAT_LIKE_ACTIVITY) != 0),
-                                           b.client);
-                needOomAdj = true;
-                mAm.enqueueOomAdjTargetLocked(s.app);
-            }
-
-            if (s.app != null && b.intent.received) {
-                // Service is already running, so we can immediately
-                // publish the connection.
-
-                // If what the client try to start/connect was an alias, then we need to
-                // pass the alias component name instead to the client.
-
-				// 服务已经启动了
-                final ComponentName clientSideComponentName =
-                    res.aliasComponent != null ? res.aliasComponent : s.name;
-                try {
-                    // 回调已连接，这个就是回到给我们binder的地方
-                    c.conn.connected(clientSideComponentName, b.intent.binder, false);
-                } catch (Exception e) {
-                    Slog.w(TAG, "Failure sending service " + s.shortInstanceName
-                           + " to connection " + c.conn.asBinder()
-                           + " (in " + c.binding.client.processName + ")", e);
-                }
-
-                // If this is the first app connected back to this binding,
-                // and the service had previously asked to be told when
-                // rebound, then do so.
-                if (b.intent.apps.size() == 1 && b.intent.doRebind) {
-                    //
-                    requestServiceBindingLocked(s, b.intent, callerFg, true);
-                }
-            } else if (!b.intent.requested) {
-                //
-                requestServiceBindingLocked(s, b.intent, callerFg, false);
-            }
-
-            maybeLogBindCrossProfileService(userId, callingPackage, callerApp.info.uid);
-
-            getServiceMapLocked(s.userId).ensureNotStartingBackgroundLocked(s);
-
-        } finally {
-            Binder.restoreCallingIdentity(origId);
-        }
-        // 以阻塞的方式通知 绑定服务事件
-        notifyBindingServiceEventLocked(callerApp, callingPackage);
-
-        return 1;
-    }
-
-```
 
 
 
-
-
-#### bringUpServiceLocked()
-
-处理一些连接服务前的准备工作，然后调用`realStartServiceLocked()` 开始启动服务。
-
-```java
-	// 负责启动服务
-    private String bringUpServiceLocked(ServiceRecord r, int intentFlags, boolean execInFg,
-            boolean whileRestarting, boolean permissionsReviewRequired, boolean packageFrozen,
-            boolean enqueueOomAdj)
-            throws TransactionTooLargeException {
-        if (r.app != null && r.app.getThread() != null) {
-            sendServiceArgsLocked(r, execInFg, false);
-            return null;
-        }
-		
-        if (!whileRestarting && mRestartingServices.contains(r)) {
-            // If waiting for a restart, then do nothing.
-            // 不是在重启流程中调用，且包含在重启列表中，那么此时直接跳过不处理。
-            return null;
-        }
-
-        // We are now bringing the service up, so no longer in the
-        // restarting state.
-        // 准备启动服务，将重启状态移除
-        if (mRestartingServices.remove(r)) {
-            clearRestartingIfNeededLocked(r);
-        }
-
-        // Make sure this service is no longer considered delayed, we are starting it now.
-        // 从延迟启动列表中移除，并标记为不延迟。
-        if (r.delayed) {
-            if (DEBUG_DELAYED_STARTS) Slog.v(TAG_SERVICE, "REM FR DELAY LIST (bring up): " + r);
-            getServiceMapLocked(r.userId).mDelayedStartList.remove(r);
-            r.delayed = false;
-        }
-
-        // Make sure that the user who owns this service is started.  If not,
-        // we don't want to allow it to run.
-        // 保证拥有服务的app已经启动
-        if (!mAm.mUserController.hasStartedUserState(r.userId)) {
-            String msg = "Unable to launch app "
-                    + r.appInfo.packageName + "/"
-                    + r.appInfo.uid + " for service "
-                    + r.intent.getIntent() + ": user " + r.userId + " is stopped";
-            Slog.w(TAG, msg);
-            bringDownServiceLocked(r, enqueueOomAdj);
-            return msg;
-        }
-
-        // Report usage if binding is from a different package except for explicitly exempted
-        // bindings
-        // 服务所在packageName和当前调用启动服务的packageName不同时上报信息。
-        if (!r.appInfo.packageName.equals(r.mRecentCallingPackage)
-                && !r.isNotAppComponentUsage) {
-            mAm.mUsageStatsService.reportEvent(
-                    r.packageName, r.userId, UsageEvents.Event.APP_COMPONENT_USED);
-        }
-
-        // Service is now being launched, its package can't be stopped.
-        // 准备启动服务，保证所在应用不能被stop
-        try {
-            AppGlobals.getPackageManager().setPackageStoppedState(
-                    r.packageName, false, r.userId);
-        } catch (RemoteException e) {
-        } catch (IllegalArgumentException e) {
-            Slog.w(TAG, "Failed trying to unstop package "
-                    + r.packageName + ": " + e);
-        }
-		
-        // isolated = true 表示Service运行在独立的进程中。
-        final boolean isolated = (r.serviceInfo.flags&ServiceInfo.FLAG_ISOLATED_PROCESS) != 0;
-        final String procName = r.processName;
-        // HostingRecord 描述启动进行需要的各种信息。
-        HostingRecord hostingRecord = new HostingRecord(
-                HostingRecord.HOSTING_TYPE_SERVICE, r.instanceName,
-                r.definingPackageName, r.definingUid, r.serviceInfo.processName);
-        // Service所在进程的信息
-        ProcessRecord app;
-
-        if (!isolated) {
-            // ***************
-            // Service 非单独进程走此流程，了解服务启动流程直接看此处即可
-            // ***************
-            app = mAm.getProcessRecordLocked(procName, r.appInfo.uid);
-
-            if (app != null) {
-                final IApplicationThread thread = app.getThread();
-                final int pid = app.getPid();
-                final UidRecord uidRecord = app.getUidRecord();
-                if (thread != null) {
-                    try {
-                        app.addPackage(r.appInfo.packageName, r.appInfo.longVersionCode,
-                                mAm.mProcessStats);
-                        // ***************
-                        // 真正启动服务的地方
-                        // ***************
-                        realStartServiceLocked(r, app, thread, pid, uidRecord, execInFg,
-                                enqueueOomAdj);
-                        // 启动成功则 流程结束
-                        return null;
-                    } catch (TransactionTooLargeException e) {
-                        throw e;
-                    } catch (RemoteException e) {
-                        Slog.w(TAG, "Exception when starting service " + r.shortInstanceName, e);
-                    }
-
-                    // If a dead object exception was thrown -- fall through to
-                    // restart the application.	
-                }
-            }
-        } else {
-            // If this service runs in an isolated process, then each time
-            // we call startProcessLocked() we will get a new isolated
-            // process, starting another process if we are currently waiting
-            // for a previous process to come up.  To deal with this, we store
-            // in the service any current isolated process it is running in or
-            // waiting to have come up.
-            // Service位于独立进程 走此流程，此处仅对app和hostingRecord进程了赋值。
-            // 服务中已经保存了服务进程的信息。
-            app = r.isolationHostProc;
-            if (WebViewZygote.isMultiprocessEnabled()
-                    && r.serviceInfo.packageName.equals(WebViewZygote.getPackageName())) {
-                hostingRecord = HostingRecord.byWebviewZygote(r.instanceName, r.definingPackageName,
-                        r.definingUid, r.serviceInfo.processName);
-            }
-            if ((r.serviceInfo.flags & ServiceInfo.FLAG_USE_APP_ZYGOTE) != 0) {
-                hostingRecord = HostingRecord.byAppZygote(r.instanceName, r.definingPackageName,
-                        r.definingUid, r.serviceInfo.processName);
-            }
-        }
-        
-        // Not running -- get it started, and enqueue this service record
-        // to be executed when the app comes up.
-        // 服务启动失败或者服务位于独立进程时走此流程
-        // 会先启动进程，然后保存启动服务请求到mPendingServices
-        // 
-        if (app == null && !permissionsReviewRequired && !packageFrozen) {
-            // TODO (chriswailes): Change the Zygote policy flags based on if the launch-for-service
-            //  was initiated from a notification tap or not.
-            if (r.isSdkSandbox) {
-                final int uid = Process.toSdkSandboxUid(r.sdkSandboxClientAppUid);
-                app = mAm.startSdkSandboxProcessLocked(procName, r.appInfo, true, intentFlags,
-                        hostingRecord, ZYGOTE_POLICY_FLAG_EMPTY, uid, r.sdkSandboxClientAppPackage);
-                r.isolationHostProc = app;
-            } else {
-                // 启动进程
-                app = mAm.startProcessLocked(procName, r.appInfo, true, intentFlags,
-                        hostingRecord, ZYGOTE_POLICY_FLAG_EMPTY, false, isolated);
-            }
-            if (app == null) {
-                // 启动进程失败。
-                bringDownServiceLocked(r, enqueueOomAdj);
-                return msg;
-            }
-            if (isolated) {
-                r.isolationHostProc = app;
-            }
-        }
-
-        if (r.fgRequired) {
-            mAm.tempAllowlistUidLocked(r.appInfo.uid,
-                    mAm.mConstants.mServiceStartForegroundTimeoutMs, REASON_SERVICE_LAUNCH,
-                    "fg-service-launch",
-                    TEMPORARY_ALLOW_LIST_TYPE_FOREGROUND_SERVICE_ALLOWED,
-                    r.mRecentCallingUid);
-        }
-		// 加入带启动服务列表中。
-        if (!mPendingServices.contains(r)) {
-            mPendingServices.add(r);
-        }
-
-        if (r.delayedStop) {
-            // 服务被标记未关闭
-            // Oh and hey we've already been asked to stop!
-            r.delayedStop = false;
-            if (r.startRequested) {
-                if (DEBUG_DELAYED_STARTS) Slog.v(TAG_SERVICE,
-                        "Applying delayed stop (in bring up): " + r);
-                stopServiceLocked(r, enqueueOomAdj);
-            }
-        }
-
-        return null;
-    }
-```
-
-
-
-#### realStartServiceLocked()
-
-```java
-	private void realStartServiceLocked(ServiceRecord r, ProcessRecord app,
-            IApplicationThread thread, int pid, UidRecord uidRecord, boolean execInFg,
-            boolean enqueueOomAdj) throws RemoteException {
-        if (thread == null) {
-            throw new RemoteException();
-        }
-
-        r.setProcess(app, thread, pid, uidRecord);
-        r.restartTime = r.lastActivity = SystemClock.uptimeMillis();
-
-        final ProcessServiceRecord psr = app.mServices;
-        // 这个方法并没有实际启动服务，只是通过ProcessServiceRecord来记录该服务被启动。
-        // 并告诉我们这个服务是不是新起的服务。
-        final boolean newService = psr.startService(r);
-        // 将Service的状态提升到 executing
-        bumpServiceExecutingLocked(r, execInFg, "create", null /* oomAdjReason */);
-        mAm.updateLruProcessLocked(app, false, null);
-        updateServiceForegroundLocked(psr, /* oomAdj= */ false);
-        // Force an immediate oomAdjUpdate, so the client app could be in the correct process state
-        // before doing any service related transactions
-        mAm.enqueueOomAdjTargetLocked(app);
-        mAm.updateOomAdjLocked(app, OomAdjuster.OOM_ADJ_REASON_START_SERVICE);
-
-        boolean created = false;
-        try {
-			...
-            
-            // 此处为
-            final int uid = r.appInfo.uid;
-            final String packageName = r.name.getPackageName();
-            final String serviceName = r.name.getClassName();
-            FrameworkStatsLog.write(FrameworkStatsLog.SERVICE_LAUNCH_REPORTED, uid, packageName,
-                    serviceName);
-            mAm.mBatteryStatsService.noteServiceStartLaunch(uid, packageName, serviceName);
-            // 通知Package使用，会更新package的最后使用时间。
-            mAm.notifyPackageUse(r.serviceInfo.packageName,
-                                 PackageManager.NOTIFY_PACKAGE_USE_SERVICE);
-            // 安排启动服务
-            // 这个thread就是ActivityThread中的ApplicationThread mAppThread.
-            thread.scheduleCreateService(r, r.serviceInfo,
-                    mAm.compatibilityInfoForPackage(r.serviceInfo.applicationInfo),
-                    app.mState.getReportedProcState());
-            r.postNotification();
-            // 标记为已创建
-            created = true;
-        } catch (DeadObjectException e) {
-            Slog.w(TAG, "Application dead when creating service " + r);
-            mAm.appDiedLocked(app, "Died when creating service");
-            throw e;
-        } finally {
-            if (!created) {
-                // Keep the executeNesting count accurate.
-                final boolean inDestroying = mDestroyingServices.contains(r);
-                serviceDoneExecutingLocked(r, inDestroying, inDestroying, false);
-
-                // Cleanup.
-                if (newService) {
-                    // 这里并不是真正的关闭服务，而是在psr中记录 该服务被关闭。
-                    psr.stopService(r);
-                    r.setProcess(null, null, 0, null);
-                }
-                // Retry.
-                if (!inDestroying) {
-                    // 计划重启服务
-                    scheduleServiceRestartLocked(r, false);
-                }
-            }
-        }
-
-        if (r.allowlistManager) {
-            psr.mAllowlistManager = true;
-        }
-
-        requestServiceBindingsLocked(r, execInFg);
-
-        updateServiceClientActivitiesLocked(psr, null, true);
-
-        if (newService && created) {
-            psr.addBoundClientUidsOfNewService(r);
-        }
-
-        // If the service is in the started state, and there are no
-        // pending arguments, then fake up one so its onStartCommand() will
-        // be called.
-        // Service已经被启动，并且客户端端没有设置参数，此处伪造了参数，保证onStartCommand()能被调用。
-        if (r.startRequested && r.callStart && r.pendingStarts.size() == 0) {
-            r.pendingStarts.add(new ServiceRecord.StartItem(r, false, r.makeNextStartId(),
-                    null, null, 0));
-        }
-		// 发送服务参数
-        sendServiceArgsLocked(r, execInFg, true);
-		
-        if (r.delayed) {
-            // 去除延迟启动标记
-            if (DEBUG_DELAYED_STARTS) Slog.v(TAG_SERVICE, "REM FR DELAY LIST (new proc): " + r);
-            getServiceMapLocked(r.userId).mDelayedStartList.remove(r);
-            r.delayed = false;
-        }
-		
-        if (r.delayedStop) {
-            // 发现服务被关闭，去关闭服务
-            // Oh and hey we've already been asked to stop!
-            r.delayedStop = false;
-            if (r.startRequested) {
-                if (DEBUG_DELAYED_STARTS) Slog.v(TAG_SERVICE,
-                        "Applying delayed stop (from start): " + r);
-                stopServiceLocked(r, enqueueOomAdj);
-            }
-        }
-    }
-```
 
 ### ActivityThread.java
 
@@ -1154,33 +1211,6 @@ public final class ActivityThread extends ClientTransactionHandler
                     break;
 				....
             }
-        }
-    }
-
-    private class ApplicationThread extends IApplicationThread.Stub {
-         public final void scheduleCreateService(IBinder token,
-                ServiceInfo info, CompatibilityInfo compatInfo, int processState) {
-            updateProcessState(processState, false);
-            CreateServiceData s = new CreateServiceData();
-            s.token = token;
-            s.info = info;
-            s.compatInfo = compatInfo;
-			
-            sendMessage(H.CREATE_SERVICE, s);
-        }
-
-        public final void scheduleBindService(IBinder token, Intent intent,
-                boolean rebind, int processState) {
-            updateProcessState(processState, false);
-            BindServiceData s = new BindServiceData();
-            s.token = token;
-            s.intent = intent;
-            s.rebind = rebind;
-
-            if (DEBUG_SERVICE)
-                Slog.v(TAG, "scheduleBindService token=" + token + " intent=" + intent + " uid="
-                        + Binder.getCallingUid() + " pid=" + Binder.getCallingPid());
-            sendMessage(H.BIND_SERVICE, s);
         }
     }
     
@@ -1332,6 +1362,8 @@ private void handleCreateService(CreateServiceData data) {
 
 #### handleBindService()
 
+这里调用 `onBind()`。
+
 ```java
 	private void handleBindService(BindServiceData data) {
         CreateServiceData createData = mServicesData.get(data.token);
@@ -1345,10 +1377,13 @@ private void handleCreateService(CreateServiceData data) {
                         s.getAttributionSource());
                 try {
                     if (!data.rebind) {
+                        // 调用 onBind
                         IBinder binder = s.onBind(data.intent);
+                        //
                         ActivityManager.getService().publishService(
                                 data.token, data.intent, binder);
                     } else {
+                        // 调用 onRebind
                         s.onRebind(data.intent);
                         ActivityManager.getService().serviceDoneExecuting(
                                 data.token, SERVICE_DONE_EXECUTING_ANON, 0, 0);
@@ -1369,8 +1404,47 @@ private void handleCreateService(CreateServiceData data) {
 
 
 
-```java
+#### handleServiceArgs()
 
+这里触发 `onStartCommand()` 。
+
+```java
+	private void handleServiceArgs(ServiceArgsData data) {
+        CreateServiceData createData = mServicesData.get(data.token);
+        Service s = mServices.get(data.token);
+        if (s != null) {
+            try {
+                if (data.args != null) {
+                    data.args.setExtrasClassLoader(s.getClassLoader());
+                    data.args.prepareToEnterProcess(isProtectedComponent(createData.info),
+                            s.getAttributionSource());
+                }
+                int res;
+                if (!data.taskRemoved) {
+                    // 调用 onStartCommand
+                    res = s.onStartCommand(data.args, data.flags, data.startId);
+                } else {
+                    s.onTaskRemoved(data.args);
+                    res = Service.START_TASK_REMOVED_COMPLETE;
+                }
+
+                QueuedWork.waitToFinish();
+				// 回调给 AMS
+                try {
+                    ActivityManager.getService().serviceDoneExecuting(
+                            data.token, SERVICE_DONE_EXECUTING_START, data.startId, res);
+                } catch (RemoteException e) {
+                    throw e.rethrowFromSystemServer();
+                }
+            } catch (Exception e) {
+                if (!mInstrumentation.onException(s, e)) {
+                    throw new RuntimeException(
+                            "Unable to start service " + s
+                            + " with " + data.args + ": " + e.toString(), e);
+                }
+            }
+        }
+    }
 ```
 
 

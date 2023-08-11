@@ -492,7 +492,7 @@ on zygote-start && property:...
 
 ---
 
-## zygote进程
+## zygote 进程
 
 > zygote的启动流程的代码比较多，从native层一路到 java层。
 
@@ -938,16 +938,18 @@ public class ZygoteInit {
 
 ---
 
-## 孵化system_server进程
+## system_server 进程
 
-system_server 是zygote 孵化的第一个进程，内部启动很多重要的系统服务（zygote将除了孵化进程之外的功能基本都交给了 system_server 来处理）。
+system_server **是zygote 孵化的第一个进程**，内部启动很多重要的系统服务（zygote将除了孵化进程之外的功能基本都交给了 system_server 来处理），包括 ActivityManagerService、WindowManagerService、PackageManagerService、DisplayManager Service等等。
 
-首先来看一下 system_server 是如何被fork出来的。
+首先来看一下 system_server 是如何被 zygote fork 出来的。
 
 ### forkSystemServer()
 
 * 硬编码了system_server启动的参数，比较关键的是定义了启动类名`com.android.server.SystemServer`。
 * 在fork 之前停止了所有其他线程，保证变成单线程。
+  * **fork机制仅会拷贝当前线程，并不支持多线程**，zygote会将这些线程管理起来，在fork前将所有线程停止，fork完后再重新启动线程。
+
 * 最终会调用 `nativeForkSystemServer()` 这个native函数来创建 system_server 进程。
 
 > [ZygoteInit.java - forkSystemServer()](https://cs.android.com/android/platform/superproject/+/master:frameworks/base/core/java/com/android/internal/os/ZygoteInit.java;drc=5ca657189aac546af0aafaba11bbc9c5d889eab3;l=693)
@@ -1008,6 +1010,7 @@ private static Runnable forkSystemServer(String abiList, String socketName,
     return null;
 }
 
+ // 先停止所有线程，fock完后再重新启动线程
  static int forkSystemServer(int uid, int gid, int[] gids, int runtimeFlags,
             int[][] rlimits, long permittedCapabilities, long effectiveCapabilities) {
      	// 内部stop了所有 DAEMONS 线程
@@ -1972,7 +1975,7 @@ private void attach(boolean system, long startSeq) {
 
 
 
-## 孵化应用进程
+## App 进程
 
 关于应用进程孵化的详细流程，我会在 [Android 应用启动流程](./Android应用启动流程.md) 一文中来梳理。
 

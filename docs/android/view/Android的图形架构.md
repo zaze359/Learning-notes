@@ -226,7 +226,7 @@ Android 4.1 (Jelly Bean) 开始为了优化性能处理丢帧问题，启动了 
 大致可以概况为两个大的步骤：
 
 * **页面视图框架的搭建**：主要是处理一个页面中的层级关系，将职责划分开。此时不涉及到渲染。
-* **页面的绘制渲染**：页面的框架搭好后就是 页面的绘制渲染。
+* **渲染和上屏**：页面的框架搭好后就是 页面的绘制渲染以及上屏。
 
 ### 页面视图框架的搭建
 
@@ -247,7 +247,7 @@ Android 4.1 (Jelly Bean) 开始为了优化性能处理丢帧问题，启动了 
 | SurfaceFlinger |              | 控制窗口的合成，将需要显示的多个Window合并成一个，然后发送给屏幕。 |
 | WindowManager  |              |                                                              |
 
-### 页面的绘制渲染
+## 渲染整体架构
 
 [图形  | Android 开源项目  | Android Open Source Project](https://source.android.com/docs/core/graphics?hl=zh-cn)
 
@@ -257,21 +257,22 @@ Android 4.1 (Jelly Bean) 开始为了优化性能处理丢帧问题，启动了 
 
 
 
-这个图将中包括 五个组成部分：
+这个图将中包括 以下几个组成部分：
 
-* Image Stream Producers：图像流生产方。可以是生成图形缓冲区以供消耗的任何内容。
+* **Image Stream Producers**：图像流生产者。可以是生成图形缓冲区以供消耗的任何内容。
+  * 最常见的就是应用端，实质是 surface，最终传递给 framework 的 RenderThread 线程来渲染。
 
-  可以是 `OpenGL ES`、`Canvas 2D` 、`mediaserver` 视频解码器等。
+  * 其他还有 `OpenGL ES`、`Canvas 2D` 、`mediaserver` 视频解码器等。
 
-* Image Stream Consumers：图像流消耗方。最常见消耗方是 `SurfaceFlinger`。
+* **Image Stream Consumers**：图像流消费者。
+  * 最常见消费方是 `SurfaceFlinger`，它从BufferQueue中获取图像流数据，使用OpenGL 和 Hardware Composer 来合成 Surface，接着交给HAL。
 
-  OpenGL ES 应用也可以消耗图像流，例如相机应用会消耗相机预览图像流。非 GL 应用也可以是使用方，例如 `ImageReader` 类。
+  * OpenGL ES 应用也可以消耗图像流，例如相机应用会消耗相机预览图像流。非 GL 应用也可以是使用方，例如 `ImageReader` 类。
 
-* Window Positioning：
+* **Window Positioning**：
 
-* Native Framework：
-
-* HAL：硬件混合渲染器。
+* **Native Framework** ：`RenderThread` 获取surface 的 buffer，通过 OpenGL 渲染后重新把缓冲区放回 BufferQueue。
+* **HAL**：硬件混合渲染器。将最终图像交给屏幕显示。
 
 
 
@@ -289,6 +290,8 @@ UI线程会逐帧执行布局并渲染到缓冲区。
 
 缓冲队列 `BufferQueue`  连接了 图形数据的成产者 和 图形数据的消费者。
 
+缓存区的特点：
+
 * BufferQueue 永远不会复制数据，而是通过句柄进行传递。
 
 * 首次从 BufferQueue 请求某个缓冲区时，该缓冲区将被分配并初始化为零。必须进行初始化，以避免意外地在进程之间共享数据。
@@ -301,10 +304,10 @@ Google提供一张BufferQueue的通信过程图：
 
 
 
-* 生成方调用`dequeueBuffer()` 从 BufferQueue 中获取一个可用的缓冲区。。
-* 生成方向缓冲区绘制数据，绘制完毕后调用`queueBuffer()`使缓冲区入队。
-* 使用方通过 `acquireBuffer()` 从 BufferQueue 中获取到该缓冲区，并使用缓冲区数据进行合成处理。
-* 使用方使用完毕后，通过调用 `releaseBuffer()` 将该缓冲区放回队列。
+* 生成者调用`dequeueBuffer()` 从 BufferQueue 中获取一个可用的缓冲区。
+* 生成者向缓冲区绘制数据，绘制完毕后调用`queueBuffer()`使缓冲区入队。
+* 消费者通过 `acquireBuffer()` 从 BufferQueue 中获取到该缓冲区，并使用缓冲区数据进行合成处理。
+* 消费者使用完毕后，通过调用 `releaseBuffer()` 将该缓冲区放回队列。
 
 ### Gralloc 内存分配器
 
@@ -619,7 +622,14 @@ Surface中不同的layer定义：
 
 反射修正系统的 density 值
 
+## mipmap和drawable的区别
 
+> mipmap 适合 应用图标，而drawable适合存放应用的图片资源（.9、png、gif、xml等等）
+
+两者在正常情况下表现形式是一致的，仅在使用了 `Bundle(.aab)` 才会有明显的差别，Bundle会按需下载drawable：
+
+* apk中drawable仅加载符合当前像素密度文件，而mipmap会全部保留。
+* 缩放差异：drawable用于是同一张图进行缩放，mipmap则会找比分辨率大且最接近的那张来进行缩放。
 
 
 

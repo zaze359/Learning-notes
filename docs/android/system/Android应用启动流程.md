@@ -2,6 +2,19 @@
 
 当我们在Launcher中点击一个应用图标时，Launcher实际是调用了`startActivity()` 来启动应用。所以我们就从这个函数开始分析一个应用是如何被启动的。
 
+| 核心类                         |                                                              |
+| ------------------------------ | ------------------------------------------------------------ |
+| ActivityThread                 | 应用程序的启动入口；在主线程中初始化消息机制。               |
+| ApplicationThread              | 是应用方定义的一个Binder接口，**是AMS、ATMS和应用进程通讯的回调接口**，代表的是应用方。ApplicationThread 收到回调后会生成 Handler消息，发送给 ActivityThread 来处理。 |
+| ActivityManager                | 是一个辅助类，提供 **应用进程和AMS进行Binder通讯**功能。内部持有AMS的BinderPrxy |
+| **ActivityManagerService**     | 是一个核心服务位于SystemServer进程中，和应用进程间使用Binder进行通讯，负责管理Activity、Service等，后续 Activity相关的逻辑移到了 ActivityTaskManagerService中处理。 |
+| ActivityTaskManager            | 是一个辅助类，提供 **应用进程和ATMS进行Binder通讯**功能。内部持有ATMS的BinderProxy |
+| **ActivityTaskManagerService** | 是Android 10新增加的系统服务类，位于SystemServer进程中，承接了ActivityManagerService的部分功能（Activity、Task）；应用进程持有Proxy 向ATMS发送消息，ATMS进程实现Stub，负责处理Binder请求。例如内部通过 `startActivityAsUser()` 启动Activity。 |
+|                                |                                                              |
+| Instrumentation                | 负责Activity、Application生命周期相关的函数调用; 每个应用进程仅有一个Instrumentation，ActivityThread 也是通过它来创建Activity 的 |
+
+
+
 ## 1. 发起应用启动请求
 
 我绘制了一张 发起应用启动请求的时序图，先放在前面：
@@ -42,7 +55,7 @@ public void startActivityForResult(@RequiresPermission Intent intent, int reques
 
 ### Instrumentation.execStartActivity()
 
-> Instrumentation 可以监控应用与系统交互。
+> Instrumentation 可以监控应用，负责Activity、Application生命周期相关的函数调用
 
 `Instrumentation.execStartActivity()` 会向ATMS 发起 Binder调用，请求启动Activity。
 
@@ -1171,7 +1184,7 @@ class Process {
 
 #### startViaZygote()
 
-这里主要就是创建并填充了指令参数 argsForZygote，然后调用 `zygoteSendArgsAndGetResult()` 获取进程启动结果。
+这里主要就是创建并填充了指令参数 `argsForZygote`，然后调用 `zygoteSendArgsAndGetResult()` 获取进程启动结果。
 
 和 zygote fork system_server时硬编码的启动参数格式类似。
 
@@ -1754,6 +1767,7 @@ private void attach(boolean system, long startSeq) {
         final IActivityManager mgr = ActivityManager.getService();
         try {
             // 将 ApplicationThread 和 AMS绑定。
+            // 这里还会将一些 待启动的服务启动。
             mgr.attachApplication(mAppThread, startSeq);
         } catch (RemoteException ex) {
             throw ex.rethrowFromSystemServer();

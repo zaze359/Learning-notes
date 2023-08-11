@@ -217,7 +217,7 @@ JVM 内存结构主要包括:
   ```
   - FullGC是否过于频繁。最大持续时间。
   - MinorGC持续时间、次数
-  - GC停顿（Stop-The-World）太长，例如超过1秒。
+  - GC停顿（Stop The World）太长，例如超过1秒。
   ```
 
 排查流程：
@@ -339,7 +339,7 @@ threadA.start();
 
 **Daemon线程**：
 
-需要 通过 `thread.setDaemon(true)` 将线程设置为 守护线程。
+需要 通过 `thread.setDaemon(true)` 将线程设置为 守护线程。用于实现一些和主流程无关，但是比较重要任务。
 
 ```java
 Thread threadA = new Thread(new Runnable(){...});
@@ -350,11 +350,11 @@ threadA.start();
 // 可以通过 threadA.isDaemon()判断。
 ```
 
-**User线程 和 Daemon线程的差异**：
+**User 线程 和 Daemon 线程的差异**：
 
-* 当JVM中所有的User线程退出后，所有的Daemon线程也会马上退出执行，并且JVM进程也会退出。
-  * JVM进程退出的条件是：不存在User线程。所以即使还存在守护线程，但是没有User线程时虚拟机也依然会直接退出。
-  * main函数所在线程的退出，不影响其他User线程的运行，也不影响JVM进程是否退出。
+当JVM中所有的User线程退出后，所有的Daemon线程也会马上退出执行，并且JVM进程也会退出。
+* JVM进程退出的条件是：不存在User线程。所以即使还存在守护线程，但是没有User线程时虚拟机也依然会直接退出。
+* main函数所在线程的退出，不影响其他User线程的运行，也不影响JVM进程是否退出。
 
 
 
