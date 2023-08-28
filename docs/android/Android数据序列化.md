@@ -15,9 +15,7 @@ Java自带的序列化接口，使用简单但是性能较差。可以将对象�
 * `@Transient`注解修饰的成员变量也不会被序列化。反序列化时获取到null。
 * Serializable 的反序列化默认不会执行构造函数。当静态变量仅在构造函数中赋值时，可能发生问题。
 
-
-
-它可以通过 ObjectOutputStream 来实现序列化，通过 ObjectInputStream来实现反序列化：
+它可以通过 `ObjectOutputStream` 来实现序列化，通过 `ObjectInputStream` 来实现反序列化：
 
 ```java
 private void writeFieldValues(Object obj, ObjectStreamClass classDesc)  {

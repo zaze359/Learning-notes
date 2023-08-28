@@ -82,7 +82,7 @@ NEXUS_PASSWORD="密码"
 > * debug：对应 SNAPSHOT 版本。
 > * release：对应正式版本。
 >
-> 需要注意的是 上传的 release编译产物时，需要注意 中不能存在debug版本依赖库，否则无法上传。
+> 需要注意的是 上传release编译产物时，模块自身不能存在debug版本依赖库，否则无法上传。
 
 ```shell
 # 将 debug 产物，上传到 MavenLocal

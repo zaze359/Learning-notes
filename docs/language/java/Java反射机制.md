@@ -164,6 +164,61 @@ public class TestJava {
 
 ```
 
+### 泛型处理
+
+|                       |                                            |                            |
+| --------------------- | ------------------------------------------ | -------------------------- |
+| Generic type          | ParameterizedType                          | 泛型。`List<E>`            |
+| Parameterized type    | ParameterizedType                          | 参数化类型，`List<String>` |
+| Raw type              | `ParameterizedType#getRawType : Class<?>`  | 原始类型。`List`           |
+| Actual type parameter | `ParameterizedType#getActualTypeArguments` | 实际类型参数。`String`     |
+
+```java
+public static <T> List<T> parseJsonToList(String json, final Class<T> clazz) {
+    // 例如 clazz = String.class
+    // 这里的 new ParameterizedType() 生成了 List<String> 类型
+    return parseJsonToList(json, new ParameterizedType() {
+        @NotNull
+        @Override
+        public Type[] getActualTypeArguments() {
+            // 实际类型参数：这里指泛型 T 的真实类型。
+            return new Class[]{clazz};
+        }
+
+        @NotNull
+        @Override
+        public Type getRawType() {
+            // 原始类型，
+            return List.class;
+        }
+
+        @Override
+        public Type getOwnerType() {
+            return null;
+        }
+    });
+}
+```
+
+匿名内部类方式 获取泛型类型。`Base<T>`
+
+```kotlin
+// 获取子类
+val superclass = this::class.java.genericSuperclass
+// 获取泛型参数类型
+val parameterized = superclass as ParameterizedType
+// 获取 参数类型
+val type = parameterized.actualTypeArguments[0]
+// 可以直接转为 class
+val clazz : Class<*> = type as Class<*>
+```
+
+
+
+
+
+
+
 ## 代码案例
 
 ### 案例一：反射的简单使用

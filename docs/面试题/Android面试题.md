@@ -658,6 +658,7 @@ epoll阻塞会什么不占用CPU资源？
 ActivityThread 中的空闲时执行gc流程就是使用的 IdleHandler。
 
 - 主线程加载完页面之后，去加载一些二级界面;
+- WebView 预加载
 - 管理一些任务, 空闲时触发执行队列。
 
 使用方式：
@@ -711,7 +712,7 @@ Looper.myQueue().removeIdleHandler(idler);
 | ContentProvider         |                                                              |                                                              |
 | Messenger               | 基于Handler、Service、Binder。                               | 它是**以串行的方式处理请求**，**不适用于需要处理多线程的高并发IPC通信场景**。 |
 | AIDL                    | Android接口定义语言，它是基于Binder的一套封装。支持一对多的并发实时通信同时也支持RPC。适用于存在多应用访问服务，并在服务中需要多线程处理的场景。 | 实现也比较复杂。                                             |
-| 文件共享                | 主要是使用 `ObjectInputStream` 和 `ObjectOutputStream`，通过将对象序列化/反序列化来实现。 | **存在并发读写的同步问题**                                   |
+| 文件共享                |                                                              | **存在并发读写的同步问题**                                   |
 | -                       |                                                              |                                                              |
 | Pipe(管道)              | 会在创建时分配一个page大小的内存。并提供两个文件描述符，一个读一个写。 | 缓存区大小比较有限，数据需要拷贝两次。                       |
 | Socket(套接字)          | 一种通用接口，主要是用于不同机器或跨网络的通信。以字节流方式传输，对于读写的大小没有限制。 | 数据需要拷贝两次，传输效率低。(Android 中使用的LocalSocket 传输效率其实很高)，不支持RPC |

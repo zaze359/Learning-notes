@@ -1,4 +1,4 @@
-# Databinding
+# DataBinding
 
 Databinding 是 Android提供的实现数据UI **双向绑定**的组件。
 
@@ -7,6 +7,20 @@ Databinding 是 Android提供的实现数据UI **双向绑定**的组件。
 处理双向绑定，还帮助我们节省了 `findViewById()` 的工作。
 
 ## 使用
+
+### 开启 DataBinding
+
+```kotlin
+android {
+    ...
+    
+    dataBinding {
+        enable = true
+    }
+}
+```
+
+### XML布局配置
 
 * `<layout>`：
 * `<data>`：定义数据
@@ -53,6 +67,8 @@ Databinding 是 Android提供的实现数据UI **双向绑定**的组件。
 </layout>
 ```
 
+### 页面代码
+
 ```kotlin
 class NetworkStatsActivity : AbsActivity() {
     private var adapter: NetworkStatsAdapter? = null
@@ -62,6 +78,7 @@ class NetworkStatsActivity : AbsActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        //
         databinding = DataBindingUtil.setContentView(this, R.layout.network_stats_act)
         databinding.lifecycleOwner = this
         // 给databinding中定义的变量赋值， viewModel
@@ -366,6 +383,165 @@ fun <V> RecyclerView.setData(items: Collection<V>?) {
         if (adapter is BaseRecyclerAdapter<*, *>) {
             (it as BaseRecyclerAdapter<V, *>).setDataList(items)
         }
+    }
+}
+```
+
+
+
+## ViewBinding
+
+若仅仅只是需要省略 `findViewById()` 的操作，而不需要数据绑定的的功能，我们可以使用 ViewBinding。
+
+* 算是 DataBinding的子集，包含 DataBinding 中的 view绑定 相关功能，但是效率更高，因为不需要数据绑定。
+* 不需要在 xml 布局文件中添加 `<layout>` 。
+* 功能 和 ButterKinfe、`kotlin-android-extensions`插件（废弃）。
+
+### 开启 ViewBinding
+
+```java
+android {
+	...
+    buildFeatures {
+        viewBinding = true
+    }
+
+}
+```
+
+### XML布局配置
+
+xml 不需要额外的配置， 正常写即可
+
+```xml
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            style="@style/Toolbar"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/toolbar">
+
+            <TextView
+                android:id="@+id/lifecycleMessageTv"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+        </ScrollView>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+```
+
+### 页面代码
+
+调用对应 布局的 `Binding.inflate()` 来构建布局， 然后调用 `setContentView()` 即可。
+
+```kotlin
+class LifecycleActivity : AbsActivity() {
+    private lateinit var binding: ActivityLifecycleBinding
+    private val viewModel: MyLifecycleViewModel by myViewModels()
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // 构建view
+        binding = ActivityLifecycleBinding.inflate(layoutInflater)
+        // setContentView
+        setContentView(binding.root)
+        setupActionBar(binding.toolbar) { toolbar ->
+            title = "生命周期观测"
+            setDisplayHomeAsUpEnabled(true)
+            setHomeButtonEnabled(true)
+            toolbar.setNavigationOnClickListener {
+                finish()
+            }
+        }
+        val logViewWrapper = LogViewWrapper(binding.lifecycleMessageTv)
+    }
+}
+```
+
+## 内存泄露问题
+
+一般发生在 Fragment 复用的场景下。
+
+Fragment 在会被复用时，生命周期 走到 `onDestoryView()`，此时正常来说 fragment 中的View 将被被销毁，fragment实例会被保存等待复用。
+
+不过由于 fragment持有 binding，binding又持有 view，所以导致 view并没有被销毁，导致了泄露。
+
+```kotlin
+class MainSettingsFragment : AbsFragment() {
+    // binding 持有了 所有的View
+    private lateinit var binding: SettingsFragmentMainBinding
+    
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        binding = SettingsFragmentMainBinding.inflate(layoutInflater, container, false)
+        return binding.root
+    }
+}
+```
+
+处理方式一：就是将 **binding 置空**。
+
+```kotlin
+class MainSettingsFragment : Fragment() {
+    private var _binding: SettingsFragmentMainBinding? = null
+    val binding get() = _binding!!
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        _binding = SettingsFragmentMainBinding.inflate(layoutInflater, container, false)
+        return binding.root
+    }
+    
+    override fun onDestroyView() {
+        super.onDestroyView()
+        // 置空
+        _binding = null
+    }
+}
+```
+
+处理方式二：**作为 临时变量**。 
+
+```kotlin
+class MainSettingsFragment : Fragment(R.layout.settings_fragment_main) {
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        val binding = SettingsFragmentMainBinding.bind(view)
+        // 处理 view
+    }
+}
+```
+
+或者：
+
+```kotlin
+class MainSettingsFragment : Fragment(R.layout.settings_fragment_main) {
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        val binding = SettingsFragmentMainBinding.inflate(inflater, container, false)
+		// 处理 view
+        return binding.root
     }
 }
 ```

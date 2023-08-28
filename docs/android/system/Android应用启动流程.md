@@ -114,13 +114,21 @@ public class ActivityTaskManager {
 }
 ```
 
-## 2. 进入ATMS进程
+## 2. ATMS进程 处理请求信息
+
+此时进入到ATMS所在的进程中。
+
+* ATMS 收到Binder请求后，会调用到内部的 `ATMS.startActivityAsUser()`。
+
+* 然后是创建了一个 `ActivityStarter`实例，交由它来处理请求。
+* ActivityStarter 会 根据请求的Intent 解析出 resolveInfo、activityInfo。
+* 创建 ActivityRecord。
+* 权限校验。
+* Task的创建/复用等逻辑。
 
 ### ActivityTaskManagerService.startActivity()
 
-此时进入到ATMS所在的进程中，ATMS 收到Binder请求后，会调用到内部的 `startActivityAsUser()`。
-
-然后是创建了一个 `ActivityStarter`实例，交由它来处理请求。
+创建了一个 `ActivityStarter`实例，交由它来处理请求
 
 > [ActivityTaskManagerService.java - startActivity()](https://cs.android.com/android/platform/superproject/+/master:frameworks/base/services/core/java/com/android/server/wm/ActivityTaskManagerService.java;l=1204)
 
@@ -192,9 +200,9 @@ public class ActivityTaskManagerService extends IActivityTaskManager.Stub {
 ### ActivityStarter
 
 * 根据请求 Intent 解析出 resolveInfo、activityInfo。
-* 创建 ActivityRecord。
+* 创建 ProcessRecord 存储进程信息，创建 ActivityRecord 存储 Activity信息。
 * 权限校验。
-* Task的创建/复用等逻辑。
+* 判断是否需要 重新创建 Activity Task，或者复用Task。
 
 #### execute()
 
@@ -295,6 +303,8 @@ public class ActivityTaskManagerService extends IActivityTaskManager.Stub {
 ```
 
 #### startActivityUnchecked()
+
+检查 Activity 的启动模式，以及判断是否需要重新创建一个Activity栈。
 
 > [ActivityStarter.java - Android Code Search](https://cs.android.com/android/platform/superproject/+/master:frameworks/base/services/core/java/com/android/server/wm/ActivityStarter.java;l=1375;)
 
@@ -616,7 +626,7 @@ class Task extends TaskFragment {}
 
 这里判断了  activity所属的应用进程是否已启动。
 
-* 若应用进程已死或未启动过：调用`mService.startProcessAsync()` 来**启动进程**。mService 是 ATMS。
+* 若应用进程已死或未启动过：此时先调用`mService.startProcessAsync()` 来**启动进程**。mService 是 ATMS。
   * 不过一开始应用一定是未启动的，先看这个流程。
 
 * 应用进程已启动：调用 `realStartActivityLocked()` **创建并启动Activity** 并结束流程。
@@ -1648,45 +1658,9 @@ Runnable processCommand(ZygoteServer zygoteServer, boolean multipleOK) {
 
 zygote 孵化了应用进程之后，最终会调用 `ActivityThread.main()`，这样我们的应用程序就正式启动了。
 
-> [ActivityThread.java - Android Code Search](https://cs.android.com/android/platform/superproject/+/master:frameworks/base/core/java/android/app/ActivityThread.java;l=264)
->
-> 摘录一些重要的成员变量和内部类
+启动后先在主线程 创建 mainlooper，然后通过 `ApplicationThread` 和 AMS建立关联，最后开启消息循环，接收Android中的消息，并通过阻塞的方式维持住主线程。
 
-```java
-public final class ActivityThread extends ClientTransactionHandler
-        implements ActivityThreadInternal {
-    private static volatile ActivityThread sCurrentActivityThread;
-    // 系统于应用的访问
-    Instrumentation mInstrumentation;
-    //
-    ActivityThread() {
-        mResourcesManager = ResourcesManager.getInstance();
-    }
-    //
-    final ApplicationThread mAppThread = new ApplicationThread();
-    
-    // --------------------------------
-    // mainLooper
-    final Looper mLooper = Looper.myLooper();
-    final H mH = new H();
-    // sMainThreadHandler 就是 mH
-    static volatile Handler sMainThreadHandler;  // set once in main()
-    public Handler getHandler() {
-        return mH;
-    }
-    
-   
-    // ----------------------------
-    class H extends Handler {
-        // ...
-    }
-    
-    // ApplicationThread，ATMS 会通过它回调到对应应用进程
-    private class ApplicationThread extends IApplicationThread.Stub {
-        // ..
-	}
-}
-```
+ActivityThread 类结构放 在最后【补充】一栏中。
 
 ### ActivityThread.main()
 
@@ -1694,7 +1668,7 @@ Android应用程序执行的入口。
 
 * 在当前线程创建一个Looper，并作为 `mainLooper`。
 * 调用`attach()` 创建上下文。
-* 开启Looper 处理Android中的消息。
+* 创建MainLooper，并开启循环，接收 Android 中的消息。
 
 > [ActivityThread.java - main()](https://cs.android.com/android/platform/superproject/+/master:frameworks/base/core/java/android/app/ActivityThread.java;l=7871)
 
@@ -1745,9 +1719,11 @@ public static void main(String[] args) {
 }
 ```
 
+## 6. 应用和 AMS建立关联
+
 ### ActivityThread.attach()
 
-* 将 `ApplicationThread` 和 AMS绑定。
+* 关联应用和AMS：调用 `attachApplication()` 通过  `ApplicationThread:IBinder`  和 AMS 建立关联。
 * 观察GC，内存不足时会释放一些Activity。
 * 监听配置变化
 
@@ -1769,6 +1745,7 @@ private void attach(boolean system, long startSeq) {
             // 将 ApplicationThread 和 AMS绑定。
             // 这里还会将一些 待启动的服务启动。
             mgr.attachApplication(mAppThread, startSeq);
+            
         } catch (RemoteException ex) {
             throw ex.rethrowFromSystemServer();
         }
@@ -1830,13 +1807,227 @@ private void attach(boolean system, long startSeq) {
 
 
 
-## 启动Activity
+### AMS.attachApplicationLocked
+
+AMS通过 `IApplicationThread.bindApplication()`，通知应用创建Application。
+
+```java
+void attachApplicationLocked() {
+    
+     // 查询到应用中的ContentProvider，
+     List<ProviderInfo> providers = normalMode
+                                            ? mCpHelper.generateApplicationProvidersLocked(app)
+                                            : null;
+
+        if (providers != null && mCpHelper.checkAppInLaunchingProvidersLocked(app)) {
+            Message msg = mHandler.obtainMessage(CONTENT_PROVIDER_PUBLISH_TIMEOUT_MSG);
+            msg.obj = app;
+            mHandler.sendMessageDelayed(msg,
+                    ContentResolver.CONTENT_PROVIDER_PUBLISH_TIMEOUT_MILLIS);
+        }
+    checkTime(startTime, "attachApplicationLocked: before bindApplication");
+    
+    // 调用 IApplicationThread.bindApplication()
+    thread.bindApplication(..);
+}
+```
+
+
+
+### ApplicationThread.bindApplication()
+
+发送 `BIND_APPLICATION` 消息 创建了 Application 对象。
+
+* 创建 Application 实例后 会触发`attch()`。
+* 然后就先注册启动了 ContentProvider。
+* ContentProvider之后 调用 `onCreate()`。
+* 之后还加载了字体资源。
+
+```java
+	@Override
+        public final void bindApplication(String processName, ApplicationInfo appInfo,
+                String sdkSandboxClientAppVolumeUuid, String sdkSandboxClientAppPackage,
+                ProviderInfoList providerList, ComponentName instrumentationName,
+                ProfilerInfo profilerInfo, Bundle instrumentationArgs,
+                IInstrumentationWatcher instrumentationWatcher,
+                IUiAutomationConnection instrumentationUiConnection, int debugMode,
+                boolean enableBinderTracking, boolean trackAllocation,
+                boolean isRestrictedBackupMode, boolean persistent, Configuration config,
+                CompatibilityInfo compatInfo, Map services, Bundle coreSettings,
+                String buildSerial, AutofillOptions autofillOptions,
+                ContentCaptureOptions contentCaptureOptions, long[] disabledCompatChanges,
+                SharedMemory serializedSystemFontMap,
+                long startRequestedElapsedTime, long startRequestedUptime) {
+            if (services != null) {
+                if (false) {
+                    // Test code to make sure the app could see the passed-in services.
+                    for (Object oname : services.keySet()) {
+                        if (services.get(oname) == null) {
+                            continue; // AM just passed in a null service.
+                        }
+                        String name = (String) oname;
+
+                        // See b/79378449 about the following exemption.
+                        switch (name) {
+                            case "package":
+                            case Context.WINDOW_SERVICE:
+                                continue;
+                        }
+
+                        if (ServiceManager.getService(name) == null) {
+                            Log.wtf(TAG, "Service " + name + " should be accessible by this app");
+                        }
+                    }
+                }
+
+                // Setup the service cache in the ServiceManager
+                ServiceManager.initServiceCache(services);
+            }
+
+            setCoreSettings(coreSettings);
+
+            AppBindData data = new AppBindData();
+            data.processName = processName;
+            data.appInfo = appInfo;
+            data.sdkSandboxClientAppVolumeUuid = sdkSandboxClientAppVolumeUuid;
+            data.sdkSandboxClientAppPackage = sdkSandboxClientAppPackage;
+            data.providers = providerList.getList();
+            data.instrumentationName = instrumentationName;
+            data.instrumentationArgs = instrumentationArgs;
+            data.instrumentationWatcher = instrumentationWatcher;
+            data.instrumentationUiAutomationConnection = instrumentationUiConnection;
+            data.debugMode = debugMode;
+            data.enableBinderTracking = enableBinderTracking;
+            data.trackAllocation = trackAllocation;
+            data.restrictedBackupMode = isRestrictedBackupMode;
+            data.persistent = persistent;
+            data.config = config;
+            data.compatInfo = compatInfo;
+            data.initProfilerInfo = profilerInfo;
+            data.buildSerial = buildSerial;
+            data.autofillOptions = autofillOptions;
+            data.contentCaptureOptions = contentCaptureOptions;
+            data.disabledCompatChanges = disabledCompatChanges;
+            data.mSerializedSystemFontMap = serializedSystemFontMap;
+            data.startRequestedElapsedTime = startRequestedElapsedTime;
+            data.startRequestedUptime = startRequestedUptime;
+            sendMessage(H.BIND_APPLICATION, data);
+        }
+```
+
+
+
+```java
+class ActivityThread {
+    private void handleBindApplication(AppBindData data) {
+        //
+        synchronized (mResourcesManager) {
+            /*
+                 * Update the system configuration since its preloaded and might not
+                 * reflect configuration changes. The configuration object passed
+                 * in AppBindData can be safely assumed to be up to date
+                 */
+            mResourcesManager.applyConfigurationToResources(data.config, data.compatInfo);
+            mCurDefaultDisplayDpi = data.config.densityDpi;
+
+            // This calls mResourcesManager so keep it within the synchronized block.
+            mConfigurationController.applyCompatConfiguration();
+        }
+
+        //
+        mConfigurationController.updateDefaultDensity(data.config.densityDpi);
+        //
+        // http 代理
+        // Initialize the default http proxy in this process.
+        Trace.traceBegin(Trace.TRACE_TAG_ACTIVITY_MANAGER, "Setup proxies");
+        try {
+            // In pre-boot mode (doing initial launch to collect password), not all system is up.
+            // This includes the connectivity service, so trying to obtain ConnectivityManager at
+            // that point would return null. Check whether the ConnectivityService is available, and
+            // avoid crashing with a NullPointerException if it is not.
+            final IBinder b = ServiceManager.getService(Context.CONNECTIVITY_SERVICE);
+            if (b != null) {
+                final ConnectivityManager cm =
+                    appContext.getSystemService(ConnectivityManager.class);
+                Proxy.setHttpProxyConfiguration(cm.getDefaultProxy());
+            }
+        } finally {
+            Trace.traceEnd(Trace.TRACE_TAG_ACTIVITY_MANAGER);
+        }
+
+        // 初始化 Instrumentation
+        // Continue loading instrumentation.
+        if (ii != null) {
+            initInstrumentation(ii, data, appContext);
+        } else {
+            mInstrumentation = new Instrumentation();
+            mInstrumentation.basicInit(this);
+        }
+        //
+        Application app;
+        try {
+            // If the app is being launched for full backup or restore, bring it up in
+            // a restricted environment with the base application class.
+            //  创建 Application 对象，同时调用了 application.attch()
+            app = data.info.makeApplicationInner(data.restrictedBackupMode, null);
+            
+            mInitialApplication = app;
+            final boolean updateHttpProxy;
+            synchronized (this) {
+                updateHttpProxy = mUpdateHttpProxyOnBind;
+            }
+            if (updateHttpProxy) {
+                ActivityThread.updateHttpProxy(app);
+            }
+            
+            // 非严苛模式就是 启动 ContentProvider
+            if (!data.restrictedBackupMode) {
+                if (!ArrayUtils.isEmpty(data.providers)) {
+                    installContentProviders(app, data.providers);
+                }
+            }
+            try {
+                mInstrumentation.onCreate(data.instrumentationArgs);
+            }
+            catch (Exception e) {
+                throw new RuntimeException(
+                    "Exception thrown in onCreate() of "
+                    + data.instrumentationName + ": " + e.toString(), e);
+            }
+            try {
+                // 调用 application.onCrate()
+                mInstrumentation.callApplicationOnCreate(app);
+            } catch (Exception e) {
+                if (!mInstrumentation.onException(app, e)) {
+                    throw new RuntimeException(
+                      "Unable to create application " + app.getClass().getName()
+                      + ": " + e.toString(), e);
+                }
+            }
+            
+        } finally {
+        }
+        // Preload fonts resources
+        // ...
+        
+    }
+}
+```
+
+
+
+
+
+## AMS通知启动Activity
 
 ### ActivityTaskSupervisor.realStartActivityLocked()
 
-*  创建 启动 activity的事务 clientTransaction。
-  * 触发 `handleLaunchActivity()`
-* 添加了一个后续期望变成的 resume状态的请求，在启动事务执行完成后被会调用。这样生命周期就能自动变为 Resume。
+最终会 调用 `IApplicaitonThread.scheduleTransaction(clientTransaction)`，回调给应用端，最后发送了 `EXECUTE_TRANSACTION` 消息，通过 `TransactionExecutor` 来执行事务。
+
+*  创建 客户端事务 clientTransaction 。
+*  添加 LaunchActivityItem 到 mActivityCallbacks 中。
+   * 触发 `handleLaunchActivity()`。
+*  设置了 mLifecycleStateRequest，一个后续期望变成的 resume状态的请求，在启动事务执行完成后被会调用。这样生命周期就能自动变为 Resume。
   * 触发 `handleResumeActivity()`
 
 ```java
@@ -1847,13 +2038,14 @@ private void attach(boolean system, long startSeq) {
             // ...
             try {
                 // 创建 启动 activity的事务 clientTransaction
+                // proc.getThread() 就是 IAppicationThread	
                 // Create activity launch transaction.
-                // 
                 final ClientTransaction clientTransaction = ClientTransaction.obtain(
                         proc.getThread(), r.token);
 
                 final boolean isTransitionForward = r.isTransitionForward();
                 final IBinder fragmentToken = r.getTaskFragment().getFragmentToken();
+                // 添加到 mActivityCallbacks 队列 中
                 clientTransaction.addCallback(LaunchActivityItem.obtain(new Intent(r.intent),
                         System.identityHashCode(r), r.info,
                         // TODO: Have this take the merged configuration instead of separate global
@@ -1873,9 +2065,10 @@ private void attach(boolean system, long startSeq) {
                 } else {
                     lifecycleItem = PauseActivityItem.obtain();
                 }
+                // 赋值给 mLifecycleStateRequest 字段
                 // 这个请求会在事务执行后被调用，这样 Activity启动之后就能继续后续的生命周期，变为 Resume。
                 clientTransaction.setLifecycleStateRequest(lifecycleItem);
-				// 发送事务
+				// 发送事务，最终调用的是 IApplicaitonThread.scheduleTransaction(clientTransaction)
                 // Schedule transaction.
                 mService.getLifecycleManager().scheduleTransaction(clientTransaction);
 				// ...
@@ -1894,9 +2087,274 @@ private void attach(boolean system, long startSeq) {
 
 
 
+## Activity生命周期相关事务
+
+根据生命周期状态 调用对应的 `handleXXXXActivity()` 方法 。 一开始就是 `handleLaunchActivity()` 被调用。
+
+```java
+public class TransactionExecutor {
+
+    public void execute(ClientTransaction transaction) {
+        if (DEBUG_RESOLVER) Slog.d(TAG, tId(transaction) + "Start resolving transaction");
+
+        final IBinder token = transaction.getActivityToken();
+        if (token != null) {
+            final Map<IBinder, ClientTransactionItem> activitiesToBeDestroyed =
+                    mTransactionHandler.getActivitiesToBeDestroyed();
+            final ClientTransactionItem destroyItem = activitiesToBeDestroyed.get(token);
+            if (destroyItem != null) {
+                if (transaction.getLifecycleStateRequest() == destroyItem) {
+                    // It is going to execute the transaction that will destroy activity with the
+                    // token, so the corresponding to-be-destroyed record can be removed.
+                    activitiesToBeDestroyed.remove(token);
+                }
+                if (mTransactionHandler.getActivityClient(token) == null) {
+                    // The activity has not been created but has been requested to destroy, so all
+                    // transactions for the token are just like being cancelled.
+                    Slog.w(TAG, tId(transaction) + "Skip pre-destroyed transaction:\n"
+                            + transactionToString(transaction, mTransactionHandler));
+                    return;
+                }
+            }
+        }
+		// 先执行  mActivityCallbacks ，这里根据生命周期调用对应的 handleXXXXActivity 方法 
+        executeCallbacks(transaction);
+		// 后执行 mLifecycleStateRequest
+        executeLifecycleState(transaction);
+        mPendingActions.clear();
+    }
+}
+```
 
 
-## ActivityManager
+
+```java
+public void executeCallbacks(ClientTransaction transaction) {
+        final List<ClientTransactionItem> callbacks = transaction.getCallbacks();
+        if (callbacks == null || callbacks.isEmpty()) {
+            // No callbacks to execute, return early.
+            return;
+        }
+        if (DEBUG_RESOLVER) Slog.d(TAG, tId(transaction) + "Resolving callbacks in transaction");
+
+        final IBinder token = transaction.getActivityToken();
+        ActivityClientRecord r = mTransactionHandler.getActivityClient(token);
+
+        // In case when post-execution state of the last callback matches the final state requested
+        // for the activity in this transaction, we won't do the last transition here and do it when
+        // moving to final state instead (because it may contain additional parameters from server).
+        final ActivityLifecycleItem finalStateRequest = transaction.getLifecycleStateRequest();
+        final int finalState = finalStateRequest != null ? finalStateRequest.getTargetState()
+                : UNDEFINED;
+        // Index of the last callback that requests some post-execution state.
+        final int lastCallbackRequestingState = lastCallbackRequestingState(transaction);
+
+        final int size = callbacks.size();
+        for (int i = 0; i < size; ++i) {
+            final ClientTransactionItem item = callbacks.get(i);
+            if (DEBUG_RESOLVER) Slog.d(TAG, tId(transaction) + "Resolving callback: " + item);
+            final int postExecutionState = item.getPostExecutionState();
+            final int closestPreExecutionState = mHelper.getClosestPreExecutionState(r,
+                    item.getPostExecutionState());
+            if (closestPreExecutionState != UNDEFINED) {
+                cycleToPath(r, closestPreExecutionState, transaction);
+            }
+
+            item.execute(mTransactionHandler, token, mPendingActions);
+            item.postExecute(mTransactionHandler, token, mPendingActions);
+            if (r == null) {
+                // Launch activity request will create an activity record.
+                r = mTransactionHandler.getActivityClient(token);
+            }
+
+            if (postExecutionState != UNDEFINED && r != null) {
+                // Skip the very last transition and perform it by explicit state request instead.
+                final boolean shouldExcludeLastTransition =
+                        i == lastCallbackRequestingState && finalState == postExecutionState;
+                cycleToPath(r, postExecutionState, shouldExcludeLastTransition, transaction);
+            }
+        }
+    }
+```
+
+
+
+`ActivityClientRecord.mLifecycleState` 取值定义在 ActivityLifecycleItem 中
+
+| ActivityLifecycleItem | 取值 |        |
+| --------------------- | ---- | ------ |
+| UNDEFINED             | -1   |        |
+| PRE_ON_CREATE         | 0    | 默认值 |
+| ON_CREATE             | 1    |        |
+| ON_START              | 2    |        |
+| ON_RESUME             | 3    |        |
+| ON_PAUSE              | 4    |        |
+| ON_STOP               | 5    |        |
+| ON_DESTROY            | 6    |        |
+| ON_RESTART            | 7    |        |
+
+```java
+private void cycleToPath(ActivityClientRecord r, int finish, boolean excludeLastState,
+            ClientTransaction transaction) {
+        final int start = r.getLifecycleState();
+        if (DEBUG_RESOLVER) {
+            Slog.d(TAG, tId(transaction) + "Cycle activity: "
+                    + getShortActivityName(r.token, mTransactionHandler)
+                    + " from: " + getStateName(start) + " to: " + getStateName(finish)
+                    + " excludeLastState: " + excludeLastState);
+        }
+    	// 根据生命周期状态进行切换，切换到下一个状态， 一开始就是 PRE_ON_CREATE -> ON_CREATE
+        final IntArray path = mHelper.getLifecyclePath(start, finish, excludeLastState);
+        performLifecycleSequence(r, path, transaction);
+    }
+```
+
+
+
+```java
+private void performLifecycleSequence(ActivityClientRecord r, IntArray path,
+            ClientTransaction transaction) {
+        final int size = path.size();
+        for (int i = 0, state; i < size; i++) {
+            state = path.get(i);
+            if (DEBUG_RESOLVER) {
+                Slog.d(TAG, tId(transaction) + "Transitioning activity: "
+                        + getShortActivityName(r.token, mTransactionHandler)
+                        + " to state: " + getStateName(state));
+            }
+            switch (state) {
+                case ON_CREATE:
+                    mTransactionHandler.handleLaunchActivity(r, mPendingActions,
+                            null /* customIntent */);
+                    break;
+                case ON_START:
+                    mTransactionHandler.handleStartActivity(r, mPendingActions,
+                            null /* activityOptions */);
+                    break;
+                case ON_RESUME:
+                    mTransactionHandler.handleResumeActivity(r, false /* finalStateRequest */,
+                            r.isForward, "LIFECYCLER_RESUME_ACTIVITY");
+                    break;
+                case ON_PAUSE:
+                    mTransactionHandler.handlePauseActivity(r, false /* finished */,
+                            false /* userLeaving */, 0 /* configChanges */, mPendingActions,
+                            "LIFECYCLER_PAUSE_ACTIVITY");
+                    break;
+                case ON_STOP:
+                    mTransactionHandler.handleStopActivity(r, 0 /* configChanges */,
+                            mPendingActions, false /* finalStateRequest */,
+                            "LIFECYCLER_STOP_ACTIVITY");
+                    break;
+                case ON_DESTROY:
+                    mTransactionHandler.handleDestroyActivity(r, false /* finishing */,
+                            0 /* configChanges */, false /* getNonConfigInstance */,
+                            "performLifecycleSequence. cycling to:" + path.get(size - 1));
+                    break;
+                case ON_RESTART:
+                    mTransactionHandler.performRestartActivity(r, false /* start */);
+                    break;
+                default:
+                    throw new IllegalArgumentException("Unexpected lifecycle state: " + state);
+            }
+        }
+    }
+```
+
+
+
+## 补充
+
+### ActivityThread
+
+> [ActivityThread.java - Android Code Search](https://cs.android.com/android/platform/superproject/+/master:frameworks/base/core/java/android/app/ActivityThread.java;l=264)
+>
+> 摘录一些重要的成员变量和内部类
+
+```java
+public final class ActivityThread extends ClientTransactionHandler
+        implements ActivityThreadInternal {
+    private static volatile ActivityThread sCurrentActivityThread;
+    // 系统于应用的访问
+    Instrumentation mInstrumentation;
+    //
+    ActivityThread() {
+        mResourcesManager = ResourcesManager.getInstance();
+    }
+    // 是一个 IBinder，用于关联 应用和AMS
+    final ApplicationThread mAppThread = new ApplicationThread();
+    
+    // --------------------------------
+    // mainLooper
+    final Looper mLooper = Looper.myLooper();
+    final H mH = new H();
+    // sMainThreadHandler 就是 mH
+    static volatile Handler sMainThreadHandler;  // set once in main()
+    public Handler getHandler() {
+        return mH;
+    }
+    
+    public static void main(String[] args) {
+
+    }
+    
+    // -------------- 内部类 -------------- 
+    class H extends Handler {
+        public static final int EXECUTE_TRANSACTION = 159;
+
+        public void handleMessage(Message msg) {
+            if (DEBUG_MESSAGES) Slog.v(TAG, ">>> handling: " + codeToString(msg.what));
+            switch (msg.what) {
+                ....
+ 				case EXECUTE_TRANSACTION:
+                    final ClientTransaction transaction = (ClientTransaction) msg.obj;
+                    // 执行事务
+                    mTransactionExecutor.execute(transaction);
+                    if (isSystem()) {
+                        // Client transactions inside system process are recycled on the client side
+                        // instead of ClientLifecycleManager to avoid being cleared before this
+                        // message is handled.
+                        transaction.recycle();
+                    }
+                    // TODO(lifecycler): Recycle locally scheduled transactions.
+                    break;
+				....
+            }
+        }
+    }
+    
+    // ApplicationThread，ATMS 会通过它回调到对应应用进程
+    private class ApplicationThread extends IApplicationThread.Stub {
+        // ..
+	}
+    
+    public static final class ActivityClientRecord {
+        private int mLifecycleState = PRE_ON_CREATE;
+    }
+}
+```
+
+
+
+```java
+
+public abstract class ClientTransactionHandler {
+    
+    void scheduleTransaction(ClientTransaction transaction) {
+        transaction.preExecute(this);
+        sendMessage(ActivityThread.H.EXECUTE_TRANSACTION, transaction);
+    } 
+}
+```
+
+
+
+
+
+
+
+
+
+### ActivityManager
 
 ```java
 @SystemService(Context.ACTIVITY_SERVICE)

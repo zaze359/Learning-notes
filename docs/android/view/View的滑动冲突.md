@@ -69,7 +69,7 @@ override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
 
 ### 内部拦截法
 
-**内部拦截法是子元素优先处理**，一般需要配合 `requestDisallowInterceptTouchEvent()` 来使用，由子元素来控制父控件是否能够拦截事件，这样所有的事件都将传递到子元素，若子元素需要就消费事件，不需要则向上传递。
+内部拦截法是**子元素优先处理**，一般需要配合 `requestDisallowInterceptTouchEvent()` 来使用，由子元素来控制父控件是否能够拦截事件，这样所有的事件都将传递到子元素，若子元素需要就消费事件，不需要则向上传递。
 
 重写父控件 `onInterceptTouchEvent()`，模拟父控件拦截事件的场景：
 
@@ -96,12 +96,14 @@ override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
         Log.i("TouchViewFirst", "dispatchTouchEvent: ${ev.action}")
         when (ev.action) {
-            MotionEvent.ACTION_DOWN -> { // 先置为不允许父类拦截
+            MotionEvent.ACTION_DOWN -> { // 预先置为不允许父容器拦截
                 parent.requestDisallowInterceptTouchEvent(true)
             }
 
             MotionEvent.ACTION_MOVE -> {
-                if () { // 子元素不需要，交给父元素处理
+                if (canChildScroll) { // 子元素需要，不允许父容器拦截
+                    parent.requestDisallowInterceptTouchEvent(true)
+                } else {  // 子元素不需要，交给父元素处理
                     parent.requestDisallowInterceptTouchEvent(false)
                 }
             }

@@ -329,6 +329,12 @@ public class AnimationHandler {
 }
 ```
 
+## 添加布局变化动画
+
+```kotlin
+TransitionManager.beginDelayedTransition(binding.appBarLayout)
+```
+
 
 
 ## 动画优化

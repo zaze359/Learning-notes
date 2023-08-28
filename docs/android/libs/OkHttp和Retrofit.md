@@ -315,7 +315,7 @@ val service = retrofit.create(RetrofitService::class.java)
 
 
 
-### 自定义数据转换Converter
+### 自定义Converter（数据类型转换）
 
 我们可以通过自定义 `Converter.Factory` 来对 请求/响应数据进行转换。转换的是返回数据的类型。
 
@@ -361,7 +361,7 @@ public final class GsonConverterFactory extends Converter.Factory {
 
 
 
-### 自定义CallAdapter
+### 自定义CallAdapter（响应结构转换）
 
 Retrofit 提供给我们了一种自定义Call的适配器的方式，就是传入自定义的 `CallAdapter.Factory `，可以将接口返回自定义成我们需要的形式。转换的是返回值的调用形式，默认是 Call。
 
@@ -554,7 +554,7 @@ static <ResponseT, ReturnT> HttpServiceMethod<ResponseT, ReturnT> parseAnnotatio
 
     Annotation[] annotations = method.getAnnotations();
     Type adapterType;
-    if (isKotlinSuspendFunction) {
+    if (isKotlinSuspendFunction) { // 挂起函数特殊处理
       Type[] parameterTypes = method.getGenericParameterTypes();
       Type responseType =
           Utils.getParameterLowerBound(
@@ -603,7 +603,7 @@ static <ResponseT, ReturnT> HttpServiceMethod<ResponseT, ReturnT> parseAnnotatio
     if (!isKotlinSuspendFunction) {
       // 非挂起函数，一般都在这。返回一个 CallAdapted。
       return new CallAdapted<>(requestFactory, callFactory, responseConverter, callAdapter);
-    } else if (continuationWantsResponse) {
+    } else if (continuationWantsResponse) { 
       //noinspection unchecked Kotlin compiler guarantees ReturnT to be Object.
       return (HttpServiceMethod<ResponseT, ReturnT>)
           new SuspendForResponse<>(
@@ -641,3 +641,10 @@ static <ResponseT, ReturnT> HttpServiceMethod<ResponseT, ReturnT> parseAnnotatio
   }
 ```
 
+
+
+## 协程的支持
+
+retrofit 对于 Kotlin 协程进行了支持。
+
+当定义的接口 是一个挂起函数时，会自动开启一个使用`Dispatchs.IO`调度器的协程去执行网络访问。

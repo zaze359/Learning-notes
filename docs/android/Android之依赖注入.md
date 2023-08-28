@@ -113,6 +113,8 @@ android {
 
 ### 依赖项注入
 
+支持的Android 类
+
 | 支持的Android 类  | 使用               |      |
 | ----------------- | ------------------ | ---- |
 | Application       | @HiltAndroidApp    |      |
@@ -388,7 +390,7 @@ Hilt 中的所有绑定 都未限定作用域。**每当应用请求绑定时，
 // If AnalyticsService is an interface.
 
 // 绑定的作用域必须与其安装到的组件的作用域一致
-// 所以AnalyticsModule 需要安装在 SingletonComponent 中。
+// Singleton 对应 SingletonComponent。
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class AnalyticsModule {
@@ -618,13 +620,30 @@ public abstract class Hilt_ComposeActivity extends AbsActivity implements Genera
 
 ```java
 public final class DefaultViewModelFactories {  
-    // 
-	public static ViewModelProvider.Factory getActivityFactory(ComponentActivity activity,
-      ViewModelProvider.Factory delegateFactory) {
-    return EntryPoints.get(activity, ActivityEntryPoint.class)
-        .getHiltInternalFactoryFactory()
-        .fromActivity(activity, delegateFactory);
-  }
+    //
+      public static ViewModelProvider.Factory getActivityFactory(ComponentActivity activity,
+          ViewModelProvider.Factory delegateFactory) {
+        return EntryPoints.get(activity, ActivityEntryPoint.class)
+            .getHiltInternalFactoryFactory()
+            .fromActivity(activity, delegateFactory);
+      }
+    //
+    ViewModelProvider.Factory fromActivity(
+        ComponentActivity activity, ViewModelProvider.Factory delegateFactory) {
+      return getHiltViewModelFactory(
+          activity,
+          activity.getIntent() != null ? activity.getIntent().getExtras() : null,
+          delegateFactory);
+    }
+    //
+    private ViewModelProvider.Factory getHiltViewModelFactory(
+        SavedStateRegistryOwner owner,
+        @Nullable Bundle defaultArgs,
+        ViewModelProvider.Factory delegate) {
+        // HiltViewModelFactory
+      return new HiltViewModelFactory(
+          owner, defaultArgs, keySet, checkNotNull(delegate), viewModelComponentBuilder);
+    }
 }
 ```
 

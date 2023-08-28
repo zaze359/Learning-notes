@@ -687,26 +687,6 @@ Box(
 ) { /** intentionally empty **/ }
 ```
 
-## Coil图片加载库
-
-[Coil](https://github.com/coil-kt/coil#jetpack-compose)：由 Kotlin 协程 (Instacart) 提供支持的图片加载库。内部也是通过 `rememberAsyncImagePainter()` 来实现
-
-```kotlin
-implementation("io.coil-kt:coil:2.2.2")
-implementation("io.coil-kt:coil-compose:2.2.2")
-implementation("io.coil-kt:coil-svg:2.2.2")
-```
-
-### AsyncImage
-
-### SubcomposeAsyncImage
-
-### Glide图片加载库
-
-[Glide](https://bumptech.github.io/glide/int/compose.html)：高效快速的 Android 图片加载库，侧重于提供流畅的滚动体验（适用于 Google）
-
-
-
 ---
 
 ## Icon（图标）

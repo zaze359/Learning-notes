@@ -306,11 +306,17 @@ subprojects {
 
 
 
+### Android 提示 `Your anti-virus ....`
 
+``Your anti-virus program might be impacting your build performance ............``
 
+1. 打开 **Windows安全中心**
 
+   ![image-20230824182733950](./FAQ.assets/image-20230824182733950.png)
 
+2. 添加排除项，将 提示中的目录添加进入即可
 
+   ![image-20230824182940464](./FAQ.assets/image-20230824182940464.png)
 
 
 

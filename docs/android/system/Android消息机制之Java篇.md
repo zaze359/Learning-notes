@@ -725,7 +725,7 @@ public void setAsynchronous(boolean async) {
 
 使用场景:
 
-- 主线程加载完页面之后，去加载一些二级界面;
+- 主线程加载完页面之后，去加载一些二级界面; WebView 预加载
 - 管理一些任务, 空闲时触发执行队列。
 - ActivityThread 中的空闲时执行gc流程就是使用的 IdleHandler。
 

@@ -97,6 +97,8 @@ MainActivity onStop
 * **配置变更（旋转、切换到[多窗口模式](https://developer.android.google.cn/guide/components/activities/state-changes)）：**默认情况下系统会在配置变更时销毁 Activity。
 
   > 虽然可以通过[配置`android:configChanges`](https://developer.android.google.cn/guide/topics/resources/runtime-changes#HandlingTheChange)，使得配置变化时Activity不被销毁，但是官方不推荐这么做。
+  >
+  > ``android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"``
 
   ```shell
   # 横竖屏切换
@@ -303,6 +305,7 @@ class MyFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        // Fragment 中需要使用 viewLifecycleOwner.lifecycleScope
         viewLifecycleOwner.lifecycleScope.launch {
             // Lifecycle 至少处于 STARTED 状态时运行，并且会在 Lifecycle 处于 STOPPED 状态时取消运行
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {

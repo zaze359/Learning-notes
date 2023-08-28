@@ -162,6 +162,10 @@ adb shell dumpsys activity -p com.zaze.demo activities
 
 
 
+
+
+
+
 ## 参考资料
 
 [Activity的五种启动模式 (qq.com)](https://mp.weixin.qq.com/s/uiAOYOQu7ZM3jrPYuv6cPg)
