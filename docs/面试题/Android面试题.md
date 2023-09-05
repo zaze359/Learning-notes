@@ -419,12 +419,12 @@ protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
 
 root 会影响 创建的布局最外层的LayoutParams：
 
-* root == null：被创建View的最外层的LayoutParams将失效，设置的宽高并不会生效，变为 wrap_content。
-* root != null：被创建View的最外层的LayoutParams生效。
+* root == null：被创建View的**最外层的LayoutParams将失效**，设置的宽高并不会生效，变为 wrap_content。
+* root != null：被创建View的**最外层的LayoutParams生效**。
 
 attachToRoot 表示是否和root关联：
 
-* attachToRoot  == true：被创建View会作为 root的子布局，且`inflater()`返回给我们的是root。
+* attachToRoot  == true：**被创建View会作为 root的子布局**，且`inflater()`**返回给我们的是root**。
 * attachToRoot == false：被创建的View不会和root关联，`inflater()`返回给我们的就是创建的View。
   * root为空时 attachToRoot这个属性就没什么用了，`inflater()`返回的也是创建的View。
 

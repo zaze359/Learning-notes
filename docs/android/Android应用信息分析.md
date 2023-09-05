@@ -35,12 +35,26 @@
 
 包含应用的一些基础信息，对应项目``AndroidManifest.xml``文件下 ``<application>``标签中的内容
 
-|                    |                                     |      |
-| ------------------ | ----------------------------------- | ---- |
-| sourceDir          | 应用安装后，APK文件在系统中的路径。 |      |
-| resourceDirs       | overlay Package的路径               |      |
-| nativeLibraryDir   | so库路径。                          |      |
-| sharedLibraryFiles | 资源共享库                          |      |
+|                       |                                                              |      |
+| --------------------- | ------------------------------------------------------------ | ---- |
+| sourceDir             | 应用安装后，APK文件在系统中的路径。                          |      |
+| publicSourceDir       |                                                              |      |
+| resourceDirs          | overlay Package的路径                                        |      |
+| nativeLibraryDir      | so库路径。                                                   |      |
+| sharedLibraryFiles    | 资源共享库                                                   |      |
+| splitSourceDirs       | Android App Bundle(拆分式APK) 中资源包路径。和 sourceDir是同目录的。 |      |
+| splitPublicSourceDirs |                                                              |      |
+
+```shell
+# sourceDir
+applicationInfo sourceDir: /data/app/~~KJq_1io8YmoErZl7YUIW9A==/com.google.android.gm-VanzCKZgYEoJKnFqPJV29Q==/base.apk
+
+# splitSourceDirs
+applicationInfo splitSourceDirs: /data/app/~~KJq_1io8YmoErZl7YUIW9A==/com.google.android.gm-VanzCKZgYEoJKnFqPJV29Q==/split_config.arm64_v8a.apk
+applicationInfo splitSourceDirs: /data/app/~~KJq_1io8YmoErZl7YUIW9A==/com.google.android.gm-VanzCKZgYEoJKnFqPJV29Q==/split_config.en.apk
+applicationInfo splitSourceDirs: /data/app/~~KJq_1io8YmoErZl7YUIW9A==/com.google.android.gm-VanzCKZgYEoJKnFqPJV29Q==/split_config.xxhdpi.apk
+applicationInfo splitSourceDirs: /data/app/~~KJq_1io8YmoErZl7YUIW9A==/com.google.android.gm-VanzCKZgYEoJKnFqPJV29Q==/split_config.zh.apk
+```
 
 
 

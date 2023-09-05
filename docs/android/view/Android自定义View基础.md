@@ -956,15 +956,16 @@ LayoutInflater.from(parent.context).inflate(R.layout.item_test, parent, false)
 
 ###  Factory/Factory2
 
-> 一般使用Factory2 它继承子 Factory。需要注意的是 factory 只能设置一次，反复添加会报错。
+> 一般使用Factory2 它继承子 Factory。需要注意的是 **factory2 只能设置一次**，反复添加会报错。
 
 提供给我们开发者使用的自定义加载View的接口。
 
-我们可以通过设置 Factory2 来 统一进行**统一配置（字体、背景等）**，或者将 TextView **统一替换**成 我们增强过的一个 CustomTextView等。
+我们可以通过 设置 Factory2 来 **统一配置（字体、背景等）**，或者将 TextView **统一替换**成 我们增强过的一个 CustomTextView等。
 
-Android提供的 AppCompatActivity 就会通过设置 Factory的方式来统一将空间替换成 AppCompatXXX （AppCompatButton）这些控件。
+> Android提供的 `AppCompatActivity `就会通过设置 Factory的方式来统一将空间替换成 AppCompatXXX （AppCompatButton）这些控件。
 
 ```java
+// AppCompatActivity 源码
 @ContentView
     public AppCompatActivity(@LayoutRes int contentLayoutId) {
         super(contentLayoutId);
@@ -983,7 +984,7 @@ Android提供的 AppCompatActivity 就会通过设置 Factory的方式来统一�
                         return outState;
                     }
                 });
-        // 设置监听，会在onCreate() 时被调用。
+        // 设置监听，会在 onCreate() 中被调用。
         addOnContextAvailableListener(new OnContextAvailableListener() {
             @Override
             public void onContextAvailable(@NonNull Context context) {
@@ -1004,7 +1005,9 @@ Android提供的 AppCompatActivity 就会通过设置 Factory的方式来统一�
 
 * 若我们后设置 Factory，那么就会报错，我们的就无法使用了。
 
-所有我们需要在 onCreate() 之前设置，并且兼容 AppCompatDelegate。方法很简单：
+`addOnContextAvailableListener` 在`onCreate()` 中被调用，所有我们需要在 `onCreate()` 之前设置自定义的Factory，并且兼容 AppCompatDelegate。
+
+方法很简单：
 
 * 我们直接获取到 delegate，然后主动调用它即可。
 * 还有一种方式就是设置 `AppCompatDelegate.mAppCompatViewInflater` ，它是 AppCompatDelegate 提供的给我们自定义用的。
@@ -1027,7 +1030,7 @@ Android提供的 AppCompatActivity 就会通过设置 Factory的方式来统一�
                 return onCreateView(null, name, context, attrs);
             }
         });
-
+		// 在
         super.onCreate(savedInstanceState);
     }
 ```

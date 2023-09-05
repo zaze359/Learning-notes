@@ -526,6 +526,21 @@ class ExtScopeClass : ExtScope {
 }
 ```
 
+#### 使用注解约束扩展
+
+通过 `@receiver:ColorInt`  来约束扩展的范围， 这个扩展仅对`@ColorInt` 注解修饰 Int生效。
+
+```kotlin
+val @receiver:ColorInt Int.lighterColor
+    get() = ColorUtil.lightenColor(this)
+```
+
+
+
+
+
+
+
 ---
 
 ## 类型系统

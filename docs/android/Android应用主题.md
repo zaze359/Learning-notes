@@ -127,3 +127,21 @@
   }
 ```
 
+## 软键盘显示配置
+
+通过配置 `android:windowSoftInputMode` 来改变软键盘的显示形式。
+
+| flag               | 说明                                                         |      |
+| ------------------ | ------------------------------------------------------------ | ---- |
+| stateUnspecified   | 默认行为，由当前使用的主题决定。                             |      |
+| stateUnChanged     | 页面打开时，保持之前页面的键盘状态。                         |      |
+| stateHidden        | 页面打开时默认隐藏，若页面已打开重新返回时则不一定是隐藏的。 |      |
+| stateAlwaysHidden  | stateHidden的增强，无论是什么方式进入页面，键盘都隐藏。      |      |
+| stateVisible       | 页面打开时默认打开，但是从栈返回时不一定。                   |      |
+| stateAlwaysVisible | stateVisible的增强，无论是什么方式进入页面，键盘都打开。     |      |
+| -                  |                                                              |      |
+| adjustUnspecified  | 默认行为。存在滚动布局：adjustResize; 否则：adjuestPen       |      |
+| adjustResize       | 会改变页面大小，顶部不变，底部被抬高腾出空间显示输入法。键盘不会覆盖住布局内容。 |      |
+| adjustPan          | 不改变页面大小，通过移动布局的方式腾出空间显示输入法。键盘会覆盖住布局内容。 |      |
+| adjustNothing      | 键盘直接盖在布局上面，会遮挡住布局内容。                     |      |
+
