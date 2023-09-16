@@ -140,6 +140,12 @@ distributionUrl=https\://services.gradle.org/distributions/gradle-6.7.1-bin.zip
 classpath "com.android.tools.build:gradle:4.2.1"
 ```
 
+对应关系：
+
+[Android Gradle 插件版本说明  | Android 开发者  | Android Developers (google.cn)](https://developer.android.google.cn/studio/releases/gradle-plugin?hl=zh-cn)
+
+![image-20230911223257703](FAQ.assets/image-20230911223257703.png)
+
 
 
 

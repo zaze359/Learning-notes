@@ -1665,7 +1665,21 @@ public typealias CompletionHandler = (cause: Throwable?) -> Unit
 
 继承自 Job，调用 `async` 时会获得一个返回值`deferred`，我们可以通过 `deferred.await()` 等待并获取结果，和 `join()`的区别是可以获取到返回结果。
 
-
+```kotlin
+fun main() = runBlocking {
+      val start = System.currentTimeMillis()
+      val async1 = async(start = CoroutineStart.LAZY) {
+          delay(1000L)
+          System.currentTimeMillis() - start
+      }
+      val async2 = async(start = CoroutineStart.LAZY) {
+          delay(1000L)
+          System.currentTimeMillis() - start
+      }
+      val one = async1.await()
+      val two = async2.await()
+}
+```
 
 
 

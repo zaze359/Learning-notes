@@ -470,15 +470,70 @@ class AppTest {
 
 
 
-#### 查看界面属性
+### uiautomatorviewer 查看界面属性
 
-打开 `..Android\Sdk\tools\bin\uiautomatorviewer` 工具，查看当前应用的界面属性。
+> Mac
 
 ```shell
+cd ~/Library/Android/sdk/tools/bin
+
 uiautomatorviewer
+```
+
+报错: 
+
+```shell
+-Djava.ext.dirs=/Users/zhaozhen/Library/Android/sdk/tools/lib/x86_64:/Users/zhaozhen/Library/Android/sdk/tools/lib is not supported.  Use -classpath instead.
+Error: Could not create the Java Virtual Machine.
+Error: A fatal exception has occurred. Program will exit.
+```
+
+1. jdk降为 1.8
+
+```shell
+# 创建 runuiautomatorviewer.sh
+vi runuiautomatorviewer.sh
+
+#######################
+# 填写以下内容
+export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk1.8.0_231.jdk/Contents/Home
+export PATH=${PATH}:$JAVA_HOME:${JAVA_HOME}/bin
+./uiautomatorviewer
+#######################
+
+# 执行
+./runuiautomatorviewer.sh
+```
+
+2. 若上述命令 启动后卡死，则clone [cmlanche/uiautomatorviewer-standalone: UIAutomatorViewer独立包工程 (github.com)](https://github.com/cmlanche/uiautomatorviewer-standalone)
+
+   ```shell
+   # clone 
+   git clone git@github.com:cmlanche/uiautomatorviewer-standalone.git
+   
+   # 安装 mvn
+   brew install maven
+   
+   # 打包
+   mvn clean package
+   # copy jar 到 adb的同级目录
+   cp target/uiautomatorviewer-standalone-1.1-all.jar ~/Library/Android/sdk/platform-tools/.
+   # 启动
+   cd ~/Library/Android/sdk/platform-tools/
+   java -XstartOnFirstThread -jar ./uiautomatorviewer-standalone-1.1-all.jar
+   ```
+
+   
+
+> Window
+
+```shell
+# `..\Android\Sdk\tools\bin\uiautomatorviewer`
 # windows
 ./uiautomatorviewer.bat
 ```
+
+
 
 点击 **Device Screenshot**，将会对当前界面截屏。
 

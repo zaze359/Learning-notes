@@ -215,13 +215,14 @@ signingConfigs {
 
 ```kotlin
 signingConfigs {
-  named("debug") {
+  // named("debug")
+  getByName("debug") {
     storeFile = file("android_zaze.keystore")
     storePassword = "xxxxx"
     keyAlias = "android"
     keyPassword = "xxxxx"
   }
-  // 需要自己创建 release， buildType中对应即可
+  // signingConfigs 需要自己创建 release， 和 buildType中对应即可
   create("release") {
     storeFile = file("android_zaze.keystore")
     storePassword = "xxxxx"

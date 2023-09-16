@@ -85,7 +85,7 @@ MAT 还支持内存快照对比，帮助我们差量分析内存泄露问题。
 
 ## 性能分析框架
 
-### LeakCanary：检测内存泄露
+### LeakCanary(检测内存泄露)
 
 [square/leakcanary: A memory leak detection library for Android. (github.com)](https://github.com/square/leakcanary)
 

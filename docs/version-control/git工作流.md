@@ -52,3 +52,42 @@ git push origin master
 ```shell
 git branch -d feature-xxx
 ```
+
+## 冲突处理
+
+`git pull` 拉取后 可能会发生冲突。
+
+### 修改较少
+
+直接强制还原变更，然后拉取最新，并进行手动修改再提交
+
+```shell
+# 还原
+git reset --hard origin/master
+# 拉取最新
+git pull
+# 手动修改提交
+```
+
+### 修改较多
+
+撤销本地的提交，然后暂存。拉取最新代码，还原暂存的修改，本地处理冲突后再提交。
+
+```shell
+git reset origin
+# 暂存
+git stash
+#
+git pull
+# 还原修改
+git stash apply stash@{0}
+# 处理冲突后重新add标记所有冲突已处理
+git add .
+#
+git push
+# 删除已应用的暂存信息
+git stash drop stash@{0}
+```
+
+
+

@@ -286,7 +286,7 @@ sqlite3 zaze_user.db
 
 * greenDAO：三方提供 的 ORM（Object Relational Mapping）对象关系映射数据库框架。
 
-* [Room](./Room数据库.md)：Google 官方提供的数据库框架
+* [Room](./Android数据库之Room.md)：Google 官方提供的数据库框架
 
   
 

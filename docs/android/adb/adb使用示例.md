@@ -154,7 +154,7 @@ input keyevent 187 	// KEYCODE_APP_SWITCH
 
 ### input tab 模拟触摸
 ```bash
-input tab 600 800
+input tap 600 800
 ```
 
 ### input swipe 模拟滑动

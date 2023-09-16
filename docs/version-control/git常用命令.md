@@ -93,7 +93,12 @@ git push --set-upstream origin master
 ### 拉取代码
 
 ```shell
+# 拉取最新，检查后合并
+git fetch
+# 拉取并合并
 git pull
+# 避免自动merge
+git pull --rebase
 ```
 
 ### 提交代码
@@ -107,11 +112,28 @@ git add -A
 git commit -m "提交信息"
 # 修改提交信息
 git commit --amend
+
+```
+
+### 撤销变更
+
+```shell
+# 撤销本地最近一次commit
+git reset HEAD~
+# 撤销 某个文件变更
+git reset HEAD util/src/main/java/com/zaze/utils/TraceHelper.kt
+# 撤销变更，还原到远程 origin到状态
+git reset origin
+# --hard，撤销变更，并强制清除变更到文件
+git reset --hard origin/master
+```
+
+### 推送到远程仓库
+
+```shell
 # 提交到远程仓库
 git push 
 ```
-
-
 
 
 
@@ -268,12 +290,12 @@ git cherry-pick A^..B
 - 恢复暂存内容
 
   ```shell
-  # 获取并从暂存列表中删除, 默认stash@{0}
-  git stash pop
-  git stash pop stash@{0}
   # 获取依然保留在暂存列表中, 默认stash@{0}
   git stash apply
   git stash apply stash@{0}
+  # 获取并从暂存列表中删除, 默认stash@{0}
+  git stash pop
+  git stash pop stash@{0}
   ```
 
 - 删除暂存内容

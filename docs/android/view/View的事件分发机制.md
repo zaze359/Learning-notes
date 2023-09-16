@@ -8,6 +8,8 @@ Android定义了一些的触摸事件用来表示用户手指在屏幕上的操�
 
 事件分发就是以 事件序列作为一个基本单位，其中 ACTION_DOWN 由谁消费将决定整个事件序列有谁来消费。
 
+### 事件类型
+
 | 触摸事件      |                                          |      |
 | ------------- | ---------------------------------------- | ---- |
 | ACTION_DOWN   | 刚接触到屏幕                             |      |
@@ -15,15 +17,17 @@ Android定义了一些的触摸事件用来表示用户手指在屏幕上的操�
 | ACTION_MOVE   | 在屏幕上移动                             |      |
 | ACTION_CANCEL | 手指未抬起，但是移动到了View的方法之外。 |      |
 
-触摸事件发生时，会回调一个 `MotionEvent` ，内部记录的触摸事件的 x/y 位置信息。
+### 获取相对于自身的坐标
 
-它的参考坐标系为触摸的View自身，即**View左上角为原点（0，0）**。
+触摸事件发生时，会回调一个 `MotionEvent` ，可以通过 `event.getX()/event.getY()`获取 相对于自身的 位置信息。它的参考坐标系为触摸的View自身，即**View左上角为原点（0，0）**。
 
-> 若要获取相对于屏幕的坐标，使用 `event.getRawX()`、`event.getRawY()`来获取。
->
-> 在处理触摸事件时，还会使用 TouchSlop，它表示系统所能识别的最小滚动距离。
->
-> 通过 `ViewConfiguration.get(context).scaledTouchSlop`  来获取。
+### 获取相对于屏幕的坐标
+
+若要获取相对于屏幕的坐标，使用 `event.getRawX()`、`event.getRawY()`来获取。
+
+在处理触摸事件时，还会使用 TouchSlop，它表示系统所能识别的最小滚动距离。
+
+通过 `ViewConfiguration.get(context).scaledTouchSlop`  来获取。
 
 
 

@@ -210,23 +210,28 @@ View的测量流程主要是用于确定View的测量宽高。
 
 > 获取测量宽高 和 获取View的宽高 两者是不同的函数，不过正常情况下是两者的值是相同的。
 >
-> 测量阶段决定 View的测量宽高，而View的宽高是在 layout 阶段决定的。
->
-> 测量宽高：
->
-> ```java
-> public final int getMeasuredWidth() {
->     return mMeasuredWidth & MEASURED_SIZE_MASK;
-> }
-> ```
->
-> View的宽高：
->
-> ```java
-> public final int getWidth() { // 根据 layout阶段赋值的 left、top、right、bottm计算得到
->     return mRight - mLeft;
-> }
-> ```
+
+ 测量宽高：
+
+> 测量阶段决定 View的测量宽高，表示View的原始大小，xml或代码指定的大小
+
+ ```java
+ public final int getMeasuredWidth() {
+  return mMeasuredWidth & MEASURED_SIZE_MASK;
+ }
+ ```
+
+ View的宽高：
+
+> View的宽高是在 layout 阶段决定的。表示View的显示大小，
+
+ ```java
+ public final int getWidth() { // 根据 layout阶段赋值的 left、top、right、bottm计算得到
+  return mRight - mLeft;
+ }
+ ```
+
+
 
 #### MeasureSpec
 
@@ -953,6 +958,19 @@ LayoutInflater.from(parent.context).inflate(R.layout.item_test, parent, false)
         return view;
     }
 ```
+
+#### root、attachToRoot参数的作用
+
+root 会影响 创建的布局最外层的LayoutParams：
+
+* root == null：被创建View的**最外层的LayoutParams将失效**，设置的宽高并不会生效，变为 wrap_content。
+* root != null：被创建View的**最外层的LayoutParams生效**。
+
+attachToRoot 表示是否和root关联：
+
+* attachToRoot  == true：**被创建View会作为 root的子布局**，且`inflater()`**返回给我们的是root**。
+* attachToRoot == false：被创建的View不会和root关联，`inflater()`返回给我们的就是创建的View。
+  * root为空时 attachToRoot这个属性就没什么用了，`inflater()`返回的也是创建的View。
 
 ###  Factory/Factory2
 

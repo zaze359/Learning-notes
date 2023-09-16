@@ -1,14 +1,16 @@
-# Java执行环境
+# Java环境配置
 
-## 下载OpenJDK
+
+
+## Windows
+
+### 下载OpenJDK
 
 [OpenJDK](https://openjdk.org/)
 
 [Java Platform, Standard Edition 13 Reference Implementations](https://jdk.java.net/java-se-ri/13)
 
-
-
-## 环境变量配置
+### 环境变量配置
 
 新建系统变量`JAVA_HOME`
 
@@ -28,7 +30,9 @@ D:\openjdk\jdk-13
 java -version
 ```
 
-### 安装版本的Java
+## 其他
+
+### 优先使用安装版本的Java
 
 调整以下环境变量的顺序即可，`%JAVA_HOME%\bin`在上面。
 
