@@ -349,9 +349,79 @@ Row(
 
 
 
-## Flutter异常
+## Flutter项目编译异常
 
 ### 系统找不到指定的路径
 
 1. 删除 `flutter/bin` 下的 cache文件夹。
 2. 重写执行 ``flutter doctor``。
+
+### version solving failed
+
+更新一下flutter
+
+```shell
+flutter upgrade
+```
+
+### Could not locate aapt. Please ensure you have the Android buildtools installed.
+
+一般是由于 build-tools不完整导致的，默认使用的是最新的那个，所以删除最新的那个 build-tools，重新安装。
+
+```shell
+cd ~/Library/Android/sdk/build-tools
+```
+
+![image-20230925221218240](Flutter问题集.assets/image-20230925221218240.png)
+
+### 配置镜像站点
+
+> 提示信号灯超时时间已到相关问题时，通过使用国内镜像修复。
+
+[Using Flutter in China | Flutter](https://docs.flutter.dev/community/china)
+
+Mac 修改`~/.bash_profile `
+
+```properties
+# flutter 社区
+export PUB_HOSTED_URL=https://pub.flutter-io.cn  
+export FLUTTER_STORAGE_BASE_URL=https://storage.flutter-io.cn
+
+# 清华
+export PUB_HOSTED_URL=https://mirrors.tuna.tsinghua.edu.cn/dart-hub
+export FLUTTER_STORAGE_BASE_URL=https://mirrors.tuna.tsinghua.edu.cn/flutter
+
+# 腾讯
+export PUB_HOSTED_URL=https://mirrors.cloud.tencent.com/dart-hub
+export FLUTTER_STORAGE_BASE_URL=https://mirrors.cloud.tencent.com/flutter
+
+# source ~/.bash_profile
+```
+
+Windows 配置环境变量：
+
+```shell
+# 新建用户变量 PUB_HOSTED_URL
+https://pub.flutter-io.cn
+# 新建用户变量 FLUTTER_STORAGE_BASE_URL
+https://storage.flutter-io.cn
+```
+
+### Android设备运行时卡在 assembleDebug
+
+在`android->build.gradle`中添加国内镜像
+
+```groovy
+maven { url 'https://maven.aliyun.com/repository/public' }
+maven { url 'https://maven.aliyun.com/repository/jcenter' }
+maven { url 'https://maven.aliyun.com/repository/google' }
+```
+
+若配置后依然卡住，应该是在下载依赖库：
+
+```shell
+cd android
+# 编译项目，并查看信息编译情况
+./gradlew clean build --info
+```
+

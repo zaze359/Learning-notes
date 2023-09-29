@@ -125,28 +125,6 @@ flutter doctor
 
 
 
-#### 配置镜像站点
-
-> 提示信号灯超时时间已到相关问题时，通过使用国内镜像修复。
-
-[Using Flutter in China | Flutter](https://docs.flutter.dev/community/china)
-
-Mac 修改`~/.bash_profile `
-
-```properties
-export PUB_HOSTED_URL=https://pub.flutter-io.cn  
-export FLUTTER_STORAGE_BASE_URL=https://storage.flutter-io.cn
-```
-
-Windows 配置环境变量：
-
-```shell
-# 新建用户变量 PUB_HOSTED_URL
-https://pub.flutter-io.cn
-# 新建用户变量 FLUTTER_STORAGE_BASE_URL
-https://storage.flutter-io.cn
-```
-
 ### 2.2 创建项目
 
 使用Android Studio自己创建flutter项目 。
@@ -169,15 +147,6 @@ git clone git@github.com:flutter/gallery.git
 
 ### 2.4 问题记录
 
-*   **Android设备运行时卡在 assembleDebug。**
-
-    > 在`android->build.gradle`中添加国内镜像
-
-    ```groovy
-    maven { url 'https://maven.aliyun.com/repository/public' }
-    maven { url 'https://maven.aliyun.com/repository/jcenter' }
-    maven { url 'https://maven.aliyun.com/repository/google' }
-    ```
 
 *   **IOS设备运行时提示`无法打开idevicesyslog....`**
 

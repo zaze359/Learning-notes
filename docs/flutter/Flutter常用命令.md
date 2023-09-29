@@ -11,7 +11,7 @@ flutter --version
 flutter run
 flutter run -d windows
 
-#
+# aar, apk, windows, appbundle bundle web
 flutter build windows
 
 # 给当前项目添加 桌面端支持

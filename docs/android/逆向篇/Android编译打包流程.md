@@ -168,55 +168,55 @@ BUILD SUCCESSFUL in 1s
 
 ```
 
-| Task                                     | 说明                                                         |                                 |
-| ---------------------------------------- | ------------------------------------------------------------ | ------------------------------- |
-| preBuild                                 |                                                              |                                 |
-| preDebugBuild                            |                                                              |                                 |
-| compileDebugAidl                         | 编译aidl，转为java文件                                       |                                 |
-| compileDebugRenderscript                 | 编译Renderscript                                             |                                 |
-| dataBindingMergeDependencyArtifactsDebug |                                                              |                                 |
-| dataBindingMergeGenClassesDebug          |                                                              |                                 |
-| generateDebugResValues                   | 获取gradle中配置的资源文件                                   |                                 |
-| generateDebugResources                   |                                                              |                                 |
-| mergeDebugResources                      | AAPT2编译阶段，合并资源                                      | build/intermediates/merged_res/ |
-| dataBindingGenBaseClassesDebug           |                                                              |                                 |
-| dataBindingTriggerDebug                  |                                                              |                                 |
-| generateDebugBuildConfig                 | 生成BuildConfig文件                                          |                                 |
-| writeDebugApplicationId                  |                                                              |                                 |
-| generateSafeArgsDebug                    |                                                              |                                 |
-| checkDebugAarMetadata                    |                                                              |                                 |
-| createDebugCompatibleScreenManifests     |                                                              |                                 |
-| extractDeepLinksDebug                    |                                                              |                                 |
-| processDebugMainManifest                 | 处理主Manifest                                               |                                 |
-| processDebugManifest                     |                                                              |                                 |
-| processDebugManifestForPackage           |                                                              |                                 |
-| processDebugResources                    | AAPT2链接阶段，生成R.java和resources.arsc。并合并所有已编译的文件。 |                                 |
-| kaptGenerateStubsDebugKotlin             |                                                              |                                 |
-| kaptDebugKotlin                          |                                                              |                                 |
-| compileDebugKotlin                       | 编译Kotlin                                                   |                                 |
-| compileDebugJavaWithJavac                | 编译Java                                                     |                                 |
-| compileDebugSources                      |                                                              |                                 |
-| mergeDebugNativeDebugMetadata            |                                                              |                                 |
-| mergeDebugShaders                        |                                                              |                                 |
-| compileDebugShaders                      |                                                              |                                 |
-| generateDebugAssets                      |                                                              |                                 |
-| mergeDebugAssets                         | 合并assets资源                                               |                                 |
-| compressDebugAssets                      | 压缩assets资源                                               |                                 |
-| processDebugJavaRes                      |                                                              |                                 |
-| mergeDebugJavaResource                   |                                                              |                                 |
-| checkDebugDuplicateClasses               |                                                              |                                 |
-| desugarDebugFileDependencies             |                                                              |                                 |
-| mergeExtDexDebug                         |                                                              |                                 |
-| mergeLibDexDebug                         |                                                              |                                 |
-| transformDebugClassesWithAsm             |                                                              |                                 |
-| dexBuilderDebug                          | 将class转换为dex                                             |                                 |
-| mergeProjectDexDebug                     |                                                              |                                 |
-| mergeDebugJniLibFolders                  |                                                              |                                 |
-| mergeDebugNativeLibs                     |                                                              |                                 |
-| stripDebugDebugSymbols                   |                                                              |                                 |
-| validateSigningDebug                     |                                                              |                                 |
-| writeDebugAppMetadata                    |                                                              |                                 |
-| writeDebugSigningConfigVersions          |                                                              |                                 |
-| packageDebug                             | 打包apk并签名                                                |                                 |
-| assembleDebug                            |                                                              |                                 |
+| Task                                     | 说明                                                         |                                                              |
+| ---------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| preBuild                                 |                                                              |                                                              |
+| preDebugBuild                            |                                                              |                                                              |
+| compileDebugAidl                         | 编译aidl，转为java文件                                       |                                                              |
+| compileDebugRenderscript                 | 编译Renderscript                                             |                                                              |
+| dataBindingMergeDependencyArtifactsDebug |                                                              |                                                              |
+| dataBindingMergeGenClassesDebug          |                                                              |                                                              |
+| generateDebugResValues                   | 获取gradle中配置的资源文件                                   |                                                              |
+| generateDebugResources                   |                                                              |                                                              |
+| mergeDebugResources                      | AAPT2编译阶段，合并资源                                      | 解压所有的aar包输出到app/build/intermediates/exploded-aar，并且把所有的资源文件合并到app/build/intermediates/res/merged/debug |
+| dataBindingGenBaseClassesDebug           |                                                              |                                                              |
+| dataBindingTriggerDebug                  |                                                              |                                                              |
+| generateDebugBuildConfig                 | 生成BuildConfig文件                                          |                                                              |
+| writeDebugApplicationId                  |                                                              |                                                              |
+| generateSafeArgsDebug                    |                                                              |                                                              |
+| checkDebugAarMetadata                    |                                                              |                                                              |
+| createDebugCompatibleScreenManifests     |                                                              |                                                              |
+| extractDeepLinksDebug                    |                                                              |                                                              |
+| processDebugMainManifest                 | 处理主Manifest                                               |                                                              |
+| **processDebugManifest**                 | 合并AndroidManifest                                          | 把所有aar包里的AndroidManifest.xml中的节点，合并到项目的AndroidManifest.xml中，并根据app/build.gradle中当前buildType的manifestPlaceholders配置内容替换manifest文件中的占位符，最后输出到app/build/intermediates/manifests/full/debug/AndroidManifest.xml |
+| processDebugManifestForPackage           |                                                              |                                                              |
+| **processDebugResources**                | AAPT2链接阶段，生成R.java和resources.arsc。并合并所有已编译的文件。 | 1.调用aapt生成项目和所有aar依赖的R.java,输出到app/build/generated/source/r/debug目录<br/>2.生成资源索引文件app/build/intermediates/res/resources-debug.ap_<br/>3.把符号表输出到app/build/intermediates/symbols/debug/R.txt |
+| kaptGenerateStubsDebugKotlin             |                                                              |                                                              |
+| kaptDebugKotlin                          |                                                              |                                                              |
+| compileDebugKotlin                       | 编译Kotlin                                                   |                                                              |
+| compileDebugJavaWithJavac                | 编译Java                                                     |                                                              |
+| compileDebugSources                      |                                                              |                                                              |
+| mergeDebugNativeDebugMetadata            |                                                              |                                                              |
+| mergeDebugShaders                        |                                                              |                                                              |
+| compileDebugShaders                      |                                                              |                                                              |
+| generateDebugAssets                      |                                                              |                                                              |
+| mergeDebugAssets                         | 合并assets资源                                               |                                                              |
+| compressDebugAssets                      | 压缩assets资源                                               |                                                              |
+| processDebugJavaRes                      |                                                              |                                                              |
+| mergeDebugJavaResource                   |                                                              |                                                              |
+| checkDebugDuplicateClasses               |                                                              |                                                              |
+| desugarDebugFileDependencies             |                                                              |                                                              |
+| mergeExtDexDebug                         |                                                              |                                                              |
+| mergeLibDexDebug                         |                                                              |                                                              |
+| transformDebugClassesWithAsm             |                                                              |                                                              |
+| dexBuilderDebug                          | 将class转换为dex                                             |                                                              |
+| mergeProjectDexDebug                     |                                                              |                                                              |
+| mergeDebugJniLibFolders                  |                                                              |                                                              |
+| mergeDebugNativeLibs                     |                                                              |                                                              |
+| stripDebugDebugSymbols                   |                                                              |                                                              |
+| validateSigningDebug                     |                                                              |                                                              |
+| writeDebugAppMetadata                    |                                                              |                                                              |
+| writeDebugSigningConfigVersions          |                                                              |                                                              |
+| packageDebug                             | 打包apk并签名                                                |                                                              |
+| assembleDebug                            |                                                              |                                                              |
 

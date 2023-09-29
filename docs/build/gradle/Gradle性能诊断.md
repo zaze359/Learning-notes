@@ -48,3 +48,43 @@ gradlew --profile --recompile-scripts --offline --rerun-tasks assembleDebug
 
 * 每一个版本的Gradle都会对应一个Daemon进程，使用同一个版本的进程可以节约配置
 * 即使使用同一个版本的Gradle, 也会因为VM配置不同而启动多个Daemon进程。
+
+### 项目模块整理
+- 去除冗余的模块。
+- 将不常改动的模块改为aar 或者maven依赖。
+- 尽量保持模块的独立性，减少互相依赖(大大拖慢编译速度)。
+
+### 查找耗时任务
+```groovy
+public class BuildTimeListener implements TaskExecutionListener, BuildListener {
+    private Clock clock
+    private times = []
+
+    @Override
+    void beforeExecute(Task task) {
+        clock = new org.gradle.util.Clock()
+    }
+
+    @Override
+    void afterExecute(Task task, TaskState taskState) {
+        def ms = clock.timeInMs
+        times.add([ms, task.path])
+
+        //task.project.logger.warn "${task.path} spend ${ms}ms"
+    }
+
+    @Override
+    void buildFinished(BuildResult result) {
+        println "Task spend time:"
+        for (time in times) {
+            if (time[0] >= 50) {
+                printf "%7sms  %s\n", time
+            }
+        }
+    }
+
+    ......
+}
+
+project.gradle.addListener(new BuildTimeListener())
+```

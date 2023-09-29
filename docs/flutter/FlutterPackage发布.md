@@ -24,7 +24,7 @@ flutter create --org com.zaze --template=plugin --platforms=android,ios,web -a k
 
 使用命令后会自动创建`atookbox` 项目，内部包含了必要的目录和文件。
 
-![image-20230209160835730](./Flutter%E5%8C%85%E7%AE%A1%E7%90%86.assets/image-20230209160835730.png)
+![image-20230209160835730](FlutterPackage发布.assets/image-20230209160835730.png)
 
 | 文件         |                                                              |      |
 | ------------ | ------------------------------------------------------------ | ---- |
@@ -78,9 +78,9 @@ dependencies:
 * 若已有LICENSE，直接拷贝内容即可。
 * 若无已Github为例：，在新建 `LICENSE(文件名必须是这个)` 文件时，选择 `Choose a license template` 。
 
-![image-20230209172401430](./Flutter%E5%8C%85%E7%AE%A1%E7%90%86.assets/image-20230209172401430.png)
+![image-20230209172401430](FlutterPackage发布.assets/image-20230209172401430.png)
 
-![image-20230209172346985](./Flutter%E5%8C%85%E7%AE%A1%E7%90%86.assets/image-20230209172346985.png)
+![image-20230209172346985](FlutterPackage发布.assets/image-20230209172346985.png)
 
 ## 发布到pub.dev
 

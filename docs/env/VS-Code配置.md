@@ -262,6 +262,10 @@ chcp 65001
 
 ## 插件记录
 
-### Markdown插件
-
-Office Viewer
+| 插件                                                      |              |      |
+| --------------------------------------------------------- | ------------ | ---- |
+| Office Viewer                                             | Markdown插件 |      |
+| Chinese (Simplified) Language Pack for Visual Studio Code | 中文语言     |      |
+| Auto Import                                               | 自动导包     |      |
+| Docker                                                    |              |      |
+| Language Support for Java(TM) by Red Hat                  |              |      |

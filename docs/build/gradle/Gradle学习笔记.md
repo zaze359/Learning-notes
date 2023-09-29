@@ -110,6 +110,7 @@ Groovy中的 `==` 等同java的`equals()`,  比较对象是否为同一个应该
 ```kotlin
 val snapshotVersion : String? = System.getenv("COMPOSE_SNAPSHOT_ID")
 
+// 指定插件的下载仓库, 对标 buildscript.repositories
 pluginManagement {
   	// 管理 Plugin Repository
     repositories {
@@ -118,7 +119,7 @@ pluginManagement {
         mavenCentral()
     }
 }
-// 依赖管理
+// 依赖管理: 对标之前 build.gradle中的 allprojects.repositories
 dependencyResolutionManagement {
   	// 指定策略
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)

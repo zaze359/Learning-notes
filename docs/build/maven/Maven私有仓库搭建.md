@@ -1,10 +1,10 @@
 # Maven私有仓库搭建
 
-| maven仓库类型 | 具体说明                                   |
-| :------------ | :----------------------------------------- |
-| hosted        | 本地存储。                                 |
-| proxy         | 提供代理其它仓库的类型                     |
-| group         | 组类型，能够组合多个仓库为一个地址提供服务 |
+| maven仓库类型 | 具体说明                                     |
+| :------------ | :------------------------------------------- |
+| hosted        | 宿主类型，本地存储。一般当作内部项目的仓库。 |
+| proxy         | 代理类型，提供代理其它仓库的类型。           |
+| group         | 组类型，能够组合多个仓库为一个地址提供服务。 |
 
 ## Docker + Nexus  搭建仓库
 
@@ -31,7 +31,7 @@ docker run -d -p 8081:8081 --name nexus --restart=always sonatype/nexus3
 
 ---
 
-## 发布到 Maven中央仓库sonatype
+## 发布到 Maven中央仓库
 
 [OSSRH Guide - The Central Repository Documentation (sonatype.org)](https://central.sonatype.org/publish/publish-guide/#releasing-to-central)
 

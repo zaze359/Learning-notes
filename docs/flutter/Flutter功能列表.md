@@ -152,7 +152,7 @@ Column(
 ```dart
 const Text(
   "123456",
-  textAlign: TextAlign.center,
+  textAlign: TextAlign.center, // 文本内容居中
   style: TextStyle(),
   strutStyle: StrutStyle(
     forceStrutHeight: true, // 去除了文字的内边距，同android的 includeFontPadding = false
