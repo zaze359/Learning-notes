@@ -520,7 +520,7 @@ PV属于集群的系统资源，和Node同级。Pod 可以使用它，但是无�
 * `PersistentVolumeClaim`：负责向系统申请PV。申请成功后将会和PV绑定。PVC可以理解为一份需求说明，表明需要什么样子的设备。
 * `StorageClass`：抽象了特定类型的存储系统，将存储设备归纳分组，从而更容易选择PV对象，简化了PVC和PV的绑定过程。简单的StorageClass 可以不用单独定义直接取个别名即可。
 
-#### 定义PV
+#### PV：存储说明
 
 PV 就是 `PersistentVolume`，它表示存储设备。
 
@@ -565,7 +565,7 @@ kubectl edit pv host-10m-pv
 
 ```
 
-#### 定义PVC
+#### PVC：需求规格
 
 PVC 就是 `PersistentVolumeClaim`，它负责向系统申请PV，里面定义了PV规格，表明需要什么样设备。申请成功后PVC就会和和PV绑定。
 
@@ -861,7 +861,7 @@ Pod负责容器的管理，但是容器执行多久，什么时候执行等这�
 >
 > `ttlSecondsAfterFinished` 指定保留时限。
 
-### Job
+### Job：临时任务
 
 整体结构 和Pod的描述很相似，不过 Job是属于 `batch`组而不是`apps` 组。
 
@@ -926,9 +926,9 @@ pod的名字：job名字 + 随机字符串
 
 
 
-### CronJob
+### CronJob：定时任务
 
-spec 是一个层层套娃的结构。
+CronJob 的 spec字段 是一个层层套娃的结构。
 
  `schedule`指定任务的运行规则，使用的Cron 语法.
 

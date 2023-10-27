@@ -26,7 +26,7 @@ BottomNavigationView
 ![image_1do1lq7ig1p6i64q1r8v1ak317fj9.png-15.9kB][1]
 
 - activity_main
-```
+```xml
 <com.google.android.material.navigation.NavigationView
     android:id="@+id/mainNav"
     android:layout_width="wrap_content"
@@ -37,7 +37,7 @@ BottomNavigationView
 ```
 
 - header_layout.xml
-```
+```xml
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -63,7 +63,7 @@ BottomNavigationView
 
 ```
 
-```
+```xml
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item

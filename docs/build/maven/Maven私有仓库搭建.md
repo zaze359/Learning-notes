@@ -6,23 +6,24 @@
 | proxy         | 代理类型，提供代理其它仓库的类型。           |
 | group         | 组类型，能够组合多个仓库为一个地址提供服务。 |
 
-## Docker + Nexus  搭建仓库
+## Docker + Nexus  搭建本地仓库
 
 ### 1.下载Nexus
 
-```javascript
+```shell
 docker pull sonatype/nexus3
 ```
 
 ### 2. 创建Nexus的挂载文件夹(可选)
 
-```bash
+```shell
+# mac
 mkdir /usr/local/nexus-data && chown -R 200 /usr/local/nexus-data
 ```
 
 ### 3. 启动容器
 
-```bash
+```shell
 docker run -d -p 8081:8081 --name nexus -v /usr/local/nexus-data:/nexus-data --restart=always sonatype/nexus3
 docker run -d -p 8081:8081 --name nexus --restart=always sonatype/nexus3
 ```
@@ -31,7 +32,7 @@ docker run -d -p 8081:8081 --name nexus --restart=always sonatype/nexus3
 
 ---
 
-## 发布到 Maven中央仓库
+## 发布到远程Maven中央仓库
 
 [OSSRH Guide - The Central Repository Documentation (sonatype.org)](https://central.sonatype.org/publish/publish-guide/#releasing-to-central)
 
@@ -77,12 +78,159 @@ NEXUS_USERNAME="账号"
 NEXUS_PASSWORD="密码"
 ```
 
-## 本地Maven：MavenLocal
+新建 **maven-publish.gradle**，配置打包脚本
+
+```groovy
+apply plugin: 'maven-publish'
+
+def loadProperties(Properties properties, List<File> files) {
+    if (files != null && !files.isEmpty()) {
+        for (File propertiesFile : files) {
+            if (propertiesFile.exists()) {
+                println("properties.load: " + propertiesFile.absolutePath)
+                properties.load(propertiesFile.newDataInputStream())
+            } else {
+                println("properties not found: " + propertiesFile.absolutePath)
+            }
+        }
+    }
+}
+
+Properties mavenProperties = new Properties()
+loadProperties(mavenProperties, Arrays.asList(rootProject.file("buildscripts/maven.properties"), rootProject.file("local.properties")))
+
+def isReleaseBuild() {
+    return VERSION_NAME.endsWith("SNAPSHOT") == false
+}
+
+static def getReleaseRepositoryUrl(Properties properties) {
+    return properties.getProperty('RELEASE_REPOSITORY_URL', "http://localhost:8081/repository/maven-releases/")
+}
+
+static def getSnapshotRepositoryUrl(Properties properties) {
+    return properties.getProperty('SNAPSHOT_REPOSITORY_URL', "http://localhost:8081/repository/maven-snapshots/")
+}
+
+static def getRepositoryUsername(Properties properties) {
+    return properties.getProperty('NEXUS_USERNAME', "zaze")
+}
+
+static def getRepositoryPassword(Properties properties) {
+    return properties.getProperty('NEXUS_PASSWORD', "123456")
+}
+
+
+def configurePom(mavenProperties, pom) {
+    pom.name = mavenProperties.getProperty("POM_NAME")
+    pom.packaging = mavenProperties.getProperty("POM_PACKAGING")
+    pom.description = mavenProperties.getProperty("POM_DESCRIPTION")
+    pom.url = mavenProperties.getProperty("POM_URL")
+
+    pom.scm {
+        url = mavenProperties.getProperty("POM_SCM_URL")
+        connection = mavenProperties.getProperty("POM_SCM_CONNECTION")
+        developerConnection = mavenProperties.getProperty("POM_SCM_DEV_CONNECTION")
+    }
+
+    pom.licenses {
+        license {
+            name = mavenProperties.getProperty("POM_LICENCE_NAME")
+            url = mavenProperties.getProperty("POM_LICENCE_URL")
+            distribution = mavenProperties.getProperty("POM_LICENCE_DIST")
+        }
+    }
+
+    pom.developers {
+        developer {
+            id = mavenProperties.getProperty("POM_DEVELOPER_ID")
+            name = mavenProperties.getProperty("POM_DEVELOPER_NAME")
+        }
+    }
+}
+
+afterEvaluate { project ->
+    publishing {
+        // 配置仓库地址
+        repositories {
+            maven {
+                allowInsecureProtocol = true
+                def releasesRepoUrl = getReleaseRepositoryUrl(mavenProperties)
+                def snapshotsRepoUrl = getSnapshotRepositoryUrl(mavenProperties)
+                url = isReleaseBuild() ? releasesRepoUrl : snapshotsRepoUrl
+                println("publishing repositories: " + url)
+                credentials(PasswordCredentials) {
+                    username = getRepositoryUsername(mavenProperties)
+                    password = getRepositoryPassword(mavenProperties)
+                }
+            }
+        }
+
+        publications {
+            // Creates a Maven publication called "release".
+            release(MavenPublication) {
+                from components.release
+                groupId = GROUP
+                artifactId = POM_ARTIFACT_ID
+                version = VERSION_NAME
+                configurePom(mavenProperties, pom)
+            }
+            // Creates a Maven publication called “debug”.
+//            debug(MavenPublication) {
+//                from components.debug
+//                groupId = GROUP
+//                artifactId = POM_ARTIFACT_ID
+//                version = VERSION_NAME + "-SNAPSHOT"
+//                configurePom(mavenProperties, pom)
+//            }
+        }
+
+    }
+}
+
+if (JavaVersion.current().isJava8Compatible()) {
+    allprojects {
+        tasks.withType(Javadoc) {
+            options.addStringOption('Xdoclint:none', '-quiet')
+            options.encoding = "UTF-8"
+        }
+    }
+}
+
+task androidJavadocs(type: Javadoc) {
+    source = android.sourceSets.main.java.source
+    classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+    excludes = ['**/*.kt']
+}
+
+task androidJavadocsJar(type: Jar, dependsOn: androidJavadocs) {
+    classifier = 'javadoc'
+    from androidJavadocs.destinationDir
+}
+
+// 配置源码路径
+task androidSourcesJar(type: Jar) {
+    classifier = 'sources'
+    from android.sourceSets.main.java.source
+}
+
+// 将源码打包到 aar
+artifacts {
+    archives androidSourcesJar
+//            archives androidJavadocsJar
+}
+
+```
+
+
+
+## 使用MavenLocal
 
 > * debug：对应 SNAPSHOT 版本。
 > * release：对应正式版本。
 >
 > 需要注意的是 上传release编译产物时，模块自身不能存在debug版本依赖库，否则无法上传。
+>
+> 所以一般不配置 debug，直接使用 release即可
 
 ```shell
 # 将 debug 产物，上传到 MavenLocal

@@ -210,7 +210,6 @@ kubectl expose deploy ngx-dep --port=80 --target-port=80 $out
 ```shell
 sudo kubeadm reset
 
-
 kubeadm token create
 
 # 显示加入命令
@@ -233,8 +232,6 @@ sudo kubeadm init \
 
 
 
-
-
 ## minikube
 
 ```shell
@@ -243,14 +240,6 @@ minikube version
 minikube status
 # 启动
 minikube start
-
-# minikube 中设置别名
-alias kubectl="minikube kubectl --"
-```
-
-```shell
-# 使用浏览器打开 minikube的Dashboard页面
-minikube dashboard
 
 # 指定 docker 作为驱动启动
 minikube start --driver=docker
@@ -276,6 +265,12 @@ minikube addons list
 # ssh 方式进入minikube
 minikube ssh
 ps -ef|grep kubelet
+
+# 使用浏览器打开 minikube的Dashboard页面
+minikube dashboard
+
+# minikube 中设置别名
+alias kubectl="minikube kubectl --"
 ```
 
 

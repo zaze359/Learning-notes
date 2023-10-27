@@ -539,3 +539,49 @@ edge://net-internals/#dns
 3. 启动后重启浏览器。
 
 ![image-20230216150214257](./FAQ.assets/image-20230216150214257.png)
+
+
+
+## Docker unexpected wsl error
+
+1. 确认是否开启了 Hyper-V，没有则 进入BIOS中启用虚拟化。
+
+2. 若已开启Hyper-V，则使用**管理员终端** 执行以下命令：
+
+   ```shell
+   netsh winsock reset
+   ```
+
+
+
+## Win11 家庭版安装Hyper-V
+
+确认是否支持 hyper-v
+
+```shell
+systeminfo
+```
+
+全是 `是` 表示支持。
+
+![image-20230930202643870](./FAQ.assets/image-20230930202643870.png)
+
+1. 新建文件`hyper-v.bat` ，已管理员权限运行：
+
+   ```bat
+   pushd "%~dp0"
+   dir /b %SystemRoot%\servicing\Packages\*Hyper-V*.mum >hyper-v.txt
+   for /f %%i in ('findstr /i . hyper-v.txt 2^>nul') do dism /online /norestart /add-package:"%SystemRoot%\servicing\Packages\%%i"
+   del hyper-v.txt
+   Dism /online /enable-feature /featurename:Microsoft-Hyper-V -All /LimitAccess /ALL
+   pause
+   ```
+
+2. 安装完后重启电脑。
+
+3. `win + R` 运行 `optionalfeatures.exe`，看看是否有 `hyper-v` 选项。
+
+   ![image-20230930205027305](./FAQ.assets/image-20230930205027305.png)
+
+4. 搜索打开 **hyper-v 管理器** 。
+
