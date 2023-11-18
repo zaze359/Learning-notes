@@ -2,21 +2,27 @@
 
 [TOC]
 
-## 依赖注入
+## 常见的依赖项获取方式
 
 [Android 中的依赖项注入  | Android 开发者  | Android Developers (google.cn)](https://developer.android.google.cn/training/dependency-injection?hl=zh_cn)
 
-一个类常常会需要引用其他的类才能正常的使用，这些引用的类称为**依赖项**。
+一个类常常会需要引用其他的类才能正常的使用，**这些引用的类称为 依赖项**。
 
-这些依赖项一般通过以下方式获取：
+依赖项一般可以通过以下方式来获取：
 
-* **由类自己来初始化依赖项**：两者耦合太深，依赖项不容易替换，且不方便测试。
-* **调用特定的API在需要时主动获取**：需要通过某一个类来获取依赖项，同样不容易替换且不方便测试。（如 `Context` getter 和 `getSystemService()`）
-* **通过依赖注入的方式**：作为函数的参数提供依赖项。
-  * **构造函数注入**：作为构造函数的入参由外部传入依赖项。
-  * **字段注入**：例如定义 `setter()` 函数来出入依赖项。
+1. **由类自己来初始化依赖项**：类内部直接new。问题就是两者耦合太深，依赖项不容易替换，且不方便测试。
+2. **调用特定的API在需要时主动获取**：需要通过某一个类来获取依赖项，同样不容易替换且不方便测试。（如 `getter`  、 `Context.getSystemService()`等方式）
+3. **通过依赖注入的方式**：作为函数的参数提供依赖项。
 
-依赖注入基于控制反转原则，通用代码控制特定代码的执行。使用依赖注入有以下几个优点：
+## 依赖注入
+
+依赖注入的方式有构造函数注入、字段注入，基于控制反转原则，通过通用代码控制特定代码的执行。
+
+* **构造函数注入**：作为构造函数的入参由外部传入依赖项。
+
+* **字段注入**：例如定义 `setter()` 函数来出入依赖项。
+
+### 依赖注入的优点
 
 - **重用代码**
 
@@ -24,24 +30,24 @@
 
 - **易于测试**
 
+### 依赖注入存在的问题
+
 依赖注入也带来了一些问题，当依赖项越来越多，层级越来越深，需要注入的参数越多，手动注入依赖十分麻烦。
 
-从而就出现了一些自动依赖项注入的框架。
+从而就出现了一些**自动依赖项注入的框架**。
 
 自动依赖项注入框架一般可分为两类：
 
 - **基于反射的解决方案**：可在**运行时**连接依赖项。(Guice)
 - **静态解决方案**：可生成在**编译时**连接依赖项的代码。(Dagger，Hilt)
 
+---
 
-
-## Hilt的使用
+## Hilt基础概念
 
 [使用 Hilt 实现依赖项注入  | Android 开发者  | Android Developers (google.cn)](https://developer.android.google.cn/training/dependency-injection/hilt-android?hl=zh_cn)
 
 Hilt 是在 Dagger 基础上构建而成的，因而能够受益于 Dagger 提供的编译时正确性、运行时性能、可伸缩性和 Android Studio 支持。
-
-### 基础概念
 
 首先需要了解一些Hilt中的概念：
 
@@ -54,6 +60,7 @@ Hilt 是在 Dagger 基础上构建而成的，因而能够受益于 Dagger 提�
 * **组件作用域(Component scopes)**：将绑定的作用域 限定在特定组件中，限定后在对应的**作用域内就仅创建一个实例**。
   * 默认不存在作用域，即每次绑定请求都会创建一个实例。
 
+## Hilt的使用
 
 ### 添加依赖库
 
@@ -111,22 +118,7 @@ android {
 
 
 
-### Hilt支持的Android 类
-
-支持的Android 类
-
-| 支持的Android 类  | 使用               |      |
-| ----------------- | ------------------ | ---- |
-| Application       | @HiltAndroidApp    |      |
-| ViewModel         | @HiltViewModel     |      |
-| Activity          | @AndroidEntryPoint |      |
-| Fragment          | @AndroidEntryPoint |      |
-| View              | @AndroidEntryPoint |      |
-| Service           | @AndroidEntryPoint |      |
-| BroadcastReceiver | @AndroidEntryPoint |      |
-|                   |                    |      |
-
-#### 初始化Hilt
+### 初始化Hilt
 
 所有使用 Hilt 的应用都必须包含一个带有 `@HiltAndroidApp` 注释的 `Application` 类，它作为应用级组件。
 
@@ -139,7 +131,7 @@ android {
 class ExampleApplication : Application() { ... }
 ```
 
-#### 注入 Android 类
+### 注入 Android 类
 
 初始化后，可以使用 `@AndroidEntryPoint` 注释其他 Android 类，Hilt会给这些类提供依赖项。
 
@@ -165,12 +157,12 @@ class ExampleActivity : AppCompatActivity() {
 }
 ```
 
-#### 定义Hilt 绑定（构造函数注入）
+#### 构造函数注入以及定义Hilt 绑定
 
-**使用 @Inject 注释构造函数，有两个作用。**
+使用 `@Inject` 注释构造函数，有两个作用：
 
-1. **向 Hilt 提供绑定信息的一种方法，告知Hilt如何生成该类的实例**：这样AnalyticsAdapter 可以使用接口注入的方式提供实例。
-2. **自动注入了 构造函数中的参数**。AnalyticsService 会被自动注入。
+1. **告知Hilt如何生成该类的实例**：向Hilt 提供绑定信息的方法，这样AnalyticsAdapter 可以使用接口注入的方式提供实例。
+2. **自动注入了 构造函数中的参数**：AnalyticsService 会被自动注入。
    * 构造函数的参数就是该类的依赖项，依赖项也需要定义如何提供实例，否则会报错。
 
 > 存在局限，只能用于项目内部的类。
@@ -183,7 +175,7 @@ class AnalyticsAdapter @Inject constructor(
 ) { ... }
 ```
 
-### 自定义Hilt模块
+## 使用 Hilt模块 自定义注入
 
 Hilt提供了自定义注入实例的方式，我们可以通过这种方式，注入任意实例。
 
@@ -192,7 +184,7 @@ Hilt提供了自定义注入实例的方式，我们可以通过这种方式，�
 * **@Binds**：**定义绑定关系，表明一个接口如何注入**。
 * **@Provides**：**定义绑定关系，表明如何注入类实例**。一般用于无法修改的外部类，也可用于内部类。
 
-#### @Module/@InstallIn
+### 定义模块：@Module/@InstallIn
 
 对于一些无法通过构造函数注入的类型，Hilt提供 @Module 的方式定义Hilt模块，来说明如何实例化。
 
@@ -206,9 +198,11 @@ abstract class AnalyticsModule {
 }
 ```
 
-#### @Binds
+### 使用 Binds 注入实例
 
-接口无法通过构造函数注入的方式生成实例。Hilt提供了 `@Binds`方式来定义绑定关系，**表明一个接口如何注入**。
+由于接口无法通过构造函数注入的方式生成实例，所以 Hilt提供了 `@Binds` 来定义绑定关系，**表明一个接口如何注入**。
+
+这种方式的局限性在于 只能注入我们自己的类，因为是通过构造函数注入的方式实现的。
 
 - **函数返回类型 **：会告知 Hilt 函数**提供哪个接口的实例**。
 - **函数参数** ：会告知 Hilt 要**提供接口哪种实现**。
@@ -219,8 +213,8 @@ interface AnalyticsService {
   fun analyticsMethods()
 }
 
-// Constructor-injected, because Hilt needs to know how to
-// provide instances of AnalyticsServiceImpl, too.
+// 声明构造函数注入
+// 后面需要注入 AnalyticsServiceImpl 实例
 class AnalyticsServiceImpl @Inject constructor(
   ...
 ) : AnalyticsService { ... }
@@ -229,22 +223,24 @@ class AnalyticsServiceImpl @Inject constructor(
 @InstallIn(ActivityComponent::class)
 abstract class AnalyticsModule {
 
-  // 入参：表示AnalyticsService的实现是AnalyticsServiceImpl 
+  // 将 AnalyticsServiceImpl 和 AnalyticsService 进行绑定
+  // 即 需要注入AnalyticsService = 等于注入 AnalyticsServiceImpl
+  // 入参：表示AnalyticsService 的实现是 AnalyticsServiceImpl 
   // 返回类型：表示提供的是 AnalyticsService接口实例。
   @Binds
-  abstract fun bindAnalyticsService(
+  abstract fun bindAnalyticsService( // 构造函数注入AnalyticsServiceImpl
     analyticsServiceImpl: AnalyticsServiceImpl
   ): AnalyticsService
 }
 ```
 
-#### @Provides
+### 使用 Provides 注入三方库实例
 
-一般用于外部库类的构造，也能用于内部类的构造。
+一般用于返回 **外部库类**，当然也能用于内部类。
 
 - **函数返回类型**：告知 Hilt 函数提供哪个类型的实例。
-- **函数参数**：告知 Hilt 相应类型的依赖项。
-- **函数主体**：告知 Hilt 如何提供相应类型的实例。每当需要提供该类型的实例时，Hilt 都会执行函数主体。
+- **函数参数**：告知 Hilt 相应类型的依赖项，可以没有。
+- **函数主体**：告知 Hilt 如何提供相应类型的实例。每次请求该类型的实例时，Hilt 都会重新执行函数主体。
 
 ```kotlin
 @Module
@@ -252,9 +248,7 @@ abstract class AnalyticsModule {
 object AnalyticsModule {
 
   @Provides
-  fun provideAnalyticsService(
-    // Potential dependencies of this type
-  ): AnalyticsService {
+  fun provideAnalyticsService(): AnalyticsService {
       // 构建 AnalyticsService 的实例
       return Retrofit.Builder()
                .baseUrl("https://example.com")
@@ -279,24 +273,38 @@ class AnalyticsAdapter @Inject constructor(
 
 ```
 
+## 当前Hilt支持的Android 类
 
+| 支持的Android 类  | 使用               |      |
+| ----------------- | ------------------ | ---- |
+| Application       | @HiltAndroidApp    |      |
+| ViewModel         | @HiltViewModel     |      |
+| Activity          | @AndroidEntryPoint |      |
+| Fragment          | @AndroidEntryPoint |      |
+| View              | @AndroidEntryPoint |      |
+| Service           | @AndroidEntryPoint |      |
+| BroadcastReceiver | @AndroidEntryPoint |      |
+|                   |                    |      |
 
-## Hilt 不支持的类中注入依赖项
+## 在Hilt 不支持的类中注入依赖项
 
 Hilt 对于常见的 Android类都提供了支持，不过对于那些不支持的类也提供了 `@EntryPoint` 来创建入口点，从而支持注入。
 
+下面 演示一下在 ContentProvider 中 通过hilt 自动注入 AnalyticsService
+
 ### 定义入口点
 
-推荐定义在需要使用的类中。主要涉及 `@EntryPoint` 和 `@InstallIn` 两个注解。
+推荐定义在需要使用的类中。主要涉及 `@EntryPoint` 和 `@InstallIn` 两个注解
 
 ```kotlin
+// ContentProvider 默认是不支持，这里通过
 class ExampleContentProvider : ContentProvider() {
 
   @EntryPoint
   @InstallIn(SingletonComponent::class) // 指定作用域
   interface ExampleContentProviderEntryPoint {
-    // 定义接口获取实例
-    // AnalyticsService 的注入也需要之前定义好。
+    // 定义接口获取 AnalyticsService 实例
+    // AnalyticsService 会根据之前定义的 hilt module 注入。
     fun analyticsService(): AnalyticsService
   }
 
@@ -312,12 +320,12 @@ class ExampleContentProvider : ContentProvider() {
 class ExampleContentProvider: ContentProvider() {
     ...
   override fun query(...): Cursor {
-    // appContext：和 @InstallIn 匹配
+    // appContext：需要和 @InstallIn 匹配
     val appContext = context?.applicationContext ?: throw IllegalStateException()
-    // 自定义的入口：ExampleContentProviderEntryPoint
+    // 获取自定义的入口：ExampleContentProviderEntryPoint
     val hiltEntryPoint =
       EntryPointAccessors.fromApplication(appContext, ExampleContentProviderEntryPoint::class.java)
-	// 获取实例。
+		// 通过 hiltEntryPoint 获取实例。
     val analyticsService = hiltEntryPoint.analyticsService()
     ...
   }

@@ -189,16 +189,28 @@ MainActivity onStop
 
 >  `@OnLifecycleEvent`注解遭废弃后，官方建议使用`LifecycleEventObserver `
 
+
+
 ### Lifecycle
 
 *   用于存储有关组件（如 activity 或 fragment）的生命周期状态的信息，并允许其他对象观察此状态。
-*   定义了Events和Steates来表示生命周期变化事件以及当前的生命周期状态。
-*   用于感知LifecycleOwner的生命周期
-*    `Fragment` 和 `SupportActivity` 中实现Lifecycle。Activity并没有实现。
+*   定义了 Event(生命周期变化事件) 以及  State (生命周期状态)。
+*   用于感知 LifecycleOwner 的生命周期，`Fragment` 和 `ComponentActivity` 中实现 LifecycleOwner 。
 
 ![image-20230228131329406](./Android%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F.assets/image-20230228131329406.png)
 
-使用方式
+> Lifecycle相关类的区别和关系
+
+| 类                         | 说明                                                         |      |
+| -------------------------- | ------------------------------------------------------------ | ---- |
+| Lifecycle                  | **生命周期**，定义了 Event 和 State，支持监听生命周期的变化。 |      |
+| LifecycleRegistry          | 是 Lifecycle的具体实现，生命周期相关的管理都在这个类中实现，会持有 LifecycleOwner。 |      |
+| LifecycleOwner             | **生命周期所有者/提供者**，一般就是Activity 和 Fragment，提供了一个返回 Lifecycle 的接口。 |      |
+| Activity/Fragment          | 最常见的 LifecycleOwner 的实现。                             |      |
+| FragmentViewLifecycleOwner | 代表的是 Fragment 中 的**View的生命周期**，因为Fragment中 view 和 Fragment两者生命周期是不同的，所以存在 Fragment.viewLifcycleOwner 和 Fragment.licycleOwner 两个。 |      |
+| ViewTreeLifecycleOwner     | 用于快速获取 Activity/Fragment 中 ViewTree 的LifecycleOwner。所以Fragment 中返回的就是 FragmentViewLifecycleOwner，Activity就是自身。 |      |
+
+使用方式:
 
 ```java
 // 继承 DefaultLifecycleObserver 来监控组件的生命周期状态
@@ -224,9 +236,11 @@ public class MainActivity extends AppCompatActivity {
 }
 ```
 
+
+
 ### LiveData
 
-*   能够感知实现了`LifecycleOwner`接口的组件生命周期。
+*   能够感知实现了 `LifecycleOwner` 接口的组件生命周期。
 
 *   可以监听数据变化进行实时更新
 
@@ -278,7 +292,7 @@ public class MyLiveData extends LiveData<String> {
 
 ### ViewModelScope
 
->  `ViewModel` 和 `kotlin协程` 结合使用。协程生命周期和`ViewModel`绑定。
+>  将 kotlin协程的生命周期 和 `ViewModel`绑定。
 >
 > `androidx.lifecycle:lifecycle-viewmodel-ktx:2.4.0`
 
@@ -294,7 +308,7 @@ class MyViewModel: ViewModel() {
 
 ### LifecycleScope
 
-> `Activity/Fragment`结合 `kotlin协程`使用。协程生命周期和`Activity/Fragment`绑定。
+> 将kotlin 协程生命周期和`Activity/Fragment`绑定。
 >
 > `androidx.lifecycle:lifecycle-viewmodel-ktx:2.4.0`
 
@@ -317,6 +331,8 @@ class MyFragment : Fragment() {
     }
 }
 ```
+
+
 
 
 

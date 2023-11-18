@@ -55,6 +55,16 @@ fun MoviesScreen(movies: List<Movie>) {
 }
 ```
 
+#### ViewCompositionStrategy：重组策略
+
+| 策略                                          | 说明                                                         | 使用场景                     |
+| --------------------------------------------- | ------------------------------------------------------------ | ---------------------------- |
+| DisposeOnDetachedFromWindowOrReleasedFromPool | 默认策略。当组合依赖的ComposeView **从 Window 分离或不在容器池**时，组合将被释放。 |                              |
+| DisposeOnLifecycleDestroyed                   | ComposeView对应的Lifecycle 被销毁时，组合将被释放            |                              |
+| DisposeOnViewTreeLifecycleDestroyed           | 当`ViewTreeLifecycleOwner.Lifecycle` 被销毁时，组合将被释放。即Activity.view 或者 Fragment.view 被销毁时 | Fragment 中使用ComposeView时 |
+
+
+
 ### 预览界面
 
 添加 `@Preview` 注解后，就能在 Android Stuido 中预览布局。
@@ -99,7 +109,7 @@ interface MutableState<T> : State<T> {
 
 ##### remember
 
-**使用 `remember {}` 将状态存储在内存中**，防止重组时状态被重置，起到记录状态修改的保护作用。
+**使用 `remember {}` 将状态存储在内存中**，防止重组时状态被重置，起到保护当前状态的作用。
 
 > Notes：调用 `remember` 的可组合项从组合中移除后，记录的值也将被移除。
 
@@ -351,7 +361,7 @@ val backDispatcher = LocalBackPressedDispatcher.current
 
 #### LaunchedEffect
 
-使用 `LaunchedEffect` 可以在在可组合项内运行挂起函数。
+允许我们在可组合项内运行挂起函数。
 
 它可以接收一个 key 参数，和一个协程体 block ：
 
@@ -463,10 +473,13 @@ internal fun createCompositionCoroutineScope(
 
 #### DisposableEffect
 
-提供了 `onDispose` 来供我们执行清理操作，触发时机如下：
+自带清理操作的Effect，提供了 `onDispose` 来供我们执行清理操作，`onDispose` 的触发时机：
 
+* 第一次初始化。
 * key 发生变化。
-* 可组合项退出组合。
+* 所在的可组合项(HomeScreen)退出组合时。
+
+也就是说，除了以上几种情况，它都不会执行，适用于做一些注册/反注册的操作。
 
 ```kotlin
 
@@ -478,7 +491,7 @@ fun HomeScreen(
     onStop: () -> Unit
 ) {
     // ...
-    DisposableEffect(lifecycleOwner) {
+    DisposableEffect(key1 = lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_START) {
                 currentOnStart()
@@ -790,9 +803,15 @@ fun ClickableSample() {
     // content that you want to make clickable
     Text(
         text = count.value.toString(),
-        modifier = Modifier.clickable { count.value += 1 }
+        modifier = Modifier.clickable(..配置参数) { count.value += 1 }
     )
 }
+// clickable() 包含很多配置参数
+// 例如 去除水波纹
+Modifier.clickable(
+    interactionSource = remember { MutableInteractionSource() },
+    indication = null
+)
 ```
 
 ### 自定义手势处理
@@ -993,7 +1012,7 @@ Modifier.fillMaxWidth().padding(vertical = 4.dp, horizontal = 8.dp)
 | `absoluteOffset()`                      | 设置x,y的偏移量          | 正偏移值一律会将元素向右移。即 LTR 中的 `offset()`           |
 |                                         |                          |                                                              |
 | ``size(width = 10.dp, height = 10.dp)`` | 设置宽高尺寸。           |                                                              |
-|                                         |                          |                                                              |
+| `indication()`                          | 水波纹                   |                                                              |
 
 | 特殊场景函数        |               |                                                              |
 | ------------------- | ------------- | ------------------------------------------------------------ |
@@ -1156,6 +1175,128 @@ class SquashedOval : Shape {
         }
         return Outline.Generic(path = path)
     }
+}
+```
+
+
+
+
+
+## View中嵌入Compose
+
+Compose 提供了  来和 原先的 View 体系进行结合
+
+ComposeView 源码，它实际就是一个 ViewGroup， 提供了一个 `setContent()` 函数切换到Compose环境 添加 Composeable.
+
+```kotlin
+class ComposeView @JvmOverloads constructor(
+    context: Context,
+    attrs: AttributeSet? = null,
+    defStyleAttr: Int = 0
+) : AbstractComposeView(context, attrs, defStyleAttr) {
+
+    private val content = mutableStateOf<(@Composable () -> Unit)?>(null)
+
+    @Suppress("RedundantVisibilityModifier")
+    protected override var shouldCreateCompositionOnAttachedToWindow: Boolean = false
+        private set
+
+    @Composable
+    override fun Content() {
+        content.value?.invoke()
+    }
+
+    override fun getAccessibilityClassName(): CharSequence {
+        return javaClass.name
+    }
+
+    /**
+     * Set the Jetpack Compose UI content for this view.
+     * Initial composition will occur when the view becomes attached to a window or when
+     * [createComposition] is called, whichever comes first.
+     */
+    fun setContent(content: @Composable () -> Unit) {
+        shouldCreateCompositionOnAttachedToWindow = true
+        this.content.value = content
+        if (isAttachedToWindow) {
+            createComposition()
+        }
+    }
+}
+
+abstract class AbstractComposeView @JvmOverloads constructor(
+    context: Context,
+    attrs: AttributeSet? = null,
+    defStyleAttr: Int = 0
+) : ViewGroup(context, attrs, defStyleAttr) {}
+```
+
+
+
+### 代码创建ComposeView
+
+```kotlin
+val composeView = ComposeView(requireContext()).apply {
+        // 设置重组策略，和 fragment.view 关联
+        setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+  			// 这里添加 Composeable
+        setContent { // 这里已经是Compose环境了
+          MyApp()
+        }
+    }
+```
+
+
+
+## Activity 和 Fragment 中使用Compose
+
+### Activity
+
+```kotlin
+class MainActivity : AbsActivity() {
+
+    @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+      	// ComponentActivity的扩展函数，是对ComposeView 对封装
+        setContent {
+            MyApp()
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MyApp() {
+  ....
+}
+```
+
+### Fragment
+
+```kotlin
+class MainFragment : AbsFragment() {
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        lifecycle
+        viewLifecycleOwner.lifecycle
+        return ComposeView(requireContext()).apply {
+            // 设置重组策略，和 fragment.view 关联
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+            	MyApp()
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MyApp() {
+  ....
 }
 ```
 

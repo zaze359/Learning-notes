@@ -43,7 +43,7 @@ class MainFragment : Fragment() {
 
 在对ViewModel的实现进行分析时，可以先从ComponentActivity看起。
 
-ComponetActivity是一个ViewModelStoreOwner的实现类。同样的还有Fragment、NavBackStackEntry等也都是 ViewModelStoreOwner的实现类。
+ComponetActivity是一个 ViewModelStoreOwner 的实现类。同样的还有Fragment、NavBackStackEntry等也都是 ViewModelStoreOwner的实现类。
 
 * **ViewModelStore**：负责缓存ViewModel的实例化对象。
   * ViewModel 会在 onDestroy() 时 被清理。

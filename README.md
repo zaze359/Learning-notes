@@ -144,7 +144,7 @@
 
 [Android界面状态的保存和恢复](./docs/android/Android界面状态保存和恢复.md)
 
-[Android的图形架构](./docs/android/Android的图形架构.md)
+[Android的图形架构](./docs/android/view/Android的图形架构.md)
 
 [Android客户端框架](./docs/android/Android客户端框架.md)
 

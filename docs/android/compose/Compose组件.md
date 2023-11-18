@@ -918,7 +918,7 @@ LaunchedEffect(errorMessageText, retryMessageText, snackbarHostState) {
 
 ## Column（列）和Row（行）
 
-所有列表项无论是否可见都会进行组合和布局，所以存在大量列表项时应该使用LazyColumn 和 LazyRow。
+Column 和 Row 所有列表项无论是否可见都会进行组合和布局，所以当存在大量列表项时应该使用 LazyColumn 和 LazyRow。
 
 * Column：每个子级都将垂直放置的垂直列表
 * Row：每个子级都将水平放置的水平列表
@@ -991,7 +991,9 @@ fun ScrollBoxes() {
 
 ## LazyColumn 和 LazyRow
 
-延迟加载的列表，默认存在滚动效果，相当于 RecyclerView，只会对在组件视口中可见的列表项进行组合和布局。但是`LazyColumn` 不会像 `RecyclerView` 一样回收其子元素，而是在滚动时重新组合。
+延迟加载的列表，默认存在滚动效果，相当于 RecyclerView，**只会对在组件视口中可见的列表项进行组合和布局**。
+
+和 RecyclerView 的区别是 但是 LazyColumn 不会回收其子元素, 而是在滚动时进行重新组合。
 
 ```kotlin
 LazyColumn {
@@ -1015,7 +1017,7 @@ fun MessageList(messages: List<Message>) {
     LazyColumn {
         items(
             items = messages,
-            key = { message -> // 防止列表数据更新丢失状态（例如滑动位置）
+            key = { message -> // 能避免key 未修改项每次都重组，同时也能防止列表数据更新丢失状态（例如滑动位置）
                 // Return a stable + unique key for the item
                 message.id
             }
@@ -1377,100 +1379,126 @@ dependencies {
 }
 ```
 
-### 使用
+### 创建 NavHostController
 
-* 使用 `rememberNavController()` 创建 `NavHostController`
+使用 `rememberNavController()` 创建 `NavHostController`，用于控制导航
 
-  ```kotlin
-  val navController = rememberNavController()
-  ```
+```kotlin
+val navController = rememberNavController()
+```
 
-* 创建并关联 `NavHost` ：提供导航路径。
+### 创建并关联 NavHost
 
-  ```kotlin
-  // 创建 NavHost
-  NavHost(navController = navController, startDestination = "profile") {
-      composable("profile") { Profile(/*...*/) } // 添加对于导航目标
-      composable("friendslist") { FriendsList(/*...*/) }
-      /*...*/
-  }
-  
-  NavHost(startDestination = "profile/{userId}") {
-    	// 定义参数导航（不建议传递复杂数据）
-      // 指定参数类型：NavType.StringType
-      composable(
-          "profile/{userId}",
-          arguments = listOf(navArgument("userId") { type = NavType.StringType })
-      ) { backStackEntry -> // NavBackStackEntry 中获取参数
-      	Profile(navController, backStackEntry.arguments?.getString("userId"))
-  		}
-    	// 可选参数：?userId={userId}
-    	// 需要默认值defaultValue 或 nullability = true
-      composable(
-          "profile?userId={userId}",
-          arguments = listOf(navArgument("userId") { defaultValue = "user1234" })
-      ) { backStackEntry ->
-          Profile(navController, backStackEntry.arguments?.getString("userId"))
-      }
-  }
-  
-  // navigation 定义导航结构。当导航图较大时建议进行拆分。
-  fun NavGraphBuilder.loginGraph(navController: NavController) {
-      navigation(startDestination = "username", route = "login") {
-          composable("username") { ... }
-          composable("password") { ... }
-          composable("registration") { ... }
-      }
-  }
-  NavHost(navController, startDestination = "home") {
-      ...
-      loginGraph(navController)
-      ...
-  }
-  ```
+用于配置导航路径图，
 
-* `navigate` 导航到目的地
+```kotlin
+// 创建 NavHost
+// startDestination 指定初始页面
+NavHost(navController = navController, startDestination = "profile") {
+  	// 添加对于导航目标
+    composable("profile") { Profile(/*...*/) } 
+    composable("friendslist") { FriendsList(/*...*/) }
+    /*...*/
+}
 
-  ```kotlin
-  navController.navigate("friendslist")
-  
-  // Pop everything up to the "home" destination off the back stack before
-  // navigating to the "friendslist" destination
-  navController.navigate("friendslist") {
-      popUpTo("home") // 弹出home 之上的所有，不包括 home 
-  }
-  
-  // Pop everything up to and including the "home" destination off
-  // the back stack before navigating to the "friendslist" destination
-  navController.navigate("friendslist") {
-      popUpTo("home") { inclusive = true } // 弹出home及其他。
-  }
-  
-  //
-  navController.navigate("search") {
-    // 回到开始的位置
-  	popUpTo(navController.graph.findStartDestination().id) {
-      saveState = true
+// navigation 定义导航结构。当导航图较大时建议进行拆分。
+fun NavGraphBuilder.loginGraph(navController: NavController) {
+    navigation(startDestination = "username", route = "login") {
+        composable("username") { ... }
+        composable("password") { ... }
+        composable("registration") { ... }
     }
-    // 避免同一个目标产生多个副本
-  	launchSingleTop = true 
-    // 重新选择以前选定的项目时 恢复状态
-  	restoreState = true
+}
+NavHost(navController, startDestination = "home") {
+    ...
+    loginGraph(navController)
+    ...
+}
+```
+
+### 导航到目的地
+
+使用 `navigate()` 执行导航   
+
+```kotlin
+navController.navigate("friendslist")
+
+// Pop everything up to the "home" destination off the back stack before
+// navigating to the "friendslist" destination
+navController.navigate("friendslist") {
+    popUpTo("home") // 弹出home 之上的所有，不包括 home 
+}
+
+// Pop everything up to and including the "home" destination off
+// the back stack before navigating to the "friendslist" destination
+navController.navigate("friendslist") {
+    popUpTo("home") { inclusive = true } // 弹出home及其他。
+}
+
+// 
+navController.navigate("search") {
+	popUpTo(navController.graph.findStartDestination().id) {
+    // 配置仅保留顶级导航的状态
+    saveState = true
   }
-  
-  // "profile/{userId}" 参数导航
-  navController.navigate("profile/user1234")
-  ```
+  // 避免同一个目标产生多个副本
+	launchSingleTop = true 
+  // 重新选择以前选定的项目时 恢复状态
+	restoreState = true
+}
+
+
+```
+
+### 参数导航
+
+```kotlin
+NavHost(startDestination = "profile/{userId}") {
+  	// 定义参数导航（不建议传递复杂数据）
+    // 指定参数类型：NavType.StringType
+    composable(
+        "profile/{userId}",
+        arguments = listOf(navArgument("userId") { type = NavType.StringType })
+    ) { backStackEntry -> // NavBackStackEntry 中获取参数
+    	Profile(navController, backStackEntry.arguments?.getString("userId"))
+		}
+  	// 可选参数：?userId={userId}
+  	// 需要默认值defaultValue 或 nullability = true
+    composable(
+        "profile?userId={userId}",
+        arguments = listOf(navArgument("userId") { defaultValue = "user1234" })
+    ) { backStackEntry -> // 获取参数
+        Profile(navController, backStackEntry.arguments?.getString("userId"))
+    }
+}
+
+// 传参： "profile/{userId}" 
+navController.navigate("profile/user1234")
+```
+
+### 获取参数
+
+通过 backStackEntry 获取参数
+
+```kotlin
+		composable(
+        "profile?userId={userId}",
+        arguments = listOf(navArgument("userId") { defaultValue = "user1234" })
+    ) { backStackEntry -> // 获取参数
+        Profile(navController, backStackEntry.arguments?.getString("userId"))
+    }
+```
 
 ### 深层链接（DeepLink）
 
 ```kotlin
 NavHost(startDestination = "profile/{id}") {
   	// 深层链接 deepLinks
+  	// https://www.example.com/{id} 这种格式
   	val uri = "https://www.example.com"
     composable(
         "profile?id={id}",
-        deepLinks = listOf(navDeepLink { uriPattern = "$uri/{id}" })
+        deepLinks = listOf(navDeepLink { uriPattern = "$uri/{id}" }) 
     ) { backStackEntry ->
         Profile(navController, backStackEntry.arguments?.getString("id"))
     }

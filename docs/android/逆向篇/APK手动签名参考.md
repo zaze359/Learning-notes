@@ -2,7 +2,7 @@
 
 ## 主要流程
 
-### 1. 使用keytool生成签名文件:
+### 1. 生成签名文件
 
 > keystore文件: android_demo.keystore
 >
@@ -11,8 +11,17 @@
 > alias:android
 
 ```shell
+# -alias 指定 keyAlias
+#
 keytool -genkey -v -keystore android.keystore -alias android -keyalg RSA -validity 20000 -keystore android_demo.keystore
 ```
+```shell
+# 查看生成的前面信息
+keytool -list -v -keystore android_demo.keystore
+```
+
+
+
 ![image-20230211145911053](./APK%E6%89%8B%E5%8A%A8%E7%AD%BE%E5%90%8D%E5%8F%82%E8%80%83.assets/image-20230211145911053.png)
 
 ### 2. apk进行签名

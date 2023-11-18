@@ -705,7 +705,7 @@ copyOut T: class java.lang.Number
 
 * 通过 `out` 关键字来表明泛型类及泛型方法是协变的。对应 Java的 `<? extends X>` 。
 * **父子关系相同，支持T的子类型**。范围向外扩展。
-* **只能读取**，不能添加（传出 out），泛型类型不能作为参数类型，但**适合作为返回值**。（可以使用 `@UnsafeVariance` 注解取消限制）
+* **只能读取**，不能添加（传出 out），泛型类型一般不能作为参数类型（可以使用 `@UnsafeVariance` 注解取消限制），但**适合作为返回值**。
 
 ```kotlin
 // 声明处型变
@@ -1334,3 +1334,14 @@ expect 和 actual 是一一对应的，他们同名。
 * 命令式
   * 面向对象：Java
   * 面向过程：C
+
+### inline、noinline、crossinline
+
+* inline：修饰的函数、函数参数内联。和 lambda 配合使用时，会出现inline 之后的代码也被跳过。一般需要使用`return@foreach`这种方式表示退出lambda。
+
+* noinline: 修饰的函数参数不内联。
+
+* crossinline：修饰的参数函数依然会内联，但是会限制 lambda表达式不能直接return。
+
+  
+

@@ -65,9 +65,6 @@ myRootDirectory = "$project.rootDir/tools/proguard-rules-debug.pro"
 
 > Groovy
 >
-> 
->
-> 
 
 ```groovy
 // 可以省略 =
@@ -165,7 +162,7 @@ rootProject.ext.compileSdkVersion
 >
 > [ExtraPropertiesExtension - Gradle DSL Version 7.6](https://docs.gradle.org/current/dsl/org.gradle.api.plugins.ExtraPropertiesExtension.html#N1B44A)
 >
-> 在 kts 的  buildscript  中是无法访问到 ext 的。
+> **在 kts 的  `buildscript{}`  中是无法访问到 ext 的**。
 
 ```kotlin
 // 1 设置 参数

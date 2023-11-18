@@ -100,7 +100,7 @@ sudo install minikube-darwin-arm64 /usr/local/bin/minikube
 
 ```shell
 minikube version
-# 查看集群状态
+# 查看集群状态, 需要 start 创建集群后才能查看。
 minikube status
 minikube node list
 ```
@@ -115,9 +115,8 @@ minikube start --kubernetes-version=v1.23.3
 minikube start --image-mirror-country='cn'
 ```
 
-> 启动异常,  
+> 启动异常,  需要指定一种容器技术作为驱动，里面给出了建议。如Docker
 >
-> 需要指定一种容器技术作为驱动，里面给出了建议。如Docker
 
 ![image-20230217191801252](./Kubernetes%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA.assets/image-20230217191801252.png)
 

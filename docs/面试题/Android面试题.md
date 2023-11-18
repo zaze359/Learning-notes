@@ -152,11 +152,11 @@
 
 主要涉及三个函数：
 
-* dispatchTouchEvent()：这个函数整个是否分发的核心，后续的 onInterceptTouchEvent() 和 onTouchEvent() 都是在这里调用。
-* onInterceptTouchEvent() ：这里处理ViewGroup 事件拦截逻辑。需要拦截 返回true，这样就不会分发给子View。
+* `dispatchTouchEvent()`：这个函数整个是否分发的核心，后续的 onInterceptTouchEvent() 和 onTouchEvent() 都是在这里调用。
+* `onInterceptTouchEvent()` ：这里处理ViewGroup 事件拦截逻辑。需要拦截 返回true，这样就不会分发给子View。
   * 需要注意的是，若拦截了ACTION_DOWN的话，后续所有事件就没法传递给子View了。
-* onTouchEvent() ：负责处理事件。返回 true表示消费这个事件，这样事件就不会再向上传递。
-* requestDisallowInterceptTouchEvent(true)：这个函数的作用是由子类来控制父类的事件分发。在 调用 `onInterceptTouchEvent()` 之前会判断 FLAG_DISALLOW_INTERCEPT这个标识，不过这个对于ACTION_DOWN事件是无效的。
+* `onTouchEvent() `：负责处理事件。返回 true表示消费这个事件，这样事件就不会再向上传递。
+* `requestDisallowInterceptTouchEvent(true)`：这个函数的作用是由子类来控制父类的事件分发。在 调用 `onInterceptTouchEvent()` 之前会判断 FLAG_DISALLOW_INTERCEPT这个标识，不过这个对于ACTION_DOWN事件是无效的。
 
 
 

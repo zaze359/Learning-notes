@@ -7,6 +7,8 @@
 
 ## 客户端下载地址
 
+> Clash 已删库跑路
+
 - [ClashX Mac](https://github.com/yichengchen/clashX/releases)
 - [Clash For Linux](https://github.com/Dreamacro/clash/releases)
 - [Clash For Windows](https://github.com/Fndroid/clash_for_windows_pkg/releases)

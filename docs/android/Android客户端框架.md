@@ -89,14 +89,23 @@ MVVM 整体结构：
 
 ### MVI
 
-MVI（Model-View-Intent）**单向数据流**，是一种响应式编程思想。它和MVVM类似，不过更加强调数据的流向和唯一数据源。
+MVI（Model-View-Intent），是一种响应式编程思想。它和MVVM类似，不过更加强调数据的流向和唯一数据源。
 
-> 不过具体使用单数据流还是多数据流，官方并没有强制规定。我觉得单数据流过大时可以考虑拆分成多个数据流，只要将数据合理的归类即可。
+> 具体使用**单数据流**还是**多数据流**，官方并没有强制规定。我觉得单数据流过大时可以考虑拆分成多个数据流，只要将数据合理的归类即可。
+>
+> **不过Compose天然适配 MVI，它帮助我们解决了单数据流中差量更新的问题**。
 
 * **Model（ViewState）**：此处的Model是指UI的所有状态，包括UI中显示的数据，加载的状态等。
+  * 定义 `UiState` 密封类/接口 来管理UI的状态。
+  * 一般会结合 `Flow` 使用，对于持久化状态使用`StateFlow`，对于临时的一次性状态则使用`SharedFlow`。
+  
 * **View**：视图。和其他框架没有区别。
 * **Intent（ViewEvent）**：是指用户操作UI 的事件。
-* ViewModel：和 MVVM 中的ViewModel功能一致，将M、V、I关联起来，接收 ViewEvent处理数据，输出 ViewState更新UI。
+  * 定义 `Intent` 密封类/接口 来管理UI上的操作。
+  * 一般使用 `Channel` 分发事件 。
+
+
+ViewModel：和 MVVM 中的ViewModel功能一致，将M、V、I关联起来，接收 ViewEvent处理数据，输出 ViewState更新UI。
 
 ![image-20230227194752185](./Android%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%A1%86%E6%9E%B6.assets/image-20230227194752185.png)
 
@@ -222,8 +231,6 @@ dependencies {
 ![image-20230228172305419](./Android%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%A1%86%E6%9E%B6.assets/image-20230228172305419.png)
 
 ### Sonar
-
-
 
 
 

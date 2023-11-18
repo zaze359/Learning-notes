@@ -1031,9 +1031,11 @@ public final class ViewRootImpl implements ViewParent ... {
 
 * **请求去重**：首先会根据 `mTraversalScheduled` 字段来对请求进行去重，避免在同一个VSYNC周期内的触发多次刷新。
 * **设置同步屏障**：发送一个同步屏障消息，保证UI绘制消息能被优先处理。
-* **发送绘制请求**：通过 mChoreographer 发送一个 mTraversalRunnable 回调消息。Choreographer 是一个单例，内部维护了一个使用 mainLooper的Handler，同时它还能接收VSYNC。
-* **开始绘制**：mChoreographer 收到vsync后会执行 mTraversalRunnable 这个 Runnable，执行完毕后会移除 Runnable。
-  * 所以仅有当我们发起了绘制请求时，才会执行view的绘制流程。
+* **发送绘制请求**：通过 mChoreographer 发送一个 mTraversalRunnable 回调消息。Choreographer 是一个单例，内部维护了一个使用 mainLooper的Handler，同时它还能接收VSYNC，用于协调vsync 和 绘制。
+* **接收VSYNC**：mChoreographer 收到vsync后会执行 mTraversalRunnable ，执行完毕后会移除 Runnable。
+  * 所以仅有当我们发起了绘制请求时，才能够执行 view的绘制流程。
+* **移除同步屏障**：收到回调后会移除同步屏障，恢复同步消息。
+* **开始绘制**：最后调用 `performTraversals()` 开始执行真正的绘制流程
 
 
 [ViewRootImpl.java - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/base/core/java/android/view/ViewRootImpl.java;l=1981)
@@ -1073,7 +1075,7 @@ mTraversalRunnable 这个 Runnable中会调用 `doTraversal()`。
             mTraversalScheduled = false;
             // 移除同步屏障
             mHandler.getLooper().getQueue().removeSyncBarrier(mTraversalBarrier);
-			// 创建了 Surface并开始绘制
+						// 创建了 Surface并开始绘制
             performTraversals();
             if (mProfile) {
                 Debug.stopMethodTracing();
@@ -1089,13 +1091,13 @@ mTraversalRunnable 这个 Runnable中会调用 `doTraversal()`。
 
 这个方法开始真正的绘制流程，包含了 measure、layout和draw三个过程。
 
-* 调用 `view.dispatchAttachedToWindow()` 将 DecorView 和 ViewRootImpl 关联起来。
+* 调用 `view.dispatchAttachedToWindow()` **将 DecorView 和 ViewRootImpl 关联起来**。
   * 后续可用通过 `View.getViewRootImpl()` 函数之间获取 对应的ViewRootImpl 。
 
-* **Surface 创建**：调用 `relayoutWindow()` 向WMS发起Binder请求，由WMS创建了Surface。
-* 调用 `performMeasure()`  测量View的宽和高。
-* 调用 `performLayout()` 进行布局，确定View在父容器中的放置位置。
-* 调用 `performDraw()` 进行渲染。
+* **创建Surface** ：调用 `relayoutWindow()` 向WMS发起Binder请求，由WMS创建了Surface。
+* 调用 `performMeasure()`  **测量View的宽和高**。
+* 调用 `performLayout()` **进行View的布局**，确定View在父容器中的放置位置。
+* 调用 `performDraw()` **进行View内容的绘制**。
 
 ![image-20230527213710778](./Android%E4%B9%8BActivity%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B.assets/image-20230527213710778.png)
 

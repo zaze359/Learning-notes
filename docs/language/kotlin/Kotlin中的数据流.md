@@ -1,6 +1,6 @@
 # Kotlin中的数据流 
 
-**Kotlin中的数据流 以协程为基础，所以需要在协程内执行**。它可按顺序发送多个值。
+Kotlin中的数据流 **以协程为基础，所以需要在协程内执行**。它可按顺序发送多个值。
 
 是一组可通过异步方式进行计算处理的数据序列。
 
@@ -14,25 +14,27 @@
 
 ![数据流中包含的实体；使用方、可选中介和提供方](./Kotlin%E4%B8%AD%E7%9A%84%E6%95%B0%E6%8D%AE%E6%B5%81.assets/flow-entities.png)
 
-### 冷数据流和热数据流
+## 冷数据流和热数据流
 
-**冷数据流（惰性）**
+### 冷数据流（惰性）
 
-* **末端操作才触发流程**：即需要时才会触发流程。
+例如`Sequence`、`flow{...}`。
+
+* **末端操作才触发流程**：需要时才会触发流程，不消费则不生产。
 
 * **中间操作都是惰性求值**：即需要时才进行求值计算，不要分配所有的中间集合产物，占用内存更小，性能更佳。
-* **多次使用时需要重新操作**：即每次都重新生成数据。
+* **多次使用时需要重新操作**：每次都需要重新生成数据。
 
-例如`Sequence`、`flow{...}`
+### 热数据流
 
-**热数据流**
+例如`Channel`、`StateFlow`、`SharedFlow`、`channelFlow { ... }`
 
 * **生成和消费相互独立**：生产端是立刻生成数据的，且会将数据存储。
 * **从数据流收集数据不会触发任何提供方代码**：生成数据后可以直接取用，不用从头生成数据。
 
-例如`Channel`、`StateFlow`、`SharedFlow`、`channelFlow { ... }`
 
-### Channel
+
+## Channel
 
 Channel 主要用于**协程间的传递数据**。用法类似Java的`BlockQueue`。
 
@@ -98,13 +100,12 @@ fun main() = runBlocking {
 
 
 
-### Flow
+## Flow
 
-> Flow需要在协程内执行, 是冷数据流。
+> Flow 将协程与响应式编程向结合，需要在协程内执行, 是**冷数据流**。和RxJava很像，同样支持链式调用
 >
-> Flow和RxJava很像，也是响应式结构，同样支持链式调用。
 
-* 使用`Flow builders`构建flow。
+* **构建Flow**：使用`Flow builders`。
 
   ```kotlin
   /// 支持以下几种方式构建flow
@@ -115,8 +116,8 @@ fun main() = runBlocking {
   MutableStateFlow and MutableSharedFlow 
   ```
 
-* 通过`emit()`发送数据。
-* 通过`collect() `接收数据。
+* **发送数据**：调用 `emit()`。
+* **接收数据**：调用`collect()`。
 
 > flow在消费时才会生成数据。
 >
@@ -131,8 +132,7 @@ fun main() = runBlocking {
 > 如果需要更新这个状态，可以使用`MutableStateFlow`
 
 * `StateFlow`是热数据流。通过`value`属性读取当前状态数据。
-* 它的作用 和 LiveData 类似，返回最后一个状态给订阅方。
-* 当有新的订阅方开始从 StateFlow 中收集数据时，它将接收信息流中的**最近一个状态及任何后续状态**。
+* 它的作用 和 LiveData 类似，当有新的订阅方开始从 StateFlow 中收集数据时，会返回**最近一个状态以及任何后续的状态**。
 
 > 官方推荐在页面中使用`repeatOnLifecycle(Lifecycle.State.xxx)`来更新界面。
 >
@@ -156,14 +156,66 @@ override fun onCreate(savedInstanceState: Bundle?) {
 
 ### SharedFlow
 
-> `SharedFlow` 是 `StateFlow` 的可配置性极高的泛化数据流。
+> `SharedFlow` 是 `StateFlow` 的可配置性极高的泛化数据流。想更新数据可以使用`MutableSharedFlow`。
 >
-> 想更新数据可以使用`MutableSharedFlow`。
+>  `shareIn()` 将 StateFlow 转为 SharedFlow。
 
--  `replay`：针对新订阅者重新发送多个之前已发出的值。
--  `onBufferOverflow`：指定在处理缓冲区中已满时，发送的数据执行的策略。默认值为 `BufferOverflow.SUSPEND`挂起，同Channel中的配置。
+-  `replay`：用于配置 ，有新订阅者时，需要重新发送多少个之前已发出的值。默认是0。
+-  `onBufferOverflow`：指定在处理缓冲区溢出(背压)时，发送的数据执行的策略。默认值为 `BufferOverflow.SUSPEND`挂起，同Channel中的配置。
 
 
+
+## backpressure（背压）
+
+由于是响应式编程，和RxJava一样也存在背压问题。**上游生产速度大于下游消费速度，导致下游的 Buffer 溢出**。
+
+flow中的处理方式有 `conflate()` 和 `collectLast()`两种方式。
+
+### conflate
+
+**新数据覆盖老数据**，不会中断未执行完成的流程。
+
+```kotlin
+	flow {
+        repeat(10) {
+            emit(it)
+        }
+    }.conflate().collect {
+        log(TAG, "conflate $it")
+        delay(1000L)
+        log(TAG, "conflate2 $it")
+    }
+// 流程都是完整的，中间流程会直接跳过不执行
+// FlowExample: : conflate 0
+// FlowExample: : conflate2 0
+// FlowExample: : conflate 9
+// FlowExample: : conflate2 9
+```
+
+### collectLast
+
+**仅处理最新数据**，它和 conflate的区别是，这个api实际**会处理每一个数据**，会取消未执行完成的流程，重新执行新流程。
+
+```kotlin
+    flow {
+        repeat(10) {
+            emit(it)
+        }
+    }.collectLatest {
+        log(TAG, "collectLatest $it")
+        delay(1000L)
+        log(TAG, "collectLatest2 $it")
+    }
+
+// FlowExample: : collectLatest 0
+// FlowExample: : collectLatest 1
+// FlowExample: : collectLatest 2
+// .. 省略，这里都仅输出一次，流程被取消了
+// FlowExample: : collectLatest 8
+// 仅最后一次是完整输出2次都
+// FlowExample: : collectLatest 9
+// FlowExample: : collectLatest2 9
+```
 
 ## 参考资料
 

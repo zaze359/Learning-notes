@@ -190,28 +190,40 @@ if (!mScroller.isFinished) {
 
 
 
-## View的显示流程
+## View的绘制流程
+
+Canvas包含一个Bitmap，并使用Paint在这个Bitmap上作图。
+
+|        |                                          |      |
+| ------ | ---------------------------------------- | ---- |
+| Canvas | 画图的动作。提供了基础的绘画函数。       |      |
+| Bitmap | 画布。是一块存储图像像素的数据存储区域。 |      |
+| Paint  | 画笔。表述绘制时的风格、颜色等。         |      |
 
 View的显示主要涉及三个流程：测量（measure）、布局（layout）、绘制（draw）。
 
 这三个过程依次对应三个回调函数：
 
-* onMeasure()：自定义控件 处理测量逻辑时 需要重写这个函数。
-* onLayout()：自定义控件处理子元素布局时需要重写这个函数。
-* onDraw()：自定义View 想要实现特定的图形效果时 需要重写这个函数。
+* `onMeasure()`：执行测量逻辑，**确定绘制的大小**。
+* `onLayout()`：处理子元素布局，**确定绘制在哪里**。
+* `onDraw()`：确定自定义View 自身**绘制什么内容**。想要实现特定的图形效果时 可以重写这个函数。
 
 > View 和 ViewGroup 区别就是 ViewGroup 多了几个处理子元素的流程。
+
+整个绘制流程是**自顶向下**进行的。ViewRootImpl 从 根节点 DecorView 开始执行这三个流程，层层往下进行调用。
+
+父控件的测量在子控件之后，布局和绘制则是在子控件之前。
 
 ![performTraversals流程](./Android%E8%87%AA%E5%AE%9A%E4%B9%89View%E5%9F%BA%E7%A1%80.assets/performTraversals%E6%B5%81%E7%A8%8B.jpg)
 
 ### 测量（measure）
 
-View的测量流程主要是用于确定View的测量宽高。
+View的测量流程主要是 **确定View的测量宽高**。需要注意的是**父控件的测量在子控件测量之后进行的**。
 
-> 获取测量宽高 和 获取View的宽高 两者是不同的函数，不过正常情况下是两者的值是相同的。
+> 获取**测量宽高** 和 获取**View的宽高** 两者是不同的函数，不过正常情况下是两者的值是相同的。
 >
 
- 测量宽高：
+ 测量宽高
 
 > 测量阶段决定 View的测量宽高，表示View的原始大小，xml或代码指定的大小
 
@@ -221,7 +233,7 @@ View的测量流程主要是用于确定View的测量宽高。
  }
  ```
 
- View的宽高：
+ View的宽高
 
 > View的宽高是在 layout 阶段决定的。表示View的显示大小，
 
@@ -231,22 +243,20 @@ View的测量流程主要是用于确定View的测量宽高。
  }
  ```
 
-
-
-#### MeasureSpec
+#### 测量模式：MeasureSpec
 
 Android提供了三种View的测量方式，并通过 `MeasureSpec` 类提供给我们使用。
 
-* MeasureSpec 高2位：表示 SpecMode。指测量模式
-* MeasureSpec 低30位：表示 SpecSize。即在某种测量模式下的规格大小。
+* MeasureSpec **高2位**：表示 SpecMode。指**测量模式**。
+* MeasureSpec **低30位**：表示 SpecSize。即在某种测量模式下的规格**尺寸大小**。
 
 当然MeasureSpec 也提供了方便的API 供我们来获取对应的值。
 
 | 测量模式                  | 说明                                                         | LayoutParams           |
 | ------------------------- | ------------------------------------------------------------ | ---------------------- |
-| `MeasureSpec.EXACTLY`     | **精确模式**。父容器已经计算出子View 精确的大小：SpecSize。此时子View的最终大小就是SpecSize。 | match_parent或固定数值 |
-| `MeasureSpec.AT_MOST`     | **最大模式**。父容器指定了一个大小：SpecSize。子View的大小将 `<= SpecSize` | wrap_content           |
-| `MeasureSpec.UNSPECIFIED` | 父容器没有指定任何限制, 想多大多大。系统内部多次Measure 时会使用到，自定义View时也会使用。ScrollView 测量子View高度时有使用。 |                        |
+| `MeasureSpec.UNSPECIFIED` | 父容器**没有指定任何限制, 想多大多大**。系统内部多次Measure 时会使用到，自定义View时也会使用。ScrollView 测量子View高度时有使用。 |                        |
+| `MeasureSpec.EXACTLY`     | **精确模式**。父容器**指定了子View 一个精确的大小**。此时子View的最终大小就是SpecSize。 | match_parent或固定数值 |
+| `MeasureSpec.AT_MOST`     | **最大模式**。父容器**指定子View的最大尺寸**。子View的大小不能超过 SpecSize | wrap_content           |
 
 View 的 MeasureSpec 由  父容器的MeasureSpec  以及  自身的LayoutParams 共同决定。对于 DecorView 则是 由Window的尺寸 以及 自身的LayoutParams共同决定。
 
@@ -333,11 +343,11 @@ public static int getDefaultSize(int size, int measureSpec) {
 
 ### 布局（layout）
 
-View的layout流程 主要是为了确定ViewGroup以及子元素的位置。
+View的 布局流程 主要是为了确定ViewGroup以及子元素的位置。
 
 #### layout()
 
-在 `layout()` 函数中 ViewGroup 的left、top、right、bottom这四个值会被赋值，从而确定了ViewGroup自身的位置，接着就会调用 `onLayout()`  来确定子元素的位置，也决定了 View的最终宽高。
+在 `layout()` 函数中 ViewGroup 的left、top、right、bottom这四个值会被赋值，最终通过 `setFrame()`确定了ViewGroup自身的位置，接着就会调用 `onLayout()`  来确定子元素的位置，也决定了 View的最终宽高。
 
 ```java
 // 正常情况下 layout的参数 ltrb 是根据测量得到的宽高得到的
@@ -352,6 +362,7 @@ public void layout(int l, int t, int r, int b) {
         setOpticalFrame(l, t, r, b) : setFrame(l, t, r, b);
     // ...
     if (changed || (mPrivateFlags & PFLAG_LAYOUT_REQUIRED) == PFLAG_LAYOUT_REQUIRED) {
+        // 确定子元素的位置，这里也决定了View的最终宽高
         onLayout(changed, l, t, r, b);
         // ...
     }
@@ -371,19 +382,19 @@ View在经过 measure 和 layout过程后，以及确定了大小和位置，最
 
 #### draw()
 
-1. **绘制背景**：`drawBackground(canvas)`。
+1. 绘制**背景 `drawBackground(canvas)`**。
 2. （可选）保存图层：为后续的 fading 淡入淡出效果做准备。
-3. **绘制View自身内容**：` onDraw(canvas)`。View/ViewGroup默认为空实现。一个基础控件的样貌基本是这里处理的。
-4. **绘制 子元素**：`dispatchDraw(canvas)`。**ViewGroup 会重写这个函数，在内部遍历调用所有 `child.draw()`**。
+3. 绘制 **View自身内容` onDraw(canvas)`**：View/ViewGroup默认为空实现。一个基础控件的样貌基本是这里处理的。
+4. 绘制 **子元素`dispatchDraw(canvas)`**：ViewGroup 会重写这个函数，在内部遍历调用所有 `child.draw()`。
 5. （可选）绘制 fading 效果并恢复保存的图层。
-6. **绘制装饰（foreground、scrollbars）**：`onDrawForeground()`。
+6. 绘制**装饰`onDrawForeground()`**：包括 foreground、scrollbars等。
 7. （可选）绘制高亮
 
-> ViewGroup 默认不会执行绘制， 它在 `initViewGroup()` 流程中会设置 WILL_NOT_DRAW，如果没有背景图就会设置 PFLAG_SKIP_DRAW，从而直接调用dispatchDraw() 绘制子View，不调用自身的draw()。所以 onDraw() 也就不会被调用。
+> ViewGroup 默认不会执行绘制， 它在 `initViewGroup()` 流程中会设置 **WILL_NOT_DRAW**，如果没有背景图就会设置 **PFLAG_SKIP_DRAW**，从而直接调用 `dispatchDraw()` 绘制子View，不调用自身的 `draw()`。所以 onDraw() 也就不会被调用。
 >
 > 如何清除 PFLAG_SKIP_DRAW？
 >
-> 1.  `setWillNotDraw(false)` ：可以强制开启自身的绘制。
+> 1.  `setWillNotDraw(false)` ：可以强制开启ViewGroup自身的绘制。
 > 2. 设置背景/前景：添加背景/前景时 这个标记会被清除。
 
 ```java
@@ -729,10 +740,10 @@ public void setZ(float z) {
 * invalidate()：会导致 `View.onDraw()` 被调用。适用于布局不变，刷新内容的场景。
 * requestLayout()：会导致View的 `onMeasure()`、`onLayout()`被调用，但是`onDraw()` 可能不会调用，只有当布局发生变化时才会调用，所以若是一定要重绘内容，则需要手动调用一下 `invalidate()`。适用于需要当前布局发送变化需要重新测量的场景。
 
-### requestLayout()
+### requestLayout() 流程
 
-* 给所有的View 设置了 `PFLAG_FORCE_LAYOUT` 和 `PFLAG_INVALIDATED` 这两个 flag。
-* 调用 `mParent.requestLayout()` ;最终调用到 `ViewRootImpl.requestLayout()`，将 `mLayoutRequested` 置为true，接着ViewRootImpl 内部调用了 `performTraversals()` ，触发了View的渲染流程。
+* 给所有的View 设置了 `PFLAG_FORCE_LAYOUT(强制重新测量和布局)` 和 `PFLAG_INVALIDATED(允许重绘)` 这两个 flag。
+* 层层向上调用 `mParent.requestLayout()` ，最终调用到 `ViewRootImpl.requestLayout()`，将 `mLayoutRequested` 置为true，接着ViewRootImpl 内部调用了 `performTraversals()` ，重新触发了View的渲染流程。
   * mParent 在addView()时被赋值，指向 父容器，层层向上传递到DecorView，而DecorView的 parent是 ViewRootImpl。
 
 * `measure()`：由于 `PFLAG_FORCE_LAYOUT`  这个标志，重新执行了 `onMeasure()`。同时又 添加了 `PFLAG_LAYOUT_REQUIRED`这个标记。

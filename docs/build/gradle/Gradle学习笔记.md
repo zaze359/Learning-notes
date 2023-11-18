@@ -88,9 +88,9 @@ Groovy中的 `==` 等同java的`equals()`,  比较对象是否为同一个应该
 
 #### init script
 
-读取全局脚本，初始化一些全局属性，例如gradle version、gradle user home等。
+读取全局脚本，初始化一些全局属性，例如 gradle version、gradle user home等。
 
-|                      |                                |                              |
+| 属性                 |                                |                              |
 | -------------------- | ------------------------------ | ---------------------------- |
 | gradle home dir      | 此次构建的Gradle目录           |                              |
 | gradle user home dir | Gradle User Home 目录          |                              |
@@ -145,9 +145,9 @@ include(":app")
 
 ### 2. Configuration阶段
 
-初始化阶段后，进入配置阶段，开始加载项目中所有的`build script`, 创建对应的task, 构造出任务依赖图。
+初始化阶段后，进入配置阶段，开始加载项目中所有的`build script`, 创建对应的task, 构造出**任务依赖图**。
 
-`build script`就是执行`build.gradle(.kts)`。其中包括以下内容
+`build script`就是执行`build.gradle(.kts)`，其中包括以下内容
 
 #### 插件引入
 

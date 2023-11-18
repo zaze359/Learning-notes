@@ -115,11 +115,11 @@ fun testButtonClickOnPieAndHigher() {
 #### assert：断言
 
 ```kotlin
-// 断言值
+// 断言值是否相同、是否是同一个对象
 assertEquals(0, 0)
 
 val result = intArrayOf(1, 2, 3, 4, 5, 6)
-// 断言内容而不是对象
+// 断言内容是否相同，而不是对象，常用于数组、列表等。
 assertContentEquals(intArrayOf(1, 2, 3, 4, 5, 6), result)
 
 ```
@@ -133,7 +133,7 @@ assertContentEquals(intArrayOf(1, 2, 3, 4, 5, 6), result)
 也可以使用gradle 脚本运行：
 
 ```shell
-# 运行 test 目录下的单元测试
+# 运行 test 目录下的所有单元测试
 ./gradlew test
 ```
 
