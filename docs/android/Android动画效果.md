@@ -46,9 +46,9 @@ ActivityOptionsCompat.makeSceneTransitionAnimation(Activity activity,Pair<View, 
 
 ## 补间动画（View Animation）
 
-补间动画也就是View动画，主要就是通过**图像不断进行变换**的方式来实现动画效果，仅支持四种：**平移、缩放、旋转、透明度**。
+**补间动画也就是View动画**，主要就是通过**图像不断进行变换**的方式来实现动画效果，仅支持四种：**平移、缩放、旋转、透明度**。
 
-* 执行补间动画时，View其实并没有移动，只是重绘改变了显示内容而已，所以**点击事件还是在原来的位置，新位置无法响应**。因此**不适合做具有交互的动画效果**。需要交换的动画应该使用属性动画。
+* 执行补间动画时，View其实并没有移动，只是重绘改变了显示内容而已，所以**点击事件还是在原来的位置，新位置无法响应**。因此**不适合做具有交互的动画效果**。需要交互的动画应该使用属性动画。
 * 由于支持的效果有限，所以在一些场景下效果并不理想，例如增大View的宽高，虽然能通过缩放实现，但是会导致内容也缩放，当我们不想缩放内容时，补间动画就不满足需求了。
 
 > 原理： 
@@ -182,7 +182,7 @@ binding.animationListIv.setOnClickListener( v -> {
 修改ProgressBar的进度
 
 ```kotlin
-// 改变 ProgressBar 的 progress 属性的指
+// 改变 ProgressBar 的 progress 属性的值
 val animation = ObjectAnimator.ofInt(musicMiniPlayerProgressBar, "progress", progress)
 // 动画持续时间
 animation.duration = 1000L

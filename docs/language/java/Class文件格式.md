@@ -115,25 +115,25 @@ SourceFile: "Simple.java"
 
 ### 符号表
 
-| 符号                                            | C/C++              | Java    |      |
-| ----------------------------------------------- | ------------------ | ------- | ---- |
-| V                                               | void               | void    |      |
-| I                                               | jint               | int     |      |
-| J                                               | jlong              | long    |      |
-| F                                               | jfloat             | float   |      |
-| D                                               | jdouble            | double  |      |
-| Z                                               | jboolean           | boolean |      |
-| S                                               | jshort             | short   |      |
-| C                                               | jchar              | char    |      |
-| B                                               | jbyte              | byte    |      |
-| -                                               |                    |         |      |
-| `[`：表示数组。例如 `[I`表示 int数组            | jintArray          | int[]   |      |
-| `L`: 表示class类型。例如 `Ljava/lang/String;`。 | 都是 `jobject`类型 | String  |      |
+| 符号                                            | C/C++              | Java    |
+| ----------------------------------------------- | ------------------ | ------- |
+| V                                               | void               | void    |
+| I                                               | jint               | int     |
+| J                                               | jlong              | long    |
+| F                                               | jfloat             | float   |
+| D                                               | jdouble            | double  |
+| Z                                               | jboolean           | boolean |
+| S                                               | jshort             | short   |
+| C                                               | jchar              | char    |
+| B                                               | jbyte              | byte    |
+| -                                               |                    |         |
+| `[`：表示数组。例如 `[I`表示 int数组            | jintArray          | int[]   |
+| `L`: 表示class类型。例如 `Ljava/lang/String;`。 | 都是 `jobject`类型 | String  |
 
 > * class 以 `;` 结尾。
 >
 > * 包名使用 `/` 分割。
->   * 弱存在内部类，使用 `$` 来作为分隔符。
+>   * 若存在内部类，使用 `$` 来作为分隔符。
 >
 > * 参数都包裹在 `()` 中。
 > * 最后的符号表示返回值。例如这里的 `J` 。

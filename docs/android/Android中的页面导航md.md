@@ -231,7 +231,7 @@ public NavDestination navigate(xxxxxx){
 
 > 解决方案
 
-* 网上有 通过自定义重写FragmentNavigator的解决方案。
+* 通过自定义重写FragmentNavigator的解决方案。
   * 将内部改为hide() 和 show()的方式。不过此方式将会导致同一个页面永远只有一个实例，无法重复创建。比如 `AFragment -> BFragment#1 -> BFragment#2 -> BFragment#3`， 页面上展示的内容不同, 此场景下BFragment#3无法导航回BFragment#2, 而是直接直接回到了AFragment。
 
 * 另一种方式就是**使用ViewModel等方式将数据和视图分离，保存好数据，并优化Fragment的渲染时间**。

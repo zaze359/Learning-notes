@@ -1,14 +1,17 @@
 # Flutter常用命令记录
 
 ```shell
-# 检测
+# 检测 -v 显示详情
 flutter doctor
 flutter doctor -v
+
+flutter upgrade
 
 flutter --version
 
 # 运行flutter项目
 flutter run
+# 指定 windows 平台
 flutter run -d windows
 
 # aar, apk, windows, appbundle bundle web

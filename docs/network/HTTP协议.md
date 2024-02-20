@@ -1171,38 +1171,3 @@ QUIC的流分为双向和单向。由流ID的低位控制。
 * 先用 HTTP/2协议连接服务器。
 * 服务器在建立HTTP/2连接后发送一个扩展帧 `Alt-Svc`帧，里面包含`h3=host:port`。
 * 浏览器接收到 `Alt-Svc` 后，使用QUIC连接给定的端口。连接成功就改用HTTP/3，并端口HTTP/2。
-
-## WebSocket
-
-**WebSocket 是全双工的通信协议**， 主要是为了优化 HTTP/1 的 请求-应答 模式导致的 半双工问题，也导致 HTTP 难以应用到实时通信领域（即时消息，网络游戏等）。
-
-* 全双工的通信协议。
-* 采用二进制帧结构。
-* 默认端口：80,443。
-* 需要自己管理连接、缓存、状态等，开发复杂度高于 HTTP。
-
-### WebSocket 的握手
-
-利用了 HTTP 协议升级的特性，握手阶段使用 HTTP GET请求来完成协议升级。
-
-* `Upgrade: websocket`：表示升级成 websocket。
-* `Connection: Upgrade`：请求协议升级。
-* `Sec-WebSocket-Key`：简单的认证密钥。Base64 编码的 16 字节随机数。
-* `Sec-WebSocket-Version`：协议版本
-
-![image-20230215130558424](./HTTP%E5%8D%8F%E8%AE%AE.assets/image-20230215130558424.png)
-
-
-
-#### WebSocket 应用领域
-
-WebSocket 使用于实时通信的场景：
-
-* IM通信
-* 数据实时同步
-* 页游
-
-#### 和 HTTP/2的区别
-
-* WebSocket 侧重于实时通信，HTTP/2侧重传输效率。
-* HTTP/2 存在流、多路复用、服务端推送，实质还是流内请求-应答模式。WebSocket 没有流、和多路复用等特性，且由于是全双工的，可以同时收发数据，所有也不需要 服务端推送这个功能。

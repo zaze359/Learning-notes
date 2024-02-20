@@ -51,7 +51,7 @@ adb shell dumpsys SurfaceFlinger
   ReflectUtil.executeMethod(threadLocal, "set", looper)
   ```
 
-View重用：放入缓存前，注意View状态的清除，防止状态的错乱
+* View重用：放入缓存前，注意View状态的清除，防止状态的错乱
 
 
 

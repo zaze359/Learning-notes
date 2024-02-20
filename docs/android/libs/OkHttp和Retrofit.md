@@ -24,25 +24,25 @@
 
 ### 双任务队列机制
 
-OkHttp采用双任务队列机制实现异步请求，并通过 Dispatcher来调度任务。而Dispatcher采用的是双任务队列机制进行调度。它是OkHttp的核心运行机制。
+OkHttp采用双任务队列机制实现异步请求，并通过 Dispatcher来调度任务。它是OkHttp的核心运行机制。
 
 主要包含两个队列：
 
-* **等待队列（readyAsyncCalls）**：
-* **执行队列（runningAsyncCalls）**：
+* **等待队列（readyAsyncCalls）**：异步请求会先进入等待队列，之后在转到执行队列。
+* **执行队列（runningAsyncCalls）**：同步请求直接进入执行队列中。
   * 可执行队列（executableCalls）：这是一个临时队列，存在于`promoteAndExecute()`方法执行期间。保存刚加入到runningAsyncCalls 中的任务，这样就可以在任务添加完后就释放锁，使用这个临时队列来遍历调度新的请求任务。
 
 运行机制：
 
-1. 通过 `client.enqueue()`添加的异步任务 AsyncCall，这个新任务会被加入到 `readyAsyncCalls` 中。
+1. 通过 `client.enqueue()`添加的异步任务 AsyncCall，这个新任务会被**加入到 等待队列 中**。
 
-2. 然后通过 `promoteAndExecute()` 将等待队列的任务放到执行队列中并执行。在这里会遍历 `readyAsyncCalls` ，判断是否能够加入到 `runningAsyncCalls`中。
+2. 然后通过 `promoteAndExecute()` 将等待队列的任务放到执行队列中并执行，这里会遍历等待队列 ，判断是否能够加入到执行中。
 
-   * runningAsyncCalls 的数量**不超过最大并发数**。默认64，最多允许64个并发请求。超过就不再遍历。
+   * 执行队列的数量**不超过最大并发数**。默认64，最多允许64个并发请求。超过就不再遍历。
 
    * 域名对应的连接**不超过Host最大并发数**。默认5，即每个域名最多5个并发连接。超过会继续遍历，添加其他域名的请求任务。
 
-3. 满足上述2个条件的任务，会从等待队列 转移到 runningAsyncCalls 中，直至塞满执行队列或遍历结束，并使用线程池执行任务。
+3. 满足上述2个条件的任务会从等待队列 转移到 执行队列 中，直至塞满执行队列或遍历结束，并使用线程池执行任务。
 
    * 这里最终会调用 `getResponseWithInterceptorChain()` 通过责任链的方式层层处理请求和响应。
 
@@ -251,6 +251,10 @@ class RealCall() : Call{
 | RealConnection     | 持有连接信息的类                       |      |
 | RealConnectionPool | 连接池，持有一个 RealConnection 队列。 |      |
 |                    |                                        |      |
+
+
+
+
 
 
 
@@ -475,13 +479,15 @@ public <T> T create(final Class<T> service) {
               @Override
               public @Nullable Object invoke(Object proxy, Method method, @Nullable Object[] args)
                   throws Throwable {
+                // 函数被调用时执行
                 // If the method is a method from Object then defer to normal invocation.
                 if (method.getDeclaringClass() == Object.class) {
                   return method.invoke(this, args);
                 }
                 args = args != null ? args : emptyArgs;
                 // 调用 loadServiceMethod 处理并执行方法,default 修饰的接口单独处理。
-                // 
+                // loadServiceMethod() 返回的是一个 CallAdapted:HttpServiceMethod
+                // invoke() 执行 ServiceMethod.adapt(), 发起请求
                 return platform.isDefaultMethod(method)
                     ? platform.invokeDefaultMethod(method, service, proxy, args)
                     : loadServiceMethod(method).invoke(args);

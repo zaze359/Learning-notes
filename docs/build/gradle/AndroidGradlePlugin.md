@@ -59,7 +59,7 @@ apply from: '../gradle-mvn-push.gradle'
 
 修改项目更目录下的 **build.gradle** 配置插件仓库和版本
 
-```
+```groovy
 buildscript {
     repositories {
         // ...

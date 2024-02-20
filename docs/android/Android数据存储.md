@@ -288,8 +288,6 @@ sqlite3 zaze_user.db
 
 * [Room](./Android数据库之Room.md)：Google 官方提供的数据库框架
 
-  
-
 ### 并发问题
 
 > 在进程与线程的并发中常出现的`SQLiteDatabaseLockedException`问题。

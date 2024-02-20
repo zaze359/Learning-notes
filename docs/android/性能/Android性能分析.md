@@ -778,7 +778,7 @@ internal class HeapDumpTrigger {
 
 [JVM(TM) Tool Interface 1.2.1 (oracle.com)](https://docs.oracle.com/javase/7/docs/platform/jvmti/jvmti.html)
 
-可以定制的性能监控、数据采集、行为修改等工具。我们可以通过这套接口定制的性能监控、数据采集、行为修改等工具。
+我们可以通过这套接口定制的性能监控、数据采集、行为修改等工具。
 
 例如抖音的 Kenzo 内存监控框架：[抖音 Android 性能优化系列：Java 内存优化篇_语言 & 开发_字节跳动技术团队_InfoQ精选文章](https://www.infoq.cn/article/b9SidcmWrZqYYjSzKbdf)
 
@@ -809,13 +809,7 @@ internal class HeapDumpTrigger {
 | GarbageCollectionFinish | GC结束。                                                    |          |
 |                         |                                                             |          |
 
-
-
 #### 线程相关事件
-
-
-
-
 
 * 监控对象的分配 和 回收。
 * 获取 Java堆栈。

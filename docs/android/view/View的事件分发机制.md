@@ -69,15 +69,14 @@ Android定义了一些的触摸事件用来表示用户手指在屏幕上的操�
 
 ### onInterceptTouchEvent()
 
-用于拦截事件，可以起到阻止事件向下传递的作用。
+用于拦截事件，可以起到**阻止事件向下传递**的作用。
 
 > 只有View Group才有这个函数
 
 * 返回 true：表示拦截这个事件，那么会调用`self.onTouchEvent()`，事件也不会继续向下传播。
 * 返回 false：表示不拦截，事件会继续向child 传播，会调用 `child.dispatchTouchEvent()`。
 
-> 1. 若当前元素 return ture，后续不会再被调用。
-> 2. 若是子元素 return true，作为父元素的自身每次事件来时依然会被调用，触发满足 1。
+> 若是子元素 return true，作为父元素的自身每次事件来时依然会被调用，触发满足 1。
 
 ```kotlin
     override fun onInterceptTouchEvent(ev: MotionEvent?): Boolean {
@@ -146,7 +145,7 @@ ViewGroup不拦截 `ACTION_DOWN` 时，那么会遍历所有的child，并判断
 1. 若存在子元素消费事件：mFirstTouchTarget 将被赋值，指向这个子元素，会将事件分发给这个子元素。
 2. 若子元素 也不消费事件：由于没人处理事件，所有这个事件又会向上传递，最终会回调到 `Activity.onTouchEvent()` 由 Activity处理。
 
-从上面对ACTION_DOWN事件的处理可以看出：**ACTION_DOWN 事件的作用就是用来决定由谁来处理后续的事件序列**。事件序列中后续的 ACTION_MOVE、ACTION_UP等事件的分发，是根据ACTION_DOWN 的处理流程决定的，可以概括为一下三种情况：
+从上面对ACTION_DOWN事件的处理可以看出：**ACTION_DOWN 事件的作用就是用来决定最远能由谁来处理后续的事件序列**。事件序列中后续的 ACTION_MOVE、ACTION_UP等事件的分发，是根据ACTION_DOWN 的处理流程决定的，可以概括为一下三种情况：
 
 1. ViewGroup拦截了事件：这些后续事件由ViewGroup 处理。
 2. 子元素 mFirstTouchTarget 拦截了事件：此时事件并不是无条件的都交给子元素，而是会先调用父元素的 `ViewGroup.onInterceptTouchEvent()` 来检测ViewGroup 是否需要拦截，若依然不拦截才会将事件转给子元素处理。即父控件依然可以拦截事件。
@@ -808,6 +807,8 @@ public boolean onTouchEvent(MotionEvent event) {
 
 我们测试 `TouchViewSecond` 拦截了事件，但是在 `onTouchEvent()` 中不消费这个事件的场景：
 
+被TouchViewSecond拦截后，不会传递给他的子元素，但是事件并没有消费，所以最终还是会向上传递给 TouchViewFirst。。
+
 ![image_1e49320151m5r1g9l16kg2076k9.png-16.7kB][3]
 
 ```kotlin
@@ -828,9 +829,9 @@ class TouchViewSecond : LinearLayout {
 
 
 
-
-
 #### onTouchEvent() return true
+
+由于事件被 TouchViewSecond 消费类，所以不会向上传递给 TouchViewFirst。
 
 ![image_1e493diofg821ovf18o21lcg15p5m.png-24.2kB][4]
 

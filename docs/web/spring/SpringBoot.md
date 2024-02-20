@@ -34,7 +34,7 @@ Spring Boot可帮助我们快速构建基于Spring的应用程序
 | @Data                    | 类   | 用于数据类。可以省去`getter`、`setter`。                     |
 | @Builder                 | 类   | 表明是一个Builder类，会自动提供一些用于辅助构造类的 Builder方法 |
 | @ConfigurationProperties | 函数 | 定义如何构建一个配置                                         |
-| @Configuration           | 类   | 表明这个类是一个配置类                                       |
+| @Configuration           | 类   | 表明这个类是一个配置类，默认只扫描和Application同级的配置，可以在@SpringBootApplication中配置 扫描的包路径。 |
 | @ImportResource          |      | 注入配置                                                     |
 | @ComponentScan           |      | 告诉spring 扫描哪些package下的Bean                           |
 |                          |      |                                                              |
@@ -99,7 +99,7 @@ fun userTransactionManager(userDataSource: DataSource): PlatformTransactionManag
 
 Spring Boot 默认会帮助项目自动进行配置，它的实现在 `org.springframework.boot:spring-boot-autoconfigure:x.x.x` 这个依赖库中。
 
-> Nots: 当我们自己配置某些类型后，Spring Boot就不会在自动配置这些类型。例如配置了DataSource，那么DataSource就不会在自动配置，其他的还是会自动配置。
+> Nots: 当我们自己配置某些类型后，Spring Boot就不会在自动配置这些类型。例如配置了DataSource，那么DataSource就不会在自动配置，其他的还是会自动配置。	
 
 ![image-20230508133558977](./SpringBoot.assets/image-20230508133558977.png)
 
@@ -127,13 +127,25 @@ Spring Boot 默认会帮助项目自动进行配置：
 
 ```properties
 ############################
-# 数据源配置，本地开发数据库
+
+# 数据源配置，使用 本地dev数据库
 spring.datasource.url=jdbc:mysql://localhost:3306/dev?serverTimezone=GMT%2B8&characterEncoding=utf-8
 spring.datasource.username=root
 spring.datasource.password=123456
 
 # 可选，默认情况下 Spring Boot会根据url自动判断类型
 # spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+
+# 若使用hikari，则通过下面的前缀进行配置
+#spring.datasource.hikari.*
+spring.datasource.hikari.connection-timeout=5000
+spring.datasource.hikari.idle-timeout=30000
+spring.datasource.hikari.pool-size=100
+spring.datasource.hikari.minimum-idle=10
+spring.datasource.hikari.maximum-pool-size=100
+spring.datasource.hikari.transaction-isolation=TRANSACTION_READ_COMMITTED
+#
+spring.datasource.type=com.hikari.HikariDataSource
 
 ############################
 # 初始化内嵌数据库
@@ -176,9 +188,9 @@ class DemoApplication : CommandLineRunner {
 
 ### 使用自定义配置
 
-当然我们也可以进行手动配置：
+当然我们也可以进行手动配置，例如下面的 user，此时需要将Spring Boot的默认配置排除，然后通过代码的方式来实现对应的配置
 
-我们可以将Spring Boot的默认配置排除，然后通过代码的方式来实现对应的配置。
+1. 自定义 user 配置
 
 ```properties
 user.datasource.url=jdbc:h2:mem:user
@@ -186,39 +198,40 @@ user.datasource.username=u
 user.datasource.password=
 ```
 
-1. 排除Spring的默认实现。
+2. 排除Spring的默认实现。
 
-   ```kotlin
-   @SpringBootApplication(
-       exclude = [DataSourceAutoConfiguration::class,
-           DataSourceTransactionManagerAutoConfiguration::class,
-           JdbcTemplateAutoConfiguration::class
-       ]
-   )
-   class DemoApplication : CommandLineRunner { ... }
-   ```
+```kotlin
+// 通过 exclude 排除
+@SpringBootApplication(
+    exclude = [DataSourceAutoConfiguration::class,
+        DataSourceTransactionManagerAutoConfiguration::class,
+        JdbcTemplateAutoConfiguration::class
+    ]
+)
+class DemoApplication : CommandLineRunner { ... }
+```
 
-2. 自定义配置实现：`DataSourceProperties`、`DataSource`、`PlatformTransactionManager`
+3. 自定义配置实现：`DataSourceProperties`、`DataSource`、`PlatformTransactionManager`
 
-   ```kotlin
-   // 创建配置
-   @Bean
-   @ConfigurationProperties("user.datasource")
-   fun userDataSourceProperties(): DataSourceProperties {
-       return DataSourceProperties()
-   }
-   
-   @Bean
-   fun userDataSource(): DataSource {
-       return userDataSourceProperties().initializeDataSourceBuilder().build()
-   }
-   
-   @Bean
-   @Resource
-   fun userTransactionManager(userDataSource: DataSource): PlatformTransactionManager {
-       return DataSourceTransactionManager(userDataSource)
-   }
-   ```
+```kotlin
+// 创建配置
+@Bean
+@ConfigurationProperties("user.datasource")
+fun userDataSourceProperties(): DataSourceProperties {
+    return DataSourceProperties()
+}
+
+@Bean
+fun userDataSource(): DataSource {
+    return userDataSourceProperties().initializeDataSourceBuilder().build()
+}
+
+@Bean
+@Resource
+fun userTransactionManager(userDataSource: DataSource): PlatformTransactionManager {
+    return DataSourceTransactionManager(userDataSource)
+}
+```
 
 ### 配置多个数据源
 
@@ -243,13 +256,15 @@ test.datasource.password=
 * 配置主数据源：使用`@Primary` 指定默认使用的数据源。
 * 排除Spring Boot的⾃动配置
 
-### 连接池配置
+### 三方连接池配置
 
 > Notes：
 >
-> Spring Boot 1.0 默认连接池 ：Tomcat-jdbc
+> * SpringBoot 1.0 默认连接池：**Tomcat-jdbc**
 >
-> Spring 2.0 默认连接池：HikariCP
+> * SpringBoot 2.0 默认连接池：**HikariCP** >> [GitHub链接](https://github.com/brettwooldridge/HikariCP)
+
+
 
 1. 先将默认的连接池依赖排除。
 

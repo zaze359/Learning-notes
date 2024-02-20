@@ -53,8 +53,6 @@
 
 * 讲一下Activity启动流程中与AMS的交互过程。
 
-* 是否了解Activity的onCreate和onAttach的执行顺序？
-
 参考资料：
 
 * [Android应用启动流程](../android/system/Android应用启动流程.md)
@@ -64,14 +62,30 @@
 
 ## 框架相关
 
-### 1. MVC、MVP、MVVM、MVI
+### MVC、MVP、MVVM、MVI
 
 相关问题：
 
-* 谈谈对MVC、MVP、MVVM、MVI的理解？
-* 它们各自的优缺点是什么？
-* 它们内部的依赖关系是怎么样的？
-* 各个层在 Android 开发中的对应关系？
+谈谈对MVC、MVP、MVVM、MVI的理解？
+
+* MVC：View层xml和View，Activity 即是Controller 也是 View，，Model层则复杂处理数据以及IO。
+* MVP：MVC的升级版本，新增Presenter层将Control 从Activity中抽离出来，P层位于View和Model之间，解决了Activity臃肿的问题同时也将View和Model解耦。
+* MVVM：在MVP基础上演化而来，使用 ViewModel 代替 Presenter，同时ViewModel配合Flow、LiveData等组件和View进行关联，数据驱动UI更新。
+* MVI：基于MVVM，只不过新增了 Intent(事件) 和 ViewState(View状态)，明确了View的操作 和 View的状态。
+
+它们各自的优缺点是什么？
+
+* MVC：有点就是结构比较简单，缺点就是 Activity 会越来越臃肿同时无法复用，View和Model 间直接交互存在耦合.
+* MVP：有点就是解决了MVC存在的问题（Activity臃肿、View和Model耦合），缺点就是存在大量的模板类，比较笨重。P层和View耦合，View的业务越复杂关联越深，复用性越差。需要自己处理生命周期相关的问题，防止View出现泄漏。
+* MVVM：解决了 MVP存在的痛点(笨重、生命周期、复用)，存在的缺点自动化的过程增加了问题排除的难度，特别是实用DataBinding的时候，ViewModel中的数据 和 View的关联性并不强，可读性略差。
+* MVI：明确了View的操作 和 View的状态，可读性更强，存在的问题就是 ViewState 每次更新都需要重新创建对象, 存在内存开销。
+
+它们内部的依赖关系是怎么样的？
+
+* MVC：V -> C -> M -> V
+* MVP: V <-> P <-> M
+* MVVM: V <-> VM <-> M
+* MVI：V <-> VE/I <-> M
 
 参考资料：
 
@@ -590,13 +604,13 @@ View动画则是会不断进行重绘，对GPU资源消耗比较大。
 
 ### Handler是什么？有什么用?
 
-Handler 是Android提供的一种用于线程间通讯的消息传递机制，常用于子线程和主线程进行消息传递。
+Handler 是Android提供的一种用于**线程间通讯的消息传递机制**，常用于子线程和主线程进行消息传递。
 
 ### Handler.post() 与 View.post() 的 区别?
 
 我们一般使用的 `Handler.post()` 就是向 mainLooper 直接发送消息，若是自定义了线程则是向我们自定义线程的Looper发送。
 
-View.post() 调用的 handler 来自 ViewRootImpl 它将消息发送到 创建ViewRootImpl 线程，一般就是主线程，使用的就是mainLooper。
+View.post() 调用的 handler 来自 ViewRootImpl 它将消息发送到 创建ViewRootImpl的线程，一般就是主线程，使用的就是mainLooper。
 
 大致流程其实和 普通的 Handler.post() 区别不大。
 
@@ -631,7 +645,7 @@ public boolean post(Runnable action) {
 ### Handler休眠是怎样的？
 
 1.  当Looper被创建后，MessageQueue也会被创建，同时会MQ会调用 `nativeInit()` 创建NativeMessageQueue，同时也初始化了 Native层的Looper，这样 Java层和Native层的消息机制就初始化完毕了。
-2. 启动Looper循环，在Java层调用 `Looper.loop()`，启动循环后，会调用 `MQ.next()`来获取消息，此时若没有需要处理的消息就会调用 `nativePollOnce()` 是当前线程进入休眠，直到有新的消息或者超时时才会被唤醒，这里底层使用的是epoll机制。
+2. 启动Looper循环，在Java层调用 `Looper.loop()`，启动循环后，会调用 `MQ.next()`来获取消息，此时若没有需要处理的消息就会调用 `nativePollOnce()` 使当前线程进入休眠，直到有新的消息或者超时时才会被唤醒，这里底层使用的是epoll机制。
 3. 若我们通过 Handler 发送了消息，那么这个消息最终会通过 `MQ.enqueueMessage()` 加入到消息队列中。
    * 若新加入的消息在队列头部且当前线程处于阻塞状态那么还会 通过 `nativeWake()` 唤醒 epoll。
 
@@ -649,9 +663,13 @@ epoll 是 select和poll的增强机制，是Linux下的一项多路复用技术�
 3. `messageQueue.nativePollOnce()`  会调用`Looper.pollOnce()`，内部通过 epoll_wait() 进入休眠，直到事件发送或者超时被才会被唤醒。epoll被唤醒后 会先判断fd和事件类型，符合条件后会从管道中读取数据进行处理。
 4. `messageQueue.nativeWake()` 实际上就是向pipe中写入数据从而唤醒 epoll。
 
-epoll阻塞会什么不占用CPU资源？
+### epoll阻塞会什么不占用CPU资源？
 
+操作系统的多任务机制：
 
+* 工作队列：工作队列才会被 CPU 轮询。
+
+* 等待队列：阻塞后进入到等待队列
 
 ### IdleHandler使用过吗？
 
@@ -686,9 +704,7 @@ Looper.myQueue().removeIdleHandler(idler);
 
 ### Handler 内存泄露问题
 
-在Activity 中使用 Handler 时，如果 Handler 作为匿名内部类使用，那么这个Hander就会持有外部类Activity的实例对象。
-
-而真正导致泄露的原因是因为使用 Handler 发送了消息。
+在Activity 中使用 Handler 时，如果 Handler 作为**匿名内部类**使用，那么这个Hander就会持有外部类Activity的实例对象。而真正导致泄露的原因是因为使用 Handler 发送了 **Message**。
 
 当我们 通过 Handler发送消息时 **Message 会持有 Handler**，Message属于Looper中的MessageQueue，而Looper存储在线程的TLS中的，所以Handler是被线程持有的，无论是主线程还是自定义线程生命周期都比Activity长，也就导致Activity发送了内存泄露。
 
@@ -728,23 +744,22 @@ Looper.myQueue().removeIdleHandler(idler);
 * **in**：默认，表示输入参数，会将客户端的数据读取并传给服务端。服务端修改后不会影响客户端
 * **out**：表示输出参数，服务端修改后可以将新数据返回给客户端。
   * 客户端发送时并不会读取数据，服务端会在binder调用的返回过程中新建一个对象并写入数据，最后通过 reply 返回给我们
-* inout：同时具备in、out的特性
+* **inout**：同时具备in、out的特性
 * **oneway**：表示这个接口异步调用，oneway修饰后的接口不可以使用 in、out，并且也不能有返回值。常用于不关心binder状态和返回的接口。
   * 由于没有返回值，所以通讯过程中不会生成 reply 局部变量。
   * 异步调用，调用oneway修饰的方法不会发生阻塞。
 
 ### zygote为什么使用socket 而不是Binder
 
-* **LocalSocket 的传输效率很高效(略低于Binder)，使用简单**。
+* **zygote是专用于 fork 其他的进程的，所以自身应当轻便简单且尽量不依赖外部**。若使用 Binder，则zygote需要先等待ServiceManger启动，然后将自身注册到ServiceManger后才能去fork其他进程。而其他服务需要和zygote通信时又需要从serviceManger中来查询，调用流程比较繁琐且因此耦合了ServiceManager。而Socket使用很简单并且技术成熟。
+
+* zygote使用的 **LocalSocket 的传输效率很高效(略低于Binder)，且使用很简单**。
 
   LocalSocket是专用于本地进程间通信机制，相比于普通的Socket，不用经过网络协议栈所以也就不用处理相关协议的编解码，同时不受限于网络带宽。虽然需要两次拷贝，由于Binder传输存在大小限制，数据量并不多，此时两者的差距并不明显。
-
-* **zygote是专用于 fork 其他的进程的，所以自身应当轻便简单且尽量不依赖外部**。若使用 Binder，则zygote需要先等待ServiceManger启动，然后将自身注册到ServiceManger后才能去fork其他进程。而其他服务需要和zygote通信时又需要从serviceManger中来查询，调用流程比较繁琐且因此耦合了ServiceManager。而Socket使用很简单并且技术成熟。
 
 * **fork机制仅会拷贝当前线程，并不支持多线程，而Binder机制恰恰是多线程的**。当然zygote中也存在很多线程，但是zygote会将这些线程管理起来，在fork前将所有线程停止，fork完后再重新启动。
 
 * Binder的阻塞调用会导致另一边也阻塞。会导致很多不必要的线程开销
-
 
 
 ## OkHttp

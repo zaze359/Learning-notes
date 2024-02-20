@@ -388,11 +388,11 @@ export PUB_HOSTED_URL=https://pub.flutter-io.cn
 export FLUTTER_STORAGE_BASE_URL=https://storage.flutter-io.cn
 
 # 清华
-export PUB_HOSTED_URL=https://mirrors.tuna.tsinghua.edu.cn/dart-hub
+export PUB_HOSTED_URL=https://mirrors.tuna.tsinghua.edu.cn/dart-pub
 export FLUTTER_STORAGE_BASE_URL=https://mirrors.tuna.tsinghua.edu.cn/flutter
 
 # 腾讯
-export PUB_HOSTED_URL=https://mirrors.cloud.tencent.com/dart-hub
+export PUB_HOSTED_URL=https://mirrors.cloud.tencent.com/dart-pub
 export FLUTTER_STORAGE_BASE_URL=https://mirrors.cloud.tencent.com/flutter
 
 # source ~/.bash_profile

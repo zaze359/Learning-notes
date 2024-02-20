@@ -19,7 +19,7 @@
    * **zygote socket**： 用于接收AMS启动应用的请求。
 
 * system_server进程启动后 会使 AMS 进入systemReady 状态。
-* ActivityManagerService与zygote中的Socket通信，请求启动Home。
+* ActivityManagerService 与 zygote 通过 Socket 进行通信，请求启动Home。
 * zygote收到 socket 请求，通过forkAndSpecialize启动新的应用进程，最终启动了Home。
 
 后续阅读源码过程中会涉及SystemServer、SystemService、ServiceManager、LocalService、SystemServiceManager这几个名字相似的类，简单介绍下它们的职责：

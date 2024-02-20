@@ -293,7 +293,7 @@
 ### Activity.attach()
 
 * **关联了 Context**。
-* **Activity 和 PhoneWindow 关联**：Activity 初始化了 mWindow 变量，它是一个**PhoneWindow**，并将Activity自身 作为 Window.Callback 传给 PhoneWindow， 后续 window 收到事件就能传递给 Activity。
+* **Activity 和 PhoneWindow 关联**：Activity 初始化了`mWindow:PhoneWindow` 变量，并将Activity自身 作为 Window.Callback 传给 PhoneWindow， 后续 window 收到事件就能传递给 Activity。
 * 给 PhoneWindow 设置了 WindowManager，从而 Activity 、Window、WindowManager建立了关联。 
   * WindowManager 是访问Window的入口，常用的功能包括： 添加View、更新View和删除View。
 
@@ -2279,17 +2279,17 @@ class SystemServiceRegistry  {
 
 ### Choreographer
 
-Choreographer 字面意思是编舞者，负责协调绘制，保证vsync到来时立即执行绘制。
+Choreographer 字面意思是编舞者，**负责协调 Vsync和 UI任务，保证vsync到来时立即执行绘制**。例如常见的View的绘制等都会抛给Choreographer处理。
 
-它是一个单例，内部维护了一个使用 mainLooper的Handler。同时它还能接收VSYNC。
+* ViewRootImpl 会在构造函数中调用 `Choreographer.getInstance()` 来创建 Choreographer实例。
+* Choreographer是一个单例，内部维护了一个使用 mainLooper的Handler，监听vsync的FrameDisplayEventReceiver。
 
-Choreographer在ViewRootImpl中被使用，ViewRootImpl 会在构造函数中调用 `Choreographer.getInstance()` 来创建 Choreographer实例。
-
-* **viewRootImpl发送请求任务**：在渲染流程中的 `viewRootImpl.scheduleTraversals()` 方法中会通过  `Choreographer.postCallback()` 发送绘制请求 `CALLBACK_TRAVERSAL`。
-* **Choreographer 监听vsync**：Choreographer 接收到 viewRootImpl的请求后会将 callback保存在 callbakc队列中，接着通过 FrameHandler 来发送异步消息，协调执行绘制请求。
-  * 4.1后默认开启vsync，此时会调用 `scheduleVsyncLocked()` ，通过 FrameDisplayEventReceiver 注册监听vsync，接收到vsync后会调用 `doFrame()`。
-  * 不开启vsync时，则是手动模拟vsync，通过计算得到下一帧时间，不过最终调用的也是 `doFrame()`。
-* **vsync回调执行任务**：`doFrame()` 中会按照一定顺序执行callback队列中的任务，也就是调用了 `callback.run()`，执行完毕后就从callback队列中移除
+* **viewRootImpl发送UI任务**：在渲染流程中的 `viewRootImpl.scheduleTraversals()` 会通过  `Choreographer.postCallback()` 发送绘制请求 `CALLBACK_TRAVERSAL`。
+* **Choreographer 添加任务到任务队列**：Choreographer 接收到 viewRootImpl的请求后会将 callback 保存在 CallbackQueue 中。若当前有可以执行则会立即准备执行任务，否则发送一个延迟消息，两者其实都是通过 FrameHandler 发送了消息。
+* **Choreographer 同步 vsync**：通过 FrameHandler 来发送异步消息，协调执行绘制请求。
+  * 4.1后默认开启vsync，此时会调用 `scheduleVsyncLocked()` ，然后通过 FrameDisplayEventReceiver调用`nativeScheduleVsync()`等到回调，接收到vsync回调后最终执行到 `doFrame()`。
+  * 不开启vsync时，则是手动模拟vsync，计算得到下一帧时间，然后再发送消息，最终调用的也是 `doFrame()`。
+* **vsync回调执行任务**：`doFrame()` 中会按照一定顺序执行callback队列中的任务，也就是调用了 `callback.run()`，执行完毕后就从callback队列中移除。
 
 ```java
 class Choreographer {
@@ -2353,7 +2353,7 @@ class Choreographer {
             // 加入到队列中
             mCallbackQueues[callbackType].addCallbackLocked(dueTime, action, token);
 
-            if (dueTime <= now) { // 立即执行
+            if (dueTime <= now) { // 可以立即执行就执行
                 scheduleFrameLocked(now);
             } else { // 发送了一个异步延迟消息
                 Message msg = mHandler.obtainMessage(MSG_DO_SCHEDULE_CALLBACK, action);
@@ -2370,7 +2370,7 @@ class Choreographer {
         if (!mFrameScheduled) {
             mFrameScheduled = true;
             if (USE_VSYNC) { // 4.1后就默认开启 vsync了
-                // 判断了一下是不是在looperThread 同一线程内调用，是的话就直接执行。
+                // 判断了一下是不是 looperThread 同一线程内调用，是的话就直接执行。
                 if (isRunningOnLooperThreadLocked()) {
                     scheduleVsyncLocked();
                 } else {
@@ -2396,7 +2396,7 @@ class Choreographer {
     private void scheduleVsyncLocked() {
         try {
             Trace.traceBegin(Trace.TRACE_TAG_VIEW, "Choreographer#scheduleVsyncLocked");
-            //
+            // 调用 Receiver.scheduleVsync()
             mDisplayEventReceiver.scheduleVsync();
         } finally {
             Trace.traceEnd(Trace.TRACE_TAG_VIEW);
@@ -2495,11 +2495,12 @@ class Choreographer {
 }    
 ```
 
-
-
 #### FrameHandler
 
 负责发送异步消息，协调执行绘制。
+
+* 不开启VSync：直接调用 `doFrame()`
+* 开启Vsync：调用 `doScheduleVsync()` 最终 会调用到 `DisplayEventReceiver.nativeScheduleVsync()`
 
 ```java
 	private final class FrameHandler extends Handler {
@@ -2515,7 +2516,7 @@ class Choreographer {
                     doFrame(System.nanoTime(), 0, new DisplayEventReceiver.VsyncEventData());
                     break;
                 case MSG_DO_SCHEDULE_VSYNC:
-                    // 调用的是 scheduleVsyncLocked()
+                    // 实际调用的是 scheduleVsyncLocked()
                     doScheduleVsync();
                     break;
                 case MSG_DO_SCHEDULE_CALLBACK:
@@ -2589,6 +2590,8 @@ private final class FrameDisplayEventReceiver extends DisplayEventReceiver
 
 ##### DisplayEventReceiver
 
+具体实现在 FrameDisplayEventReceiver 中，vsync到来时，native层会回调 `FrameDisplayEventReceiver.onVsync()`。
+
 ```java
 public abstract class DisplayEventReceiver {   
 	public DisplayEventReceiver(Looper looper, int vsyncSource, int eventRegistration) {
@@ -2608,7 +2611,7 @@ public abstract class DisplayEventReceiver {
             Log.w(TAG, "Attempted to schedule a vertical sync pulse but the display event "
                     + "receiver has already been disposed.");
         } else {
-            // 调用JNI
+            // 调用JNI, mReceiverPtr 包含了回调，会调用 onVsync()
             nativeScheduleVsync(mReceiverPtr);
         }
     }

@@ -132,7 +132,7 @@ MainActivity onStop
 | 回调                      |                                                              |
 | ------------------------- | ------------------------------------------------------------ |
 | ~~`onAttach()`~~          | 已废弃。和Context（Activity）关联时调用。之后会调用`onCreate()` |
-| `onCreate()`              | `onAttach()`之后被调用。                                     |
+| `onCreate()`              | 在`onAttach()`之后被调用。                                   |
 | `onCreateView()`          | 加载布局时调用，可以在这里构建View。                         |
 | `onViewCreate()`          | 布局加载完毕后调用，可以在这里对View进行一些操作。和`onDestoryView()`对应 |
 | ~~`onActivityCreated()`~~ | 已废弃，关联的Activity一定已经创建后调用。使用`onViewCreate()`。 |

@@ -102,16 +102,20 @@ exit
 
 ### 修改密码
 
-```bash
-mysqladmin -u 用户名 -p 旧密码 password 新密码 
+```shell
+# mysqladmin -u 用户名 -p password 新密码
+mysqladmin -u root -p password "123456"
 ```
 
 ### 数据库表修改
 
-```bash
-增加列：ALTER TABLE t2 ADD c INT UNSIGNED NOT NULL AUTO_INCREMENT,ADD INDEX (c); 
-修改列：ALTER TABLE t2 MODIFY a TINYINT NOT NULL, CHANGE b c CHAR(20); 
-删除列：ALTER TABLE t2 DROP COLUMN c; 
+```shell
+#增加列：
+ALTER TABLE t2 ADD c INT UNSIGNED NOT NULL AUTO_INCREMENT,ADD INDEX (c); 
+#修改列：
+ALTER TABLE t2 MODIFY a TINYINT NOT NULL, CHANGE b c CHAR(20); 
+#删除列：
+ALTER TABLE t2 DROP COLUMN c; 
 ```
 
 ### 数据库表备份和修复

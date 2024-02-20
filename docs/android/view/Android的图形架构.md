@@ -504,13 +504,13 @@ CPU处理数据 （view的绘制过程）-> GPU渲染 -> 缓存到buffer中 -> �
 
 不同的 View 或者 Activity 会共用一个 Window ， 而每个 Window 都会关联一个`Surface`。Surface是一个接口，供 生产方 与 消耗方 交换缓冲区。
 
-* Surface  一个 `BufferQueue` 缓存队列，队列中有两个 `Graphic Buffer` 。
+* Surface  包含 一个 `BufferQueue` 缓存队列，队列中有两个 `Graphic Buffer` 。可以通过 `canvas()`写入。
   *  **Off Screen Buffer**：用于绘制。
   *  **Front Graphic Buffer**：用于显示。
 
 * 应用通过 `SurfaceHolder` 接口控制 Surface 将图像渲染到屏幕上。
 
-我们可通过
+
 
 ### SurfaceHolder
 

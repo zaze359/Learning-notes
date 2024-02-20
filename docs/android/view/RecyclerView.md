@@ -84,8 +84,10 @@ getItemOffsets(Rect outRect, View view, RecyclerView parent, State state)
 *   state : RecyclerView的状态 但并不包含滑动状态
 
 ```java
+// 位于内容下层，在内容前绘制
 onDraw(Canvas c, RecyclerView parent, State state) 
 
+// 位于内容上层，在内容后绘制
 onDrawOver(Canvas c, RecyclerView parent, State state)
 ```
 
@@ -121,7 +123,7 @@ public final class Recycler {
 
 ### Scrap
 
-scrap 意为废缓存，是**重新布局期间的临时缓存，缓存的是在重新布局期间位于在屏幕区域的ViewHolder**，布局完成后这层缓存会被清空。它和滑动时的缓存复用没有关系。其他的Item是保存在 CachedViews 和 RecyclerViewPool中。
+scrap 意为废缓存，是**重新布局期间的临时缓存，缓存的是在重新布局期间位于在屏幕区域的ViewHolder**，布局完成后这层缓存会被清空。它**和滑动时的缓存复用没有关系**。其他的Item是保存在 CachedViews 和 RecyclerViewPool中。
 
 在 Recycler 类中 声明了两个 scrap，mAttachedScrap 和 mChangedScrap，它们都是 ViewHolder列表：`ArrayList<ViewHolder> ` 
 

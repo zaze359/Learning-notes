@@ -56,7 +56,7 @@ tasks.withType(JavaCompile) {
 org.gradle.java.home=/Library/Java/JavaVirtualMachines/temurin-11.jdk/Contents/Home
 ```
 
-### Gradle编译错误
+### Gradle版本和配置不兼容导致编译错误
 
 ---
 
@@ -357,9 +357,9 @@ git config --global http.postBuffer 524288000
 
 
 
-## npm修改仓库地址
+## npm报错WARN ERESOLVE overriding peer dependency
 
-修改仓库地址
+无法下载，所要使用镜像
 
 ```shell
 npm config set registry "https://registry.npm.taobao.org"

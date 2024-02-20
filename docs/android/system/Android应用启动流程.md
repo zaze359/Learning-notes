@@ -12,16 +12,24 @@
 | **ActivityTaskManagerService** | 是Android 10新增加的系统服务类，位于SystemServer进程中，承接了ActivityManagerService的部分功能（Activity、Task）；应用进程持有Proxy 向ATMS发送消息，ATMS进程实现Stub，负责处理Binder请求。例如内部通过 `startActivityAsUser()` 启动Activity。 |
 |                                |                                                              |
 | Instrumentation                | 负责Activity、Application生命周期相关的函数调用; 每个应用进程仅有一个Instrumentation，ActivityThread 也是通过它来创建Activity 的 |
+|                                |                                                              |
 
 
-
-## 1. 发起应用启动请求
 
 我绘制了一张 发起应用启动请求的时序图，先放在前面：
 
+* Launcher 通过 `startActivity()` 向 ATMS 发送应用启动请求，这是Binder通讯。
+* ATMS 接收到这个Binder请求后，开始创建对应的 ActivityRecord、Task等。
+* 接着 ATMS 和Zygote 建立 socket连接，并向zygote 发送创建进程的请求。
+* zygote接收到 这个sokcet消息后，会fork 一个新进程作为应用进程，并调用 `ActivityThread.main()` 启动应用程序。
+* `main()` 调用后 首先会通过 `attach()` 将应用和 AMS进行关联，传入了`IApplicationThread` 作为回调接口。
+* 接着会创建 mainLooper 并启动循环，等待接受处理各种消息。
+* AMS 会 通过 `IApplicationThread` 回调 `bindApplication()` ，触发 `BIND_APPLICATION` 消息 创建了 Application 对象。同时在`application.attach()` 之后，还完成了 ContentProvider 的初始化，这一步在 `application.onCreate()` 之前。
+* 上一步结束后，Application 创建完成，然后AMS 会调用 `ActivityTaskManagerInternal.attachApplication()` ，这个流程最后会通过 `IApplicaitonThread.scheduleTransaction(clientTransaction)`回调给应用端，发送 `EXECUTE_TRANSACTION` 消息，从而触发`handleLaunchActivity()` 创建并启动了 Activity。
+
 ![应用启动流程](./Android%E5%BA%94%E7%94%A8%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B.assets/%E5%BA%94%E7%94%A8%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B.jpg)
 
-
+## 1. 发起应用启动请求
 
 ### Activity.startActivityForResult()
 
@@ -269,7 +277,7 @@ public class ActivityTaskManagerService extends IActivityTaskManager.Stub {
         }
         
 		// ...
-        // 创建 目标ActivityRecord
+        // 创建 目标 ActivityRecord
         final ActivityRecord r = new ActivityRecord.Builder(mService)
                 .setCaller(callerApp)
                 .setLaunchedFromPid(callingPid)
@@ -448,7 +456,7 @@ public class ActivityTaskManagerService extends IActivityTaskManager.Stub {
                         && !mRootWindowContainer.isTopDisplayFocusedRootTask(mTargetRootTask)) {
                     mTargetRootTask.moveToFront("startActivityInner");
                 }
-                // 主要流程
+                // ------------------ 这里是主要流程
                 mRootWindowContainer.resumeFocusedTasksTopActivities(
                         mTargetRootTask, mStartActivity, mOptions, mTransientLaunch);
             }
@@ -571,7 +579,7 @@ class Task extends TaskFragment {}
 
 在这里 判断了 **Activity是否已经和 app进程关联**，即是否已经在应用进程中存在了：
 
-* Activity已关联进程：则将activity 设为可见，并且同时生命周期变更为 RESUMED 等。然后ATMS 通过 IApplicationThread这个IBinder 回调给给 目标Activity 所在的进程。
+* Activity已关联进程：则将activity 设为可见，并且同时生命周期变更为 RESUMED 等。然后ATMS 通过 IApplicationThread这个IBinder 回调给 目标Activity 所在的进程。
   * 最终调用的是 `ActivityThread.scheduleTransaction()`，发送 `EXECUTE_TRANSACTION` 消息。从而根据不同生命周期做不同的处理。就是（handleLaunchActivity、handleResumeActivity等函数）
 
 * Activity未关联进程：调用  `mTaskSupervisor.startSpecificActivity()` 继续启动流程。
@@ -627,7 +635,7 @@ class Task extends TaskFragment {}
 这里判断了  activity所属的应用进程是否已启动。
 
 * 若应用进程已死或未启动过：此时先调用`mService.startProcessAsync()` 来**启动进程**。mService 是 ATMS。
-  * 不过一开始应用一定是未启动的，先看这个流程。
+  * 不过一开始应用一定是未启动的，所以先走的是这个流程。
 
 * 应用进程已启动：调用 `realStartActivityLocked()` **创建并启动Activity** 并结束流程。
   * 最终通过 IApplicationThread这个IBinder回调给 Activity所在进程，触发`ActivityThread.scheduleTransaction()`，发送 `EXECUTE_TRANSACTION` 消息。
@@ -648,7 +656,7 @@ class Task extends TaskFragment {}
         if (wpc != null && wpc.hasThread()) {
             // 这里是app已启动流程
             try {
-                // 正在启动Activity的地方，启动后结束流程。
+                // 真正创建启动Activity的地方。
                 realStartActivityLocked(r, wpc, andResume, checkConfig);
                 return;
             } catch (RemoteException e) {
@@ -667,7 +675,7 @@ class Task extends TaskFragment {}
         r.notifyUnknownVisibilityLaunchedForKeyguardTransition();
 
         final boolean isTop = andResume && r.isTopRunningActivity();
-        // 启动对应进程。主要看这个流程
+        // -------- 启动对应进程。主要看这个流程
         // HostingRecord.HOSTING_TYPE_TOP_ACTIVITY 后面有用
         mService.startProcessAsync(r, knownToBeDead, isTop,
                 isTop ? HostingRecord.HOSTING_TYPE_TOP_ACTIVITY
@@ -1142,7 +1150,7 @@ class ProcessList {
 
 ### Process.start()	
 
-从这里开始主要就是创建进程的流程。
+从这里开始主要就是**创建进程的流程**。
 
 > [Process.java - start()](https://cs.android.com/android/platform/superproject/+/master:frameworks/base/core/java/android/os/Process.java;l=713)
 
@@ -1166,7 +1174,7 @@ class Process {
 ### ZygoteProcess
 
 * 填充应用启动参数。
-* 首先和 zygote进程建立 socket连接。
+* 和 zygote进程建立 socket连接。
 * 向zygote 发起socket请求，请求创建应用进程。
 * 获取创建结果，读取进程pid，若pid > 0 表示创建成功。
 
@@ -1660,7 +1668,7 @@ zygote 孵化了应用进程之后，最终会调用 `ActivityThread.main()`，�
 
 启动后先在主线程 创建 mainlooper，然后通过 `ApplicationThread` 和 AMS建立关联，最后开启消息循环，接收Android中的消息，并通过阻塞的方式维持住主线程。
 
-ActivityThread 类结构放 在最后【补充】一栏中。
+> ActivityThread 类结构放 在最后【补充】一栏中。
 
 ### ActivityThread.main()
 
@@ -1723,7 +1731,7 @@ public static void main(String[] args) {
 
 ### ActivityThread.attach()
 
-* 关联应用和AMS：调用 `attachApplication()` 通过  `ApplicationThread:IBinder`  和 AMS 建立关联。
+* 关联应用和AMS：调用 `IActivityManager.attachApplication()`  和 AMS 建立关联，传入了`ApplicationThread` 作为Binder通讯回调接口。
 * 观察GC，内存不足时会释放一些Activity。
 * 监听配置变化
 
@@ -1829,6 +1837,9 @@ void attachApplicationLocked() {
     
     // 调用 IApplicationThread.bindApplication()
     thread.bindApplication(..);
+    // ...
+  	// 这里会触发 realStartActivityLocked(), 创建并启动Activity。
+  	mAtmInternal.attachApplication()
 }
 ```
 
@@ -1838,7 +1849,7 @@ void attachApplicationLocked() {
 
 发送 `BIND_APPLICATION` 消息 创建了 Application 对象。
 
-* 创建 Application 实例后 会触发`attch()`。
+* 创建 Application 实例后 会触发`attach()`。
 * 然后就先注册启动了 ContentProvider。
 * ContentProvider之后 调用 `onCreate()`。
 * 之后还加载了字体资源。
@@ -2022,11 +2033,11 @@ class ActivityThread {
 
 ### ActivityTaskSupervisor.realStartActivityLocked()
 
-最终会 调用 `IApplicaitonThread.scheduleTransaction(clientTransaction)`，回调给应用端，最后发送了 `EXECUTE_TRANSACTION` 消息，通过 `TransactionExecutor` 来执行事务。
+最终会 调用 `IApplicaitonThread.scheduleTransaction(clientTransaction)`，回调给应用端，发送 `EXECUTE_TRANSACTION` 消息，通过 `TransactionExecutor` 来执行事务。
 
 *  创建 客户端事务 clientTransaction 。
 *  添加 LaunchActivityItem 到 mActivityCallbacks 中。
-   * 触发 `handleLaunchActivity()`。
+   * 触发 `handleLaunchActivity()` 创建 Activity 。
 *  设置了 mLifecycleStateRequest，一个后续期望变成的 resume状态的请求，在启动事务执行完成后被会调用。这样生命周期就能自动变为 Resume。
   * 触发 `handleResumeActivity()`
 
@@ -2045,7 +2056,7 @@ class ActivityThread {
 
                 final boolean isTransitionForward = r.isTransitionForward();
                 final IBinder fragmentToken = r.getTaskFragment().getFragmentToken();
-                // 添加到 mActivityCallbacks 队列 中
+                // 添加 LaunchActivityItem 到 mActivityCallbacks 队列 中, 触发 handleLaunchActivity
                 clientTransaction.addCallback(LaunchActivityItem.obtain(new Intent(r.intent),
                         System.identityHashCode(r), r.info,
                         // TODO: Have this take the merged configuration instead of separate global

@@ -56,10 +56,11 @@ MVP（Model-View-Presenter）是基于MVC演进而来，它将Activity中的Cont
 * 需要手动定义层间的交互接口，逻辑较复杂且存在大量的模板代码。虽然可以通过模板生成，但还是比较笨重。
 * Presenter持有View需要注意内存泄露和view为空等问题。
 * 由于View和Presenter间通过接口通信，View的业务逻辑越复杂，则Presenter和View之间的绑定越紧密，此时Presenter的复用程度就降低了。强行复用会导致其他View需要实现很多不需要的接口，则违背接口隔离。
+* 需要自己处理生命周期相关的问题，防止View出现泄漏
 
 ### MVVM
 
-MVVM(Model-View-ViewModel) 应该算是基于MVP演化而来，使用ViewModel代替了Presenter，引入了**数据驱动和**，将MVP中需要 手动进行数据和视图同步的操作，改为了自动。
+MVVM(Model-View-ViewModel) 应该算是基于MVP演化而来，使用ViewModel代替了Presenter，引入了**数据驱动**，将MVP中需要 手动进行数据和视图同步的操作，改为了自动。
 
 在Android中，ViewModel将View和Model分离，然后通过LiveData、DataBinding 等组件将 数据 和 UI进行绑定。
 
@@ -70,7 +71,7 @@ MVVM 整体结构：
 
 * **Model**：负责控制数据相关逻辑的操作。这部分没有发生变化。
 * **View**：负责视图显示以及一些视图相关的逻辑。
-* **ViewModel**：负责将View和Model分离，并实现双向绑定。
+* **ViewModel**：负责将View和Model分离，并同时和View通过 LiveData等生命周期组件建立绑定。
 
 ![image-20230227194551183](./Android%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%A1%86%E6%9E%B6.assets/image-20230227194551183.png)
 

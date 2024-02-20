@@ -358,7 +358,7 @@ curl 127.1:5000/v2/nginx/tags/list
 
 ## 容器的实现技术
 
-Linux 资源隔离 三大技术：namespace、cgroup、chroot
+Linux 资源隔离 三大技术：namespace、cgrodocker-compose、chroot
 
 * namespace：可以创建出独立的文件系统、主机名、进程号、网络等资源空间，实现了**系统全局资源和进程局部资源的隔离**。
 

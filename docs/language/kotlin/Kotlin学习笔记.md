@@ -188,7 +188,9 @@ enum class Month constructor(var cn: String, var en: String, var number: Int) {
   * 注意kotlin的protected不是包内可见的，这点和java不同。
 * internal：模块内可见，常用于封装SDK时。
 
-## 密封类/接口
+## Sealed 密封类/接口
+
+> 不同包名下无法继承 密封类/接口
 
 ### 密封类
 
@@ -224,7 +226,10 @@ class B(s: String) : A()
 
 ### 密封接口
 
-和 密封类 具有相同的功能。它的优势在于 **能帮助密封类、枚举类等类实现多继承和复杂的扩展性**，通过密封接口 可以使不同的枚举建立一定的联系。
+和 密封类 具有相同的功能。它的优势在于。
+
+* 不希望接口被外部实现时，可以使用密封接口。
+* 由于枚举继承了Enum，无法在继承其他类，但是能继承接口，这时就可以通过密封接口，使不同的枚举建立一定的联系。**能帮助密封类、枚举类等类实现多继承和复杂的扩展性**。
 
 ```kotlin
 sealed interface A {
@@ -301,6 +306,12 @@ public final class DateUtil {
 }
 
 ```
+
+## Value Class 内联类
+
+可以在构造函数中传入一个参数，且仅能传入一个参数，用于将参数包装成一个类，类似 typealias，区别在于 value class 能保证类型安全且它拥有类的功能。
+
+使用value calss 实际上并不会创建额外的实例，编译后会被自动转为参数对应的类型，所以效率很高。
 
 
 
@@ -419,8 +430,6 @@ class MyDelegate : ReadWriteProperty<Derived, String> {
     }
 }
 ```
-
-
 
 
 

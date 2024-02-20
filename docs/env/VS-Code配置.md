@@ -10,6 +10,27 @@ date: 2020-07-01 17:05
 
 
 
+## VSCode 加到命令行环境里
+
+1. 选择 View(查看) -> Command Palette（命令面板）
+
+   ![image-20240219105817329](VS-Code配置.assets/image-20240219105817329.png)
+
+2. 输入 install code 根据提示选择
+
+![image-20240219110010669](VS-Code配置.assets/image-20240219110010669.png)
+
+3. 通过 code 命令打开项目
+
+```shell
+# vscode 打开当前项目
+code .
+# 打开 path 目录下的 workspaces 项目
+code /path/workspaces
+```
+
+
+
 ## C/C++编译环境配置
 
 ### Windows安装C编译器

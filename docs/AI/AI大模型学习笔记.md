@@ -32,6 +32,33 @@ LLM：第一代大语言模型
 
 
 
+## Embedding
+
+嵌入式，指向量映射，将不同事物进行链接常见的就是将输入处理成的词向量，然后这些词向量就就能进行计算。
+
+例如
+
+Embedding 层的主要作用就是利用矩阵乘法的特性进行升/降维：例如降维 2x100 * 100x3 = 2x3。
+
+* 高维数据进行降维：缩减特征。
+* 低维数据进行升维：放大特征。
+
+
+
+
+
+## 组件
+
+| 组件                     | 类型   |                                                              |
+| ------------------------ | ------ | ------------------------------------------------------------ |
+| ConversationBufferMemory | Memory | **存储功能**，帮助 LLM 记录对话过程。                        |
+| ConversationChain        |        | **管理整个会话过程**，通过调取 BufferMemory 中的对话信息，让无状态的 LLM 了解对话的上下文。 |
+|                          |        |                                                              |
+
+
+
+
+
 ## Transformer架构
 
 Transformer 是一种用于自然语言处理 和 其他序列到序列任务的神经网络模型文本。
@@ -60,7 +87,7 @@ Transformer 的input结构：
 
 transformer 串联了多个具有相同结构的编码器形成了深度神经网络。输入Embedding 序列 （词嵌入）X 经过这些编码器处理后就形成了已经习得全局上下文信息的一个新的Embedding序列 Z。
 
-1. 将输入映射成 一个 embedding向量
+1. 将输入映射成 一个 embedding 向量
 
 2. 加入序列位置信息。
 3. 进入编码器的主处理单元，包括2个子模块
@@ -147,6 +174,14 @@ pip install transformers
 
 
 
+## LLM
+
+
+
+
+
+
+
 ## 聊天机器人
 
 Telegram
@@ -166,6 +201,46 @@ Telegram
 | system       | 系统消息，指定ChatGPT的人设 |         |
 | user         | 用户消息，用于正常对话      |         |
 | assistant    | 助手消息，辅助给定上下文    |         |
+
+
+
+## 实验
+
+### Flowise
+
+#### 安装
+
+```shell
+# 安装
+npm install -g flowise
+# chmod
+chmod +x ..../flowise
+# 启动
+npx flowise start --FLOWISE_USERNAME=zz --FLOWISE_PASSWORD=1234
+```
+
+### LocalAI
+
+使用 LocalAI 代替 OpenAI，下载项目代码：
+
+```shell
+git clone git@github.com:mudler/LocalAI.git
+```
+
+下载LLM模型：
+
+```shell
+cd LocalAI
+```
+
+```shell
+wget https://gpt4all.io/models/ggml-gpt4all-j.bin -O models/ggml-gpt4all-j
+cp -rf prompt-templates/ggml-gpt4all-j.tmpl models/
+```
+
+
+
+
 
 
 
