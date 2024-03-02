@@ -103,20 +103,18 @@ fnm install --lts
 npm -v
 # 更新
 npm install -g npm
-
-#
-npm config get registry
-# 设置镜像源， 使用淘宝的
-npm config set registry "https://registry.npm.taobao.org"
 ```
 
-```shell
-# 可能出现一下报错，原因是淘宝镜像源的SSL 证书过期
-request to https://registry.npm.taobao.org/create-react-app failed, reason: certificate has expired
+镜像地址
 
-# 切换回官方镜像或者其他镜像
+```shell
+# 查看当前镜像
+npm config get registry
+# 官方镜像
 npm config set registry "https://registry.npmjs.org"
 
+# 淘宝
+npm config set registry "https://registry.npmmirror.com"
 ```
 
 

@@ -7,7 +7,7 @@
 
 ## 客户端下载地址
 
-> Clash 已删库跑路
+> Clash-core 已删库跑路，替代品有Clash meta、 V2ray、Xray 等。
 
 - [ClashX Mac](https://github.com/yichengchen/clashX/releases)
 - [Clash For Linux](https://github.com/Dreamacro/clash/releases)

@@ -63,7 +63,7 @@ public class Looper {
         mQueue = new MessageQueue();
         // 将当前线程状态标记为run
         mRun = true;
-        // 存储当前线程
+        // 获取当前线程
         mThread = Thread.currentThread();
     }
     
@@ -142,7 +142,7 @@ public class MessageQueue {
 }
 ```
 
-#### 添加消息：MessageQueue.enqueueMessage()
+#### 添加消息：MQ.enqueueMessage()
 
 将链表中的所有消息进行排序（根据最执行时间进行从近到远排序）。若需要唤醒且当前阻塞，则通过``nativeWake(mPtr)``唤醒epoll。
 
@@ -208,7 +208,7 @@ final boolean enqueueMessage(Message msg, long when) {
 }
 ```
 
-#### 读取消息：MessageQueue.next()
+#### 读取消息：MQ.next()
 
 提供下一条需要处理的消息，它会阻塞等待直到到达消息的执行时机，没有消息时将会一直阻塞，直到有新消息入队时才会被主动唤醒。
 
@@ -431,11 +431,9 @@ public Handler() {
 }
 ```
 
-#### 发生消息
+#### 发送消息：Handler.enqueueMessage()
 
-* Handler.post(new Runnable())
-
-已 Runnable  callback的方式发送了一条消息。
+Handler 提供了很多发送消息的函数，`post()`、 ``sendMessage()``等等，不过最终内部都是通过 ``enqueueMessage()`` 函数来调用 ``MessageQueue.enqueueMessage()`` 将消息放入MessageQueue中。
 
 ```java
 public final boolean post(Runnable r){
@@ -447,37 +445,31 @@ private static Message getPostMessage(Runnable r) {
     m.callback = r;
     return m;
 }
+ public final boolean sendMessage(@NonNull Message msg) {
+      return sendMessageDelayed(msg, 0);
+  }
 ```
 
-- Handler.sendMessageAtTime()
-
-发生一个Message消息，并将Handler自身赋值给msg.target, 并将消息放入MessageQueue中
+发送一个Message消息 时会将Handler自身赋值给 `msg.target`, 所以一般来说 target 都是存在值的，仅当作为同步屏障消息时 会为null。
 
 ```java
-/**
- * uptimeMillis 表示何时处理这个消息
- */
-public boolean sendMessageAtTime(Message msg, long uptimeMillis){
-    boolean sent = false;
-    MessageQueue queue = mQueue;
-    if (queue != null) {
-        // 将当前的Handler 指定为处理消息的目标端
+private boolean enqueueMessage(@NonNull MessageQueue queue, @NonNull Message msg,
+            long uptimeMillis) {
+  			// 将当前的Handler 指定为处理消息的 target。
         msg.target = this;
-        // 入队
-        sent = queue.enqueueMessage(msg, uptimeMillis);
+        msg.workSourceUid = ThreadLocalWorkSource.getUid();
+
+        if (mAsynchronous) {
+            msg.setAsynchronous(true);
+        }
+  			// 加入到 MQ 中
+        return queue.enqueueMessage(msg, uptimeMillis);
     }
-    else {
-        RuntimeException e = new RuntimeException(
-            this + " sendMessageAtTime() called with no mQueue");
-        Log.w("Looper", e.getMessage(), e);
-    }
-    return sent;
-}
 ```
 
-#### 处理消息
 
-- Handler.dispatchMessage()
+
+#### 处理消息：Handler.dispatchMessage()
 
 以下源码可以看出, 当使用post()发送消息时, 最后会调用runnable.run()回调。sendMessage()则是执行handleMessage()， 这个就是我们构建对象时重写的方法
 
@@ -535,24 +527,29 @@ public class ThreadLocal<T> {
 ## 同步屏障
 
 > 对于一些需要优先处理的消息可以设置同步屏障并添加为异步消息，
->
-> 
 
-### 消息类型
+### 什么是同步屏障
 
-Android消息机制中的 Message 可以分为 **同步消息**和 **异步消息** 两类，，不过在设置了 **同步屏障** 后就会。
+同步屏障的作用是 **临时过滤同步屏障消息之后的所有的同步消息，找到最近的异步消息并优先执行，且只会执行异步消息**，需要注意的是并不是将同步消息去除了，不过是暂时忽略不执行，后续移除同步屏障后还是会执行的。所以同步屏障就是 用于保证异步消息优先于同步消息执行的一种机制。
 
-* **同步消息**：平时默认发送的 Message 都是同步消息。
+### 同步/异步消息
+
+Android消息机制中的 Message 可以分为 **同步消息**和 **异步消息** 两类。平时这两种消息没有什么区别，仅当设置了同步屏障后才会产生差异。
+
+* **同步消息**：默认发送的 Message 都是同步消息。
 * **异步消息**：调用 `message.setAsynchronous()` 将消息设置为异步消息。
-  * 例如Android中的UI刷新事件就使用到了同步屏障，`ViewRootImpl.scheduleTraversals()` 这个流程
 
-
-message 中通过 flags 来控制消息的状态，默认是0，消息使用后会被标记为 FLAG_IN_USE。调用`setAsynchronous()` 则会被设置为异步消息。
+> Message 中通过 flags 字段来控制消息的状态，默认是0。
+>
+> * 消息被使用后会被标记为 FLAG_IN_USE。
+>
+> * 调用`setAsynchronous(true)` 则会被设置为异步消息。
 
 ```java
-// 标记使用
+// 标记为已使用
 static final int FLAG_IN_USE = 1 << 0;
 /** If set message is asynchronous */
+// 标记异步消息
 static final int FLAG_ASYNCHRONOUS = 1 << 1;
 
 int flags;
@@ -570,22 +567,64 @@ public void setAsynchronous(boolean async) {
 }
 ```
 
-### 什么是同步屏障
-
-平时这两种消息没有什么区别，不过在调用 `MessageQueue.postSyncBarrier()` 设置同步屏障后就会产生差异，同步屏障的作用是 **过滤发送同步屏障消息之后的所有的同步消息，找到最近的异步消息并优先执行，且只会执行异步消息**，需要注意的是这里的过滤并不是将同步消息去除了，不过是暂时忽略不执行，后续移除同步屏障后还是会执行的。所以**同步屏障相当于一个过滤机制，过滤出所有的异步消息优先执行**。
-
-### 如何使用同步屏障
-
-我们可以通过 `MessageQueue.postSyncBarrier()` 来设置同步屏障，它会插入一个 `target`是空（也就是没有Hander）的消息到消息队列中，这个消息叫做 **同步屏障消息**。
+### 同步屏障的应用
 
 > 使用同步屏障需要注意的是：当我们处理完逻辑后需要使用`MessageQueue.removeSyncBarrier()` 来**移除同步屏障**，保证同步消息能够继续执行。
 
-设置同步屏障：`postSyncBarrier()`
+Android中的UI刷新事件 ``ViewRootImpl.scheduleTraversals()`` 流程中 就使用到了同步屏障，保证UI优先执行。
 
 ```java
-	// 这个返回值很重要，是后续用来移除同步屏障的。
+	void scheduleTraversals() {
+      if (!mTraversalScheduled) {
+          mTraversalScheduled = true;
+         // 发送同步屏障消息
+          mTraversalBarrier = mHandler.getLooper().getQueue().postSyncBarrier();
+          // 发送异步消息
+          mChoreographer.postCallback(
+                  Choreographer.CALLBACK_TRAVERSAL, mTraversalRunnable, null);
+          notifyRendererOfFramePending();
+          pokeDrawLockIfNeeded();
+      }
+  }
+
+	void unscheduleTraversals() {
+      if (mTraversalScheduled) {
+          mTraversalScheduled = false;
+        	// 移除同步屏障消息
+          mHandler.getLooper().getQueue().removeSyncBarrier(mTraversalBarrier);
+          mChoreographer.removeCallbacks(
+                  Choreographer.CALLBACK_TRAVERSAL, mTraversalRunnable, null);
+      }
+  }
+
+  void doTraversal() {
+      if (mTraversalScheduled) {
+          mTraversalScheduled = false;
+          // 移除同步屏障消息
+          mHandler.getLooper().getQueue().removeSyncBarrier(mTraversalBarrier);
+
+          if (mProfile) {
+              Debug.startMethodTracing("ViewAncestor");
+          }
+
+          performTraversals();
+
+          if (mProfile) {
+              Debug.stopMethodTracing();
+              mProfile = false;
+          }
+      }
+  }
+```
+
+#### 设置同步屏障
+
+我们可以通过 `MessageQueue.postSyncBarrier()` 来设置同步屏障，它会插入一个 `target = null`（也就是没有Hander）的消息到消息队列中，这个消息叫做 **同步屏障消息**。
+
+```java
+	// 这个返回值 token 很重要，是后续用来移除同步屏障的。
 	private int postSyncBarrier(long when) {
-        // 插入一条同步屏障消息,这里没有对 target进行赋值。
+        // 插入一条同步屏障消息,这里没有对 target进行赋值，直接加入到
         synchronized (this) {
             // 这个token 是后续用来移除同步屏障的。
             final int token = mNextBarrierToken++;
@@ -594,18 +633,21 @@ public void setAsynchronous(boolean async) {
             msg.when = when;
             msg.arg1 = token;
 
-            Message prev = null;
+            Message prev = null; 
             Message p = mMessages;
             if (when != 0) {
+                // 找到 msg 的合适位置
                 while (p != null && p.when <= when) {
                     prev = p;
                     p = p.next;
                 }
             }
             if (prev != null) { // invariant: p == prev.next
+              	// prev 指向前一个执行的消息，p 指向下一个执行的消息
                 msg.next = p;
                 prev.next = msg;
             } else {
+                // 直接作为队头
                 msg.next = p;
                 mMessages = msg;
             }
@@ -615,7 +657,9 @@ public void setAsynchronous(boolean async) {
 
 ```
 
-> 移除同步屏障：`removeSyncBarrier()`
+#### 去除同步屏障
+
+`MessageQueue.removeSyncBarrier()`:
 
 ```java
 	// 移除同步屏障消息，并唤醒Looper
@@ -656,9 +700,13 @@ public void setAsynchronous(boolean async) {
     }
 ```
 
-### 同步屏障原理
+### 同步屏障实现原理
 
-这个同步屏障消息会在 `MessageQueue.next()` 中被处理。一旦开启同步屏障此后就仅处理异步消息，同步消息都会跳过。
+这个同步屏障消息会在 `MessageQueue.next()` 中被处理。一旦开启同步屏障此后就仅处理异步消息，同步消息都会暂时跳过，待移除同步屏障时会重新执行。
+
+* 发现存在 msg.target == null 的同步屏障消息，表示开启了同步屏障。
+* 遍历消息队列，筛选出异步消息。并记录 异步消息之前的 最后一条同步消息。
+* 异步消息执行后 会从队列中移除，不过同步屏障还在，同步消息也并没有丢失，后续依然会优先筛选出异步消息执行，直到移除同步屏障消息。
 
 ```java
  Message next() {
@@ -670,7 +718,7 @@ public void setAsynchronous(boolean async) {
             Message msg = mMessages;
             if (msg != null && msg.target == null) {
                 // msg.target == null 表示碰到了同步屏障
-                // 遍历消息队列过滤同步消息，仅处理异步消息。
+                // 遍历消息队列过滤同步消息，直到找到异步消息。
                 do {
                     // 记录最后一条同步消息
                     prevMsg = msg;
@@ -688,16 +736,16 @@ public void setAsynchronous(boolean async) {
                     // 标记为不阻塞
                     mBlocked = false;
                     // 将当前执行的消息从消息队列中移除。
-                    if (prevMsg != null) {
-                        // 碰到过同步屏障
+                    if (prevMsg != null) { // 表示碰到过同步屏障
                         // prevMsg 表示最近一个异步消息前的最后一条同步消息。
                         // prevMsg.next() 就是异步消息，这里等同于msg
                         // msg.next 是异步消息的后一条消息
+                      
                         // 所以这里就是将这条异步消息从队列中移除。
-                        // 注意这里的 mMessages还是之前的队头，所以同步屏障还在，同步消息也并没有丢失
+                        // 注意这里的 mMessages还是之前的队头，所以同步屏障还在，同步消息也并没有丢失。
                         prevMsg.next = msg.next;
                     } else {
-                        // 没有碰到同步屏障 直接指向下一条消息
+                        // 没有碰到同步屏障 mMessages直接指向下一条消息
                         mMessages = msg.next;
                     }
                     msg.next = null;

@@ -127,9 +127,9 @@ code /path/workspaces
 
 ## 2. Spring Boot配置
 
-初始化
+* Spring Boot Tools 插件
 
-* Spring Initializr Java Support
+* Spring Initializr Java Support 插件
 
 - DevTools（代码修改热更新，无需重启）
 - Web：集成tomcat、SpringMVC
@@ -246,7 +246,9 @@ pip3 install flake8
 },
 ```
 
+## Gradle 项目配置
 
+安装gradle 插件: Gradle Extension Pack
 
 ## 问题处理记录
 

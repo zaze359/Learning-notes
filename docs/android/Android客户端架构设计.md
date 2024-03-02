@@ -1,4 +1,4 @@
-# Android客户端框架
+# Android客户端架构设计
 
 ## 常见的应用架构模式
 
@@ -12,11 +12,11 @@ MVC 即 Model-View-Control 。是一种将视图、数据、业务逻辑分离�
 * **View（视图）**：负责视图显示以及一些视图相关的逻辑。即XML、View等。
 * **Controller（控制器）**：负责业务逻辑处理。在Android就是Activity、Fragment等，它同时持有了View和Model。
 
-![image-20230227191223857](./Android%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%A1%86%E6%9E%B6.assets/image-20230227191223857.png)
+![image-20230227191223857](Android客户端架构设计.assets/image-20230227191223857.png)
 
 不过在Android中使用MVC，若是简单的将Activity 等容器作为Controller，会导致一些问题。因为Activity会持有一些UI并包含很多操作视图逻辑的代码，这就导致Activity即是Controller的同时又是一个View，使得Activity变得越来越臃肿，且存在耦合。
 
-![image-20230227191239955](./Android%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%A1%86%E6%9E%B6.assets/image-20230227191239955.png)
+![image-20230227191239955](Android客户端架构设计.assets/image-20230227191239955.png)
 
 > 优点：
 
@@ -42,7 +42,7 @@ MVP（Model-View-Presenter）是基于MVC演进而来，它将Activity中的Cont
 * **View**：负责视图显示以及一些视图相关的逻辑。Activity、Fragment等被划分到此处。它持有Presenter。
 * **Presenter**：负责业务逻辑处理。它持有View和Model。
 
-![image-20230227174121158](./Android%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%A1%86%E6%9E%B6.assets/image-20230227174121158.png)
+![image-20230227174121158](Android客户端架构设计.assets/image-20230227174121158.png)
 
 > 优点：
 
@@ -73,7 +73,7 @@ MVVM 整体结构：
 * **View**：负责视图显示以及一些视图相关的逻辑。
 * **ViewModel**：负责将View和Model分离，并同时和View通过 LiveData等生命周期组件建立绑定。
 
-![image-20230227194551183](./Android%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%A1%86%E6%9E%B6.assets/image-20230227194551183.png)
+![image-20230227194551183](Android客户端架构设计.assets/image-20230227194551183.png)
 
 > 优点：
 
@@ -108,7 +108,7 @@ MVI（Model-View-Intent），是一种响应式编程思想。它和MVVM类似�
 
 ViewModel：和 MVVM 中的ViewModel功能一致，将M、V、I关联起来，接收 ViewEvent处理数据，输出 ViewState更新UI。
 
-![image-20230227194752185](./Android%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%A1%86%E6%9E%B6.assets/image-20230227194752185.png)
+![image-20230227194752185](Android客户端架构设计.assets/image-20230227194752185.png)
 
 > 优点：
 
@@ -119,6 +119,27 @@ ViewModel：和 MVVM 中的ViewModel功能一致，将M、V、I关联起来，�
 
 * 每次更新State对象都需要重新创建，即使仅变动了某一个部分，会产生额外的内存开销。
 * 页面复杂时，State将会很复杂，同时State更新会导致整个页面都更新。可以考虑State分组拆分或者实现Diff操作。
+
+
+
+## 组件/模块化
+
+### 为什么要组件/模块化开发
+
+* 项目代码膨胀，难以下手，维护困难，不利于新功能开发。
+* 不同业务间代码耦合严重，职责不明确，不利于多人协作、测试。
+
+针对以上存在的问题，就出现了 模块化开发、组件化开发，主要就是**分治思想**。
+
+* **模块化**：将项目**按照职责划分，分成多个相互独立的模块**，每个模块中仅包含与自身业务相关的代码，模块间通过接口进行交互。方便开发、测试。
+* **组件化**：基于模块化，但是**更加强调复用性**，将可重用部分进行高度封装，也是通过接口进行调用。
+
+### 组件/模块化的要求
+
+* **单一职责**：一个模块，只完成一件事。
+* **单向依赖**：模块间仅存在单方向依赖，不存在相互依赖，否则需要考虑重新调整结构。
+* **正交性**：模块间不存在交集，即不会存在重复的功能。
+* **面向接口**：模块间仅能通过接口进行交互，且对外暴露的接口、参数尽可能少。
 
 
 
@@ -165,6 +186,8 @@ ViewModel：和 MVVM 中的ViewModel功能一致，将M、V、I关联起来，�
 * 组件职责单一且功能内聚，方便单元测试。
 * 组件开发完毕后，可直接使用打包产物，组件可复用。能提高编译速度和开发效率。
 
+
+
 ## 项目重构
 
 重构能使整个项目更易于理解，提高项目的可维护性和可测性，降低项目维护成本和风险。在后续迭代中也能起到减少开发周期的效果，不过重构这个过程需要耗费一些时间，复杂度越高耗时越长。
@@ -187,7 +210,7 @@ ViewModel：和 MVVM 中的ViewModel功能一致，将M、V、I关联起来，�
 
 Android Studio自带的依赖分析工具。可以分析项目中组件、packages和classes之间的依赖关系。使用于本地检测依赖。
 
-![image-20230228160338448](./Android%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%A1%86%E6%9E%B6.assets/image-20230228160338448.png)
+![image-20230228160338448](Android客户端架构设计.assets/image-20230228160338448.png)
 
 Dependency Validation 自定义规则进行过滤。
 
@@ -201,9 +224,9 @@ Dependency Validation 自定义规则进行过滤。
 
 3. 重新执行检测。不符合规则的部分将会被标记为红色。
 
-![image-20230228170302552](./Android%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%A1%86%E6%9E%B6.assets/image-20230228170302552.png)
+![image-20230228170302552](Android客户端架构设计.assets/image-20230228170302552.png)
 
-![image-20230228170745748](./Android%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%A1%86%E6%9E%B6.assets/image-20230228170745748.png)
+![image-20230228170745748](Android客户端架构设计.assets/image-20230228170745748.png)
 
 
 
@@ -225,11 +248,11 @@ dependencies {
 
 使用Android Studio自带的 Inspect工具来检测代码质量。
 
-![image-20230228171928202](./Android%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%A1%86%E6%9E%B6.assets/image-20230228171928202.png)
+![image-20230228171928202](Android客户端架构设计.assets/image-20230228171928202.png)
 
 也可以使用IDE字段的 remove unused resources 来扫描没有使用的资源。
 
-![image-20230228172305419](./Android%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%A1%86%E6%9E%B6.assets/image-20230228172305419.png)
+![image-20230228172305419](Android客户端架构设计.assets/image-20230228172305419.png)
 
 ### Sonar
 

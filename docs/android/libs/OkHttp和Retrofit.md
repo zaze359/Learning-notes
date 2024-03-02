@@ -28,23 +28,21 @@ OkHttp采用双任务队列机制实现异步请求，并通过 Dispatcher来调
 
 主要包含两个队列：
 
-* **等待队列（readyAsyncCalls）**：异步请求会先进入等待队列，之后在转到执行队列。
-* **执行队列（runningAsyncCalls）**：同步请求直接进入执行队列中。
+* **等待队列（readyAsyncCalls）**：异步请求会先进入等待队列，之后触发执行时会转到执行队列。
+* **执行队列（runningAsyncCalls）**：同步请求直接加入到执行队列中，没什么特殊条件。
   * 可执行队列（executableCalls）：这是一个临时队列，存在于`promoteAndExecute()`方法执行期间。保存刚加入到runningAsyncCalls 中的任务，这样就可以在任务添加完后就释放锁，使用这个临时队列来遍历调度新的请求任务。
 
 运行机制：
 
 1. 通过 `client.enqueue()`添加的异步任务 AsyncCall，这个新任务会被**加入到 等待队列 中**。
 
-2. 然后通过 `promoteAndExecute()` 将等待队列的任务放到执行队列中并执行，这里会遍历等待队列 ，判断是否能够加入到执行中。
+2. 然后通过 `promoteAndExecute()` 将等待队列的任务放到执行队列中并执行，这里会遍历等待队列 ，将满足条件的任务会从等待队列 转移到 执行队列 中，直至塞满执行队列或遍历结束，并使用线程池执行任务。
 
    * 执行队列的数量**不超过最大并发数**。默认64，最多允许64个并发请求。超过就不再遍历。
 
    * 域名对应的连接**不超过Host最大并发数**。默认5，即每个域名最多5个并发连接。超过会继续遍历，添加其他域名的请求任务。
 
-3. 满足上述2个条件的任务会从等待队列 转移到 执行队列 中，直至塞满执行队列或遍历结束，并使用线程池执行任务。
-
-   * 这里最终会调用 `getResponseWithInterceptorChain()` 通过责任链的方式层层处理请求和响应。
+3. 最终会调用 `getResponseWithInterceptorChain()` 通过责任链的方式层层处理请求和响应。
 
 4. AsyncCall 在线程中无论执行成功还是失败，最终都会调用 `dispatcher.finish()`，这个函数内部重新调用了 `promoteAndExecute()`回到了第2步，有任务完成空出了一个位置就可以重新尝试将等待队列中的任务放到执行队列中。
 
@@ -177,7 +175,7 @@ internal inner class AsyncCall() : Runnable{
 
 ### 责任链
 
-OkHttp为了避免将网络请求和请求响应的不同处理逻辑耦合在一起，使用了责任链模式来进行解耦，每种处理需求都抽象成一个拦截器，并且将这些拦截器组合成一条链Chain，这个请求会在这条链上层层传递，直到某个拦截器消费了请求并且不再传递。（和View的事件分发很相似）。
+OkHttp为了避免将网络请求和请求响应的不同处理逻辑耦合在一起，使用了责任链模式来进行解耦，每种处理需求都抽象成一个拦截器，并且将这些拦截器组合成一条链Chain，这个请求会在这条链上层层传递，直到某个拦截器消费了请求并且不再向下传递，请求消费后的执行结果将向上传递。（有点和View的事件分发很相似，不过拦截器的优先级是按照添加顺序决定的）。
 
 我们可以通过添加自定义拦截器来对请求添加自定义的处理逻辑。自定义拦截器是在最上层请求链的最上层，会被优先调用。
 
@@ -242,9 +240,9 @@ class RealCall() : Call{
 
 ### 连接池复用
 
-利用的就是Http协议中的 KeepAlive机制，这个机制可以保证在数据传输完毕后依然保持连接，需要时可以直接复用这个连接来传输数据，不需要再重新建立TCP连接（降低TCP的三次握手和四次挥手的频率，从而优化请求速度）。
+其实就是普通的池化技术，维护了一个连接池，每次都先尝试冲池中取，没有就新创建一个，连接超时就cancel，如果池满了则根据淘汰策略来处理。利用到了 Http协议中的 KeepAlive机制，这个机制可以保证在数据传输完毕后依然保持连接，通过复用降低 了TCP的三次握手和四次挥手的频率，从而优化请求速度
 
-默认保持5个连接，存活时间为5分钟。
+> 默认保持5个连接，存活时间为5分钟。
 
 |                    |                                        |      |
 | ------------------ | -------------------------------------- | ---- |
@@ -253,6 +251,45 @@ class RealCall() : Call{
 |                    |                                        |      |
 
 
+
+### SSL证书
+
+okhttp 默认会通过反射获取了系统默认证书，采用的是单向校验 服务端证书，所以默认无需配置也能使用 https。
+
+自定义 SSLSocketFactory
+
+```java
+// 获得ssl上下文
+SSLContext sslContext = SSLContext.getInstance("TLS");
+// 信任证书管理器
+TrustManagerFactory trustManager = TrustManagerFactory.getInstance("X509");
+// 证书配置
+// 证书类型：BKS
+KeyStore keyStore = KeyStore.getInstance("BKS");
+// 证书文件， 证书密码
+keyStore.load(context.getAssets().open("test.bks"), "123456".toCharArray());
+// 
+trustManager.init(keyStore);
+// 第一参数 null 表示单向验证
+sslContext.init(null, trustManager.getTrustManagers(), null);
+// 创建 sslsocket
+SSLSocketFactory socketFactory = sslContext.getSocketFactory();
+```
+
+配置双向验证：
+
+添加一步 将客户端证书传给服务端即可。
+
+```kotlin
+// 客户证书
+val clientKeyStore = KeyStore.getInstance("BKS")
+keyStore.load(context.getAssets().open("test.bks"), "123456".toCharArray())
+val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
+                keyManagerFactory.init(clientKeyStore, "123456".toCharArray())
+val keyManagers = keyManagerFactory.keyManagers
+// 双向认证， 将第一个参数传入 客户端证书
+sslContext.init(keyManagers, trustManager.getTrustManagers(), null)
+```
 
 
 
@@ -321,7 +358,7 @@ val service = retrofit.create(RetrofitService::class.java)
 
 ### 自定义Converter（数据类型转换）
 
-我们可以通过自定义 `Converter.Factory` 来对 请求/响应数据进行转换。转换的是返回数据的类型。
+我们可以通过自定义 `Converter.Factory` 来对 **请求/响应数据进行转换**。转换的是返回值中范型的类型。
 
 例如常见的 `GsonConverterFactory` 。
 
@@ -365,11 +402,11 @@ public final class GsonConverterFactory extends Converter.Factory {
 
 
 
-### 自定义CallAdapter（响应结构转换）
+### 自定义CallAdapter（返回结构适配器）
 
-Retrofit 提供给我们了一种自定义Call的适配器的方式，就是传入自定义的 `CallAdapter.Factory `，可以将接口返回自定义成我们需要的形式。转换的是返回值的调用形式，默认是 Call。
+Retrofit 提供给我们了一种函数调用返回类型的机制 CallAdapter，通过自定义 `CallAdapter.Factory`，可以将接口返回值类型自定义成我们需要的形式。默认使用 DefaultCallAdapterFactory 返回类型是 Call。
 
-常见的转为Rxjava格式就是通过这中方式实现的，同理，我们就可以改为 LiveData等格式。
+常见的 Rxjava格式 也是通过这中方式实现的，同理，也可以改为 LiveData等格式。
 
 ```java
 public final class RxJava2CallAdapterFactory extends CallAdapter.Factory {
@@ -400,12 +437,12 @@ public final class RxJava2CallAdapterFactory extends CallAdapter.Factory {
   public @Nullable CallAdapter<?, ?> get(
       Type returnType, Annotation[] annotations, Retrofit retrofit) {
     Class<?> rawType = getRawType(returnType);
-	// Completable 是没有参数化的所以特殊处理。
+	  // Completable 是没有参数化, Void 类型。
     if (rawType == Completable.class) {
       return new RxJava2CallAdapter(
           Void.class, scheduler, isAsync, false, true, false, false, false, true);
     }
-	// 判断返回类型是 RxJava中的哪种
+	  // 判断返回类型是 RxJava中的哪种
     boolean isFlowable = rawType == Flowable.class;
     boolean isSingle = rawType == Single.class;
     boolean isMaybe = rawType == Maybe.class;
@@ -461,9 +498,9 @@ public final class RxJava2CallAdapterFactory extends CallAdapter.Factory {
 
 #### Retrofit.create()
 
-`create()` 函数是使用的 JDK动态代理的方式创建服务接口实例。
+`Retrofit.create()` 函数内部通过 JDK动态代理的方式 创建 了服务接口实例。
 
-这里有一个关键函数 `loadServiceMethod()` ，这个函数会解析接口上的注解并转换成http请求。
+其中有一个关键函数 `Retrofit.loadServiceMethod()` ，这个函数会解析接口上的注解并转换成http请求。
 
 ```java
 public <T> T create(final Class<T> service) {
@@ -472,16 +509,16 @@ public <T> T create(final Class<T> service) {
         Proxy.newProxyInstance(
             service.getClassLoader(),
             new Class<?>[] {service},
-            new InvocationHandler() {
+            new InvocationHandler() { // JDK 动态代理
               private final Platform platform = Platform.get();
               private final Object[] emptyArgs = new Object[0];
-
+							
+              // 函数被调用时执行
               @Override
               public @Nullable Object invoke(Object proxy, Method method, @Nullable Object[] args)
                   throws Throwable {
-                // 函数被调用时执行
                 // If the method is a method from Object then defer to normal invocation.
-                if (method.getDeclaringClass() == Object.class) {
+                if (method.getDeclaringClass() == Object.class) { // Object 声明的函数直接执行
                   return method.invoke(this, args);
                 }
                 args = args != null ? args : emptyArgs;
@@ -499,7 +536,7 @@ public <T> T create(final Class<T> service) {
 
 #### Retrofit.loadServiceMethod()
 
-首先会从 缓存中获取，若缓存未命中，则会根据 接口上的注解执行解析，得到一个加工得到的服务方法 ServiceMethod，然后添加到缓存中。
+首先会从 缓存中获取 ServiceMethod ，若缓存未命中，则会根据 接口上的注解执行解析，创建一个 ServiceMethod，然后添加到缓存中。
 
 ```java
   ServiceMethod<?> loadServiceMethod(Method method) {
@@ -521,7 +558,7 @@ public <T> T create(final Class<T> service) {
 
 #### ServiceMethod.parseAnnotations()
 
-最终调用的HttpServiceMethod.parseAnnotations()
+解析接口注解得到一个 ServiceMethod，主要逻辑在 `HttpServiceMethod.parseAnnotations()` 中。
 
 ```java
 static <T> ServiceMethod<T> parseAnnotations(Retrofit retrofit, Method method) {
@@ -545,9 +582,9 @@ static <T> ServiceMethod<T> parseAnnotations(Retrofit retrofit, Method method) {
 
 #### HttpServiceMethod.parseAnnotations()
 
-* 创建符合返回类型的 CallAdapter。之前调用`addCallAdapterFactory()` 添加了对应的工厂类来创建。
-* 创建符合响应数据类型的 ResponseConverter。之前调用`addConverterFactory()` 添加了对应的工厂类来创建。
-* 最终会创建一个 `CallAdapted: HttpServiceMethod`，返回给我们。内部持有上面获取到的 CallAdapter、ResponseConverter以及 RequestFactory
+* **创建符合返回类型的 CallAdapter**。之前调用`addCallAdapterFactory()` 添加了对应的工厂类来创建。
+* **创建符合响应数据类型的 ResponseConverter**。之前调用`addConverterFactory()` 添加了对应的工厂类来创建。
+* **最终会创建一个 CallAdapted:HttpServiceMethod**，返回给我们。内部持有上面获取到的 CallAdapter、ResponseConverter以及 RequestFactory
   * 会首先判断是否是 kotlin的挂起函数，挂起函数会特殊处理。
 
 
@@ -581,7 +618,7 @@ static <ResponseT, ReturnT> HttpServiceMethod<ResponseT, ReturnT> parseAnnotatio
     } else {
       adapterType = method.getGenericReturnType();
     }
-	// 查找 CallAdapter
+	  // 查找 CallAdapter
     CallAdapter<ResponseT, ReturnT> callAdapter =
         createCallAdapter(retrofit, method, adapterType, annotations);
     Type responseType = callAdapter.responseType();

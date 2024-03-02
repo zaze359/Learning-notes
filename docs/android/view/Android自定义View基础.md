@@ -10,27 +10,27 @@
 
 ## View的位置参数
 
-而我们的View 位于图层之中，可以由一块矩形框中。矩形的四个点由四个参数：left、top、right、bottom 构成，表示**相对于父控件的原始偏移量，参考坐标系为父控件, 即父控件左上角为原点（0， 0）**。
+我们的View 位于图层之中，可以由一块矩形框来表示，矩形的四个点由四个参数：left、top、right、bottom 构成，表示**相对于父控件的原始偏移量，参考坐标系为父控件, 即父控件左上角为原点（0， 0）**：
 
 * 左上顶点：（left，top）。
 * 左下顶点：（left，bottom）
 * 右上顶点：（right，top）
 * 右下顶点：（right，bottom）
 
-这个矩形的宽高就是 view 的宽高。
+这个矩形的宽高就是 view 的宽高：
 
 * width = right - left
 * heigh = bottom - top
 
-还可以使用 xy来表示View的位置。
+还可以使用 x、y来表示View的位置：
 
-* (x，y)：表示 View左上角的坐标。没发生平移的情况 和 (left, top) 是相同的，发生平移后原始坐标(left, top) 不会发生变化，(x, y) 则会发生变化。参考坐标系也是父控件。![image-20230525160436041](./Android%E8%87%AA%E5%AE%9A%E4%B9%89View%E5%9F%BA%E7%A1%80.assets/image-20230525160436041.png)
+* (x，y)：表示 **View左上角的坐标**。没发生平移的情况 和 (left, top) 是相同的，发生平移后原始坐标(left, top) 不会发生变化，(x, y) 则会发生变化。参考坐标系也是父控件。![image-20230525160436041](./Android%E8%87%AA%E5%AE%9A%E4%B9%89View%E5%9F%BA%E7%A1%80.assets/image-20230525160436041.png)
 
 
-> 相对应其他参考系的坐标获取方式。
+> 其他坐标参考系下View位置的获取方式。
 >
-> * `view.getLocationInScreen()`：获取 View在屏幕中的坐标。包括的通知栏这些。
-> * `view.getLocationInWindow()`：获取 View在Window中的坐标。
+> * `view.getLocationInScreen()`：获取 View在屏幕中的坐标xy。包括的通知栏、状态栏这些。
+> * `view.getLocationInWindow()`：获取 View在Window中的坐标xy。不包括通知栏、状态栏这些。
 
 ## View的滚动
 
@@ -390,11 +390,11 @@ View在经过 measure 和 layout过程后，以及确定了大小和位置，最
 6. 绘制**装饰`onDrawForeground()`**：包括 foreground、scrollbars等。
 7. （可选）绘制高亮
 
-> ViewGroup 默认不会执行绘制， 它在 `initViewGroup()` 流程中会设置 **WILL_NOT_DRAW**，如果没有背景图就会设置 **PFLAG_SKIP_DRAW**，从而直接调用 `dispatchDraw()` 绘制子View，不调用自身的 `draw()`。所以 onDraw() 也就不会被调用。
+> ViewGroup 在 `initViewGroup()` 初始化流程中会设置 `mViewFlags |= WILL_NOT_DRAW`，并且如果没有设置前景/背景图就会 设置 `mPrivateFlags |= PFLAG_SKIP_DRAW` （跳过绘制自身），从而直接调用 `dispatchDraw()` 绘制子View，不调用自身的绘制，因此 `onDraw()`也就不会被调用。
 >
 > 如何清除 PFLAG_SKIP_DRAW？
 >
-> 1.  `setWillNotDraw(false)` ：可以强制开启ViewGroup自身的绘制。
+> 1.  调用`View.setWillNotDraw(false)` ：可以强制开启ViewGroup自身的绘制。
 > 2. 设置背景/前景：添加背景/前景时 这个标记会被清除。
 
 ```java
@@ -694,7 +694,7 @@ protected void dispatchDraw(Canvas canvas) {
 ArrayList<View> buildOrderedChildList() {
     final int childrenCount = mChildrenCount;
     if (childrenCount <= 1 || !hasChildWithZ()) return null;
-
+		// mPreSortedChildren 记录 排序后的子元素
     if (mPreSortedChildren == null) {
         mPreSortedChildren = new ArrayList<>(childrenCount);
     } else {
@@ -702,7 +702,7 @@ ArrayList<View> buildOrderedChildList() {
         mPreSortedChildren.clear();
         mPreSortedChildren.ensureCapacity(childrenCount);
     }
-	// 是否使用自定义排序
+	  // 是否使用自定义排序
     final boolean customOrder = isChildrenDrawingOrderEnabled();
     for (int i = 0; i < childrenCount; i++) {
         // add next child (in child order) to end of list
@@ -735,10 +735,10 @@ public void setZ(float z) {
 
 
 
-## invalidate() 和 requestLayout()
+## invalidate() 和 requestLayout()的区别
 
 * invalidate()：会导致 `View.onDraw()` 被调用。适用于布局不变，刷新内容的场景。
-* requestLayout()：会导致View的 `onMeasure()`、`onLayout()`被调用，但是`onDraw()` 可能不会调用，只有当布局发生变化时才会调用，所以若是一定要重绘内容，则需要手动调用一下 `invalidate()`。适用于需要当前布局发送变化需要重新测量的场景。
+* requestLayout()：会导致View的 `onMeasure()`、`onLayout()`被调用，但是`onDraw()` 可能不会调用，只有当布局发生变化时才会调用，所以若是一定要重绘内容，则需要手动调用一下 `invalidate()`。适用于当前布局发送变化需要重新测量的场景。
 
 ### requestLayout() 流程
 
@@ -790,9 +790,9 @@ public void requestLayout() {
 
 ### invalidate()
 
-invalidate() 会调用 `p.invalidateChild()` ，ViewGroup重写了这个函数，内部会递归调用了 `parent.invalidateChildInParent()`，最终调用到 `ViewRootImpl.invalidateChildParent()`，从而触发了 `performTraversals()`函数，进而View被重绘。
+invalidate() 会调用 `p.invalidateChild()` ，ViewGroup重写了这个函数，内部会递归向上调用`parent.invalidateChildInParent()`，最终调用到 `ViewRootImpl.invalidateChildParent()`，从而触发了 `ViewRootImpl.performTraversals()`函数，进而View被重绘。
 
-不过由于调用的不是 `ViewRootImpl.requestLayout()` 因此 `mLayoutRequested == false` ，那么 也就不会触发 layout流程。
+不过由于调用的不是 `ViewRootImpl.requestLayout()` ，因此`mLayoutRequested == false` ，也就不会触发 measure、layout 相关流程。
 
 ```java
 // invalidateCache 默认 true

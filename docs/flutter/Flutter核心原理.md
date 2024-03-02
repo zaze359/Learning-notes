@@ -60,9 +60,9 @@
 
 Flutter 提供了一套Dart API，在底层通过``OpenGL``跨平台的绘制库实现一套代码跨多端使用。针对不同的操作系统，对上提供统一的API，对下适配不同操作操作系统的中间层，然后打包编译时再使用相应的中间层代码。
 
-Flutter的UI界面主要是通过``Widget组合``来实现。
+Flutter的UI界面主要是通过**Widget组合**来实现。
 
-UI发生变化时，不直接修改DOM，而是通过更新状态。以``响应式``的模式让框架根据新的状态来重新构建UI。
+UI发生变化时，不直接修改DOM，而是通过更新状态。以 **响应式** 的模式让框架根据新的状态来重新构建UI。
 
 * Widget：配置文件
 * Element：连接Widget和RenderObject的桥梁，负责主要的逻辑。
@@ -138,9 +138,9 @@ abstract class RenderObjectElement extends Element {
   @override
   void mount(Element? parent, Object? newSlot) {
     super.mount(parent, newSlot);
-    /// 创建了RenderObject
+    // 创建了RenderObject
     _renderObject = (widget as RenderObjectWidget).createRenderObject(this);
-	// 添加到渲染树中
+	  // 添加到渲染树中
     attachRenderObject(newSlot);
     _dirty = false;
   }

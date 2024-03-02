@@ -852,3 +852,17 @@ jar {
 }
 ```
 
+### @Configuration 配置不生效问题
+
+看下 配置类 是否 Application启动类 同包名下（配置需要位于同级或子级），不同包名需要配置扫描。
+
+```kotlin
+// 方式1
+@SpringBootApplication(scanBasePackages = ["com.zaze.server"])
+// 方式2
+@ComponentScan("com.zaze.server")
+```
+
+> 若检查发现是同包名 或 配置包名后无法扫描到，检查一下 代码是否分散于 `java` 和 `kotlin` ，这是两个目录，分散存放时 即使和启动类 包名相同也是无法自动装配配置的。不仅仅是配置，依赖注入相关问题，排查其他情况后依然无法解决可以看看目录。
+>
+> 别问我怎么知道的，不知道以后的IDEA 是否会处理这个问题。

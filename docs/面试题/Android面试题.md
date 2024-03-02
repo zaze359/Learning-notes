@@ -13,6 +13,8 @@
 * BroadcastReceiver：广播接收器
 * ContentProvider：内容提供者，共享数据。
 
+### Android的LaunchMode
+
 
 
 ### Activity 间跳转时的生命周期变化？
@@ -122,7 +124,7 @@
 [Android图形架构](../android/view/Android的图形架构.md)
 
 * 是指设备屏幕会以固定每16ms一次的频率从Buffer中获取帧数据进行画面更新。
-* 屏幕刷新时发送一个VSync信号，通知系统屏幕进行刷新，而Android应用接收到vsync后会开始绘制下一帧的数据。
+* 屏幕刷新时发送一个VSync信号，通知系统屏幕进行刷新，而Android应用在接收到vsync后会开始绘制下一帧的数据。
 
 
 
@@ -130,10 +132,11 @@
 
 只有发起绘制请求时才会收到vsync 并触发刷新。
 
-* vsync信号是由屏幕发送的，**屏幕会一直刷新**只不过显示的画面是同一帧的而已。
+vsync信号是由屏幕发送的，**屏幕会一直刷新**只不过显示的画面是同一帧的而已。
 
-* **App界面静止（没有动画，没有用户操作）时，就不会发起vsync请求，所以也就不会接收到vsync信号，CPU也不会计算下一帧数据，View的绘制流程 onMeasure、onDraw、onLayout 也不会执行**。
-  * View的绘制流程是在 `ViewRootImpl.scheduleTraversals()` 中通过 向Choreograhper添加 `CALLBACK_TRAVERSAL` 任务触发的，此时Choreograhper会调用JNI函数 进入native层，native层会生成一个VsyncRequest.Single请求，并唤醒线程，获取vsync信息并返回给应用层，这个过程是一次性的，所以Choreograhper 只会接收到一次vsync回调，Choreograhper 收到vsync回调后就会执行绘制流程，同样这个`CALLBACK_TRAVERSAL`也是一次性，执行完就从队列中移除了它。
+**App界面静止（没有动画，没有用户操作）时，就不会发起vsync请求，所以也就不会接收到vsync信号，CPU也不会计算下一帧数据，View的绘制流程 onMeasure、onDraw、onLayout 也不会执行**。
+
+>  View的绘制流程是在 `ViewRootImpl.scheduleTraversals()` 中通过 向Choreograhper添加 `CALLBACK_TRAVERSAL` 任务触发的，此时Choreograhper会调用JNI函数 进入native层，native层会生成一个VsyncRequest.Single请求，并唤醒线程，获取vsync信息并返回给应用层，这个过程是一次性的，所以Choreograhper 只会接收到一次vsync回调，Choreograhper 收到vsync回调后就会执行绘制流程，同样这个`CALLBACK_TRAVERSAL`也是一次性，执行完就从队列中移除了它。
 
 ---
 
@@ -166,19 +169,24 @@
 
 主要涉及三个函数：
 
-* `dispatchTouchEvent()`：这个函数整个是否分发的核心，后续的 onInterceptTouchEvent() 和 onTouchEvent() 都是在这里调用。
-* `onInterceptTouchEvent()` ：这里处理ViewGroup 事件拦截逻辑。需要拦截 返回true，这样就不会分发给子View。
-  * 需要注意的是，若拦截了ACTION_DOWN的话，后续所有事件就没法传递给子View了。
-* `onTouchEvent() `：负责处理事件。返回 true表示消费这个事件，这样事件就不会再向上传递。
-* `requestDisallowInterceptTouchEvent(true)`：这个函数的作用是由子类来控制父类的事件分发。在 调用 `onInterceptTouchEvent()` 之前会判断 FLAG_DISALLOW_INTERCEPT这个标识，不过这个对于ACTION_DOWN事件是无效的。
+* `dispatchTouchEvent()`：这个函数是**实现事件分发逻辑的核心方法**，后续的 onInterceptTouchEvent() 和 onTouchEvent() 都是有内部逻辑触发的。
+* `onInterceptTouchEvent()` ：这里处理ViewGroup 事件拦截逻辑，起到**阻止事件向下传递**的作用。需要拦截 返回true，这样就不会分发给子View。
+  * 若在这里拦截了 ACTION_DOWN 事件，那么此事件序列的后续事件即使返回false，都不会再传递给子View了。
+* `onTouchEvent() `：负责处理事件。返回 true表示消费这个事件，这样事件就**不会再向上传递**。
 
 
 
 ### View的三种测量模式及使用场景
 
-* **EXACTLY**：父容器计算出了子View的精确大小，子View的大小就是给定的SpecSize。对应布局文件中设置 `math_parent` 或者 固定值(10dp) 。
-* **AT_MOST**：父容器给定一个 大小，子View不能超过这个大小。对应布局文件中的`wrap_content`。
-* **UNSPECIFIED**：父容器没有给定限制，子View多大都可以。用于这种子布局超出父容器的场景。
+* **EXACTLY**：父容器计算出了子View的精确大小，子View的大小就是给定的SpecSize。
+  * 对应布局文件中设置 `math_parent` 或者 固定值(10dp) 。
+
+* **AT_MOST**：父容器给定一个 大小，子View不能超过这个大小。
+  * 对应布局文件中的`wrap_content`。
+
+* **UNSPECIFIED**：父容器没有给定限制，子View多大都可以。
+  * 用于这种子布局超出父容器的场景。
+
 
 ### View的渲染流程 需要经过哪几个步骤呢？
 
@@ -210,56 +218,58 @@
 
 ### ViewGroup 中的 onDraw 是否每次都会执行？
 
-**ViewGroup的 onDraw() 不一定每次都执行**。
+**ViewGroup的 onDraw() 不一定每次都执行，且 默认不会执行绘制**。
 
-ViewGroup 默认不会执行绘制， 它在 `initViewGroup()` 流程中会设置 WILL_NOT_DRAW，如果没有背景图就会设置 PFLAG_SKIP_DRAW，从而直接调用dispatchDraw() 绘制子View，不调用自身的draw()。所以 onDraw() 也就不会被调用。
+ViewGroup 在 `initViewGroup()` 初始化流程中会设置 `mViewFlags |= WILL_NOT_DRAW`，并且如果没有设置前景/背景图就会 设置 `mPrivateFlags |= PFLAG_SKIP_DRAW` （跳过绘制自身），从而直接调用 `dispatchDraw()` 绘制子View，不调用自身的绘制，因此 `onDraw()`也就不会被调用。
 
 如何清除 PFLAG_SKIP_DRAW？
 
-1.  `setWillNotDraw(false)` ：可以强制开启自身的绘制。
+1.  调用`View.setWillNotDraw(false)` ：可以强制开启自身的绘制。
 2. 设置背景/前景：添加背景/前景 时这个标记会被清除。
 
 ### 如何修改ViewGroup绘制子View的顺序
 
-ViewGroup 中的 mPreSortedChildren 会保持排序后的子元素，默认是按照z 值 从大到小进行排序。Z值相同时默认按照child的添加顺序来排序。
+ViewGroup 中的 mPreSortedChildren 会存储排序后的子元素，默认是按照z 值 从大到小进行排序。Z值相同时默认按照child的添加顺序来排序。
 
 我们想要修改绘制顺序时可以通过两个方式：
 
-* **调整 View的Z 值**：使用`setZ() `、`setElevation()`、`etTranslationZ()` 这三个函数都可以做到。
+* **调整 View的Z 值**：使用`setZ() `、`setElevation()`、`setTranslationZ()` 这三个函数都可以做到。
 * **开启 customOrder**：调用 `setChildrenDrawingOrderEnabled(true)` 可以开启 customOrder，然后通过重写  `getChildDrawingOrder()` 的返回值来决定child的绘制顺序。
 
 
 
 ### 实现view的更新方法有哪几种？
 
-* requestLayout()
-* invalidate()：这个函数必须在UI线程中调用。
-* postInvalidate()：支持在非UI线程中调用。
+requestLayout()、invalidate()、postInvalidate()
+
+* requestLayout()：View的 `onMeasure()`、`onLayout()`被调用，当布局发生变化时还会触发 `onDraw()` 。
+* invalidate()：这个函数必须在UI线程中调用，会导致 `View.onDraw()` 被调用。
+* postInvalidate()：功能同 invalidate，支持在非UI线程中调用。
 
 #### invalidate() 和 postInvalidate() 的区别
 
-* invalidate()：这个函数必须在UI线程中调用。
-* postInvalidate()：支持在非UI线程中调用。
+首先 这两个方法都会导致 `View.onDraw()` 被调用。适用于布局不变，需要刷新内容的场景。
 
-postInvalidate() 其实就是通过 mHandler发送了一个了消息，从而转到了UI线程调用 invalidate()
+* invalidate()：这个函数必须在UI线程中调用。
+* postInvalidate()：支持在非UI线程中调用。其实就是通过 mHandler发送了一个了消息，从而转到了UI线程调用 invalidate()。
 
 #### invalidate() 和requestLayout() 的区别
 
-* invalidate()：适用于布局不变，刷新内容的场景。会导致 `View.onDraw()` 被调用。
-* requestLayout()：适用于需要当前布局发生变化 需要重新测量的场景。会导致View的 `onMeasure()`、`onLayout()`被调用，但是`onDraw()` 可能不会调用，只有当布局发生变化时才会调用，所以若是一定要重绘内容，最好手动调用一下 `invalidate()`。
+* invalidate()：会导致 `View.onDraw()` 被调用。
+* requestLayout()：会导致View的 `onMeasure()`、`onLayout()`被调用，但是`onDraw()` 可能不会调用，只有当布局发生变化时才会调用，所以若是一定要重绘内容，最好手动调用一下 `invalidate()`。适用于当前布局发生变化 需要重新测量的场景。
 
 ### View渲染流程的触发时机
 
-1. 在Activity 创建流程中的 `handleResumeActivity()`  时期会创建 ViewRootImpl，并开始通过`ViewRootImpl.requestLayout()` 开始执行渲染流程。
-2. 直接调用 `requestLayout()` 和 `invalidate()` 来触发。
-3. 调用 `view.setForeground()` 、`view.setBackgroundDrawable()` 会触发 `requestLayout()` 和 `invalidate()` 。
+1. 在Activity 创建流程中的 `ActivityThread.handleResumeActivity()`  触发，期间会创建 ViewRootImpl，并通过`ViewRootImpl.requestLayout()` 开始执行渲染流程。
+2. 直接调用 `View.requestLayout() + View.invalidate()` 来触发。
+3. 调用 前景`view.setForeground()` 、背景`view.setBackgroundDrawable()` 会触发 `requestLayout()` 和 `invalidate()` 。
 4. View的布局属性发生变化：修改 LayoutParams，会触发 `requestLayout()` 。
 
 ### 如何正确的获取View的宽高
 
 1. **`View.post()`**：通过这个函数投递的消息会在View 初始化完毕并关联到window后执行。
-2. **`onWindowFocusChanged()` **：此时View已经初始化完毕，我可以在获取到焦点时去获取View到宽高。不过这个函数调用非常频繁，Activity的Window每次获取/失去焦点都会被调用。
-3. **ViewTreeObserver**：可以添加一个 `addOnGlobalLayoutListener()`，当View树的状态发生改变或者View树内部的View的可见性发现改变时，会回调给我们，我可以在回调中去获取view的宽高。
+2. **`Activity.onWindowFocusChanged()` **：此时View已经初始化完毕，我可以在获取到焦点时去获取View到宽高。不过这个函数调用非常频繁，Activity的Window每次获取/失去焦点都会被调用。
+3. **ViewTreeObserver**：可以添加一个 `addOnGlobalLayoutListener()`，当View树的状态发生改变或者View树内部的View的可见性发现改变时会回调给我们，我可以在回调中去获取view的宽高。
 
 
 
@@ -267,7 +277,7 @@ postInvalidate() 其实就是通过 mHandler发送了一个了消息，从而转
 
 过度绘制（Overdraw） 就是值存在像素区域在同一帧时间内被多次绘制。主要就是重叠布局引起的。
 
-具体的场景比如：多层次叠加的UI，上下两层都设置了背景，不过下层被上层挡住，但是下层不可见的部分还是执行绘制操作，这样就会导致这部分区域发生多次绘制，此时就是过度绘制。
+具体的场景比如：在多层次叠加的UI中 上下两层都设置了背景，不过下层被上层挡住，但是下层不可见的部分还是执行绘制操作，这样就会导致这部分区域发生多次绘制，此时就是过度绘制。
 
 * 重叠的View、重叠的背景。
   * 布局层级优化。
@@ -312,7 +322,7 @@ postInvalidate() 其实就是通过 mHandler发送了一个了消息，从而转
 
   * 首先创建一个bitmap然后绘制一个圆。
 
-  * 通过xfermode 将 圆形bmp和 图片bmp 混合得到 圆形图像。
+  * 通过xfermode 将 圆形bmp和 图片bmp 混合得到 圆形图像。`PorterDuff.Mode.SRC_IN` 为只在源图像和目标图像相交的地方绘制源图像
 
 
   ```kotlin
@@ -337,7 +347,7 @@ postInvalidate() 其实就是通过 mHandler发送了一个了消息，从而转
 
 * **使用 BitmapShader 图像渲染器 绘制**，可以在绘制某一图像的时候，把另一图像同时渲染上去。
 
-  * 将图像bmp 赋值给paint.shader 作为渲染器，这样画笔刷出来的就是这个图像。
+  * 将图像bmp 赋值给 paint.shader 作为渲染器，这样画笔刷出来的就是这个图像。
   * 利用这个画笔在 canvas上直接画圆即可。
 
   ```kotlin
@@ -374,8 +384,10 @@ ScrollView 重写了 `measureChildWithMargins()` ，在测量 childView的高度
 
 #### ScrollView 的onMeasure()
 
-* fillViewport 是 false时：此时ScrollView 不会执行测量。是指 childView 无法填充满 ScrollView的情况。
-* MesaureSpec = UNSPECIFIED时：此时也不测量。这种情况是子View 大于了 ScrollView。
+* 首先执行正常的 FrameLayout测量流程，即所有的 childView都会测量一遍
+
+* 若 `fillViewport == false`：此时 ScrollView 的measure 流程结束，不再执行测量。是指 childView 无法填充满 ScrollView的情况。
+* `MesaureSpec = UNSPECIFIED`时：此时也不测量。这种情况是子View 大于了 ScrollView。
 * 
 * 执行测量：这时仅会测量 第一个 childView。
 
@@ -388,7 +400,7 @@ protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
     if (!mFillViewport) {
         return;
     }
-	// MesaureSpec == UNSPECIFIED，不再继续
+	 // MesaureSpec == UNSPECIFIED，不再继续
     final int heightMode = MeasureSpec.getMode(heightMeasureSpec);
     if (heightMode == MeasureSpec.UNSPECIFIED) {
         return;
@@ -487,9 +499,11 @@ ViewPager2 基于 RecyclerView，所以等同 RecyclerView嵌套 ViewPager、Rec
 
 NestedScrollViewHost 采用内部拦截法处理滑动冲突。
 
-重写 `dispatchTouchEvent()` 或者 `onInterceptTouchEvent()`来处理事件分发逻辑，并结合 `requestDisallowInterceptTouchEvent()`来控制父容器。
+重写 `dispatchTouchEvent()` 或者 `onInterceptTouchEvent()`来处理事件分发逻辑，并结合 `requestDisallowInterceptTouchEvent()`来控制父容器。子元素需要事件时禁用 父容器的拦截，并将事件继续向下分发，不需要时则允许父容器拦截。
 
-需要事件时禁用 父容器的拦截，并将事件继续向下分发，不需要时则允许父容器拦截。
+> 此外还有一个 `requestDisallowInterceptTouchEvent(true)`：这个函数的作用是由子类来控制父类的事件分发。在 调用 `onInterceptTouchEvent()` 之前会判断 FLAG_DISALLOW_INTERCEPT这个标识，不过这个对于ACTION_DOWN事件是无效的。
+
+
 
 ### ViewPager切换掉帧如何优化？
 
@@ -600,28 +614,32 @@ View动画则是会不断进行重绘，对GPU资源消耗比较大。
 
 
 
-## Handler消息机制
+## 消息机制
 
-### Handler是什么？有什么用?
+### Handler是什么？怎么使用?
 
 Handler 是Android提供的一种用于**线程间通讯的消息传递机制**，常用于子线程和主线程进行消息传递。
+
+1. 首先需要一个线程的Looper。
+   * 创建一个子线程，通过 ``Looper.prepare()`` 创建一个当前线程的 Looper，调用 ``Looper.loop()`` 启动消息循环等待消息。一般使用HandlerThread。
+   * 通过 ``Looper.getMainLooper()`` 获取 MainLooper。
+2. 将 Looper 作为参数创建Handler 对象。
+3. 通过创建的 Handler 对象 来收发消息。
 
 ### Handler.post() 与 View.post() 的 区别?
 
 我们一般使用的 `Handler.post()` 就是向 mainLooper 直接发送消息，若是自定义了线程则是向我们自定义线程的Looper发送。
 
-View.post() 调用的 handler 来自 ViewRootImpl 它将消息发送到 创建ViewRootImpl的线程，一般就是主线程，使用的就是mainLooper。
-
-大致流程其实和 普通的 Handler.post() 区别不大。
+View.post() 调用的 handler 来自 ViewRootImpl，它将消息发送到 创建ViewRootImpl的线程，一般就是主线程，使用的是mainLooper。
 
 **两者主要区别：**
 
-**当这个View的 attachInfo 未赋值时，即还没有和Window关联时，会先将 runnable 保存到 HandlerActionQueue中，待后续关联后 会将这些暂存的消息都发送到对应UI线程的looper中执行，保证消息不会丢失。**
+**当这个View的 attachInfo 未赋值时，即还没有和Window关联时，会先将 runnable 保存到 HandlerActionQueue中，待后续 生命周期到达 resume 后 attachInfo 会被赋值，同时这些暂存的消息就会被全部发送到 UI线程的looper中执行，保证消息不会丢失。**
 
 ```java
 public boolean post(Runnable action) {
     final AttachInfo attachInfo = mAttachInfo;
-    // attachInfo 是在 resume 生命周期时RootViewImple 调用 view.dispatchAttachedToWindow() 传递给 view的。
+    // attachInfo 是在 resume 生命周期时 RootViewImple 调用 view.dispatchAttachedToWindow() 传递给 view的。
     if (attachInfo != null) {
         return attachInfo.mHandler.post(action);
     }
@@ -635,7 +653,7 @@ public boolean post(Runnable action) {
 
 > mAttachInfo 是在 ViewRootImpl 的构造函数中创建的实例，保存了一些 window、handler相关的信息。
 >
-> 它会在 ViewRootImpl.performTraversals() 函数中通过 `view.dispatchAttachedToWindow()` 传递给 view的。需要在生命周期到 resume 时才触发。
+> 它会在 ViewRootImpl.performTraversals() 函数中通过 `view.dispatchAttachedToWindow()` 传递给 view的。在生命周期 resume 时触发。
 
 ```java
  mAttachInfo = new View.AttachInfo(mWindowSession, mWindow, display, this, mHandler, this,
@@ -647,7 +665,7 @@ public boolean post(Runnable action) {
 1.  当Looper被创建后，MessageQueue也会被创建，同时会MQ会调用 `nativeInit()` 创建NativeMessageQueue，同时也初始化了 Native层的Looper，这样 Java层和Native层的消息机制就初始化完毕了。
 2. 启动Looper循环，在Java层调用 `Looper.loop()`，启动循环后，会调用 `MQ.next()`来获取消息，此时若没有需要处理的消息就会调用 `nativePollOnce()` 使当前线程进入休眠，直到有新的消息或者超时时才会被唤醒，这里底层使用的是epoll机制。
 3. 若我们通过 Handler 发送了消息，那么这个消息最终会通过 `MQ.enqueueMessage()` 加入到消息队列中。
-   * 若新加入的消息在队列头部且当前线程处于阻塞状态那么还会 通过 `nativeWake()` 唤醒 epoll。
+   * 新加入的消息会根据 `msg.when` 插入到 队列的合适位置，若需要立即执行且线程处于阻塞状态那么还会 通过 `nativeWake()` 唤醒 epoll。
 
 ### epoll机制的原理是什么？
 
@@ -665,11 +683,17 @@ epoll 是 select和poll的增强机制，是Linux下的一项多路复用技术�
 
 ### epoll阻塞会什么不占用CPU资源？
 
-操作系统的多任务机制：
+设计操作系统的多任务机制：
 
-* 工作队列：工作队列才会被 CPU 轮询。
+* 工作队列：只有工作队列才会被 CPU 轮询。
 
-* 等待队列：阻塞后进入到等待队列
+* 等待队列：阻塞后进入到等待队列，不在工作队列所以不会被轮询到，也就不消耗资源了。
+
+### 同步屏障了解过吗？
+
+在View的刷新流程中就使用到了 同步屏障，`ViewRootImpl.scheduleTraversals()` 会通过发送同步屏障消息的方式来设置同步屏障，然后再发送异步任务，执行完后再移除同步屏障。
+
+当MessageQueue 发现存在同步屏障消息时，它会优先从队列中筛选出异步消息，保证异步消息的优先执行，且仅执行异步消息，直到同步屏障消息被移除，才会执行同步消息。
 
 ### IdleHandler使用过吗？
 
@@ -704,9 +728,9 @@ Looper.myQueue().removeIdleHandler(idler);
 
 ### Handler 内存泄露问题
 
-在Activity 中使用 Handler 时，如果 Handler 作为**匿名内部类**使用，那么这个Hander就会持有外部类Activity的实例对象。而真正导致泄露的原因是因为使用 Handler 发送了 **Message**。
+在Activity 中使用 Handler 时，如果 Handler 作为**匿名内部类**使用，那么这个Hander就会持有外部类Activity的实例对象，此时如果发送了消息就可能发生内存泄漏。
 
-当我们 通过 Handler发送消息时 **Message 会持有 Handler**，Message属于Looper中的MessageQueue，而Looper存储在线程的TLS中的，所以Handler是被线程持有的，无论是主线程还是自定义线程生命周期都比Activity长，也就导致Activity发送了内存泄露。
+本质原因是 当我们通过 Handler发送消息时 **Handler 持有Activity对象实例，Message 会持有 Handler，Message属于Looper中的MessageQueue，而Looper存储在线程的TLS中的，所以最终 Activity 是被线程持有的**。无论是主线程还是自定义线程生命周期都比Activity长，也就导致Activity发送了内存泄露。
 
 ``Activity -> Handler -> Message -> MessageQueue -> Looper -> TLS``
 
@@ -739,9 +763,9 @@ Looper.myQueue().removeIdleHandler(idler);
 
 
 
-### AIDL 中的in out oneway代表什么意思？
+### AIDL 中的in、out、oneway代表什么意思？
 
-* **in**：默认，表示输入参数，会将客户端的数据读取并传给服务端。服务端修改后不会影响客户端
+* **in**：默认，表示输入参数，会将客户端的数据读取并传给服务端。服务端修改后不会影响客户端。
 * **out**：表示输出参数，服务端修改后可以将新数据返回给客户端。
   * 客户端发送时并不会读取数据，服务端会在binder调用的返回过程中新建一个对象并写入数据，最后通过 reply 返回给我们
 * **inout**：同时具备in、out的特性
@@ -761,22 +785,64 @@ Looper.myQueue().removeIdleHandler(idler);
 
 * Binder的阻塞调用会导致另一边也阻塞。会导致很多不必要的线程开销
 
-
 ## OkHttp
+
+### 双任务队列机制
+
+主要逻辑在 Dispatcher 中
+
+- 等待队列：异步请求会先进入等待队列，之后会转移到 执行队列中执行。
+
+- 执行队列：同步任务会直接加入执行队列没什么条件，而等待队列中的异步任务会在触发执行时将满足条件的任务转到执行队列
+  - 异步任务入队条件：执行队列不超过最大并发数64，域名对应的Host 不超过最大并发数5。
 
 ### OkHttp的连接池？
 
 什么样的连接可以复用？怎么实现连接池？
 
+其实就是普通的池化技术，维护了一个连接池，每次都先尝试冲池中取，没有就新创建一个，连接超时就cancel，如果池满了则根据淘汰策略来处理，KeepAlive机制，降低TCP握手挥手的次数
+
+默认保持 5个连接，5分钟。
+
 ### OkHttp怎么处理SSL？
+
+通过设置 sslSocketFactory 来处理，okhttp 默认会通过反射获取了系统默认证书，进行配置，采用的是单向校验 服务端证书，所以默认无需配置也能使用 https。
 
 ### OkHttp里面用到了什么设计模式？
 
+责任链: 层层传递处理，将请求 和 响应处理解耦，
+
 ### OKHttp有哪些拦截器，分别起什么作用？
 
-OkHttp网络拦截器，应用拦截器
+| 拦截器                                   |                                                              |
+| ---------------------------------------- | ------------------------------------------------------------ |
+| RetryAndFollowUpInterceptor              | 重定向                                                       |
+| BridgeInterceptor                        | 添加必要的基础请求头信息。                                   |
+| CacheInterceptor                         | 缓存                                                         |
+| ConnectInterceptor                       | 连接                                                         |
+| `networkInterceptors: List<Interceptor>` | 面向非WebSocket的拦截器，默认为空。可以通过做一些网络相关的拦截处理， |
+| CallServerInterceptor                    | 访问服务器，真正请求服务器的地方                             |
 
 ## 组件化
+
+### 为什么要组件化开发？
+
+* 项目代码膨胀，难以下手，维护困难，不利于新功能开发。
+* 不同业务间代码耦合严重，职责不明确，不利于多人协作、测试。
+
+针对以上存在的问题，就出现了 模块化开发、组件化开发，主要就是**分治思想**。
+
+* **模块化**：将项目**按照职责划分，分成多个相互独立的模块**，每个模块中仅包含与自身业务相关的代码，模块间通过接口进行交互。方便开发、测试。
+* **组件化**：基于模块化，但是**更加强调复用性**，将可重用部分进行高度封装，也是通过接口进行调用。
+
+模块化的要求：
+
+* **单一职责**：一个模块，只完成一件事。
+* **单向依赖**：模块间仅存在单方向依赖，不存在相互依赖，否则需要考虑重新调整结构。
+* 关注点分离：
+* **正交性**：模块间不存在交集，即不会存在重复的功能。
+* **面向接口**：模块间仅能通过接口进行交互，且对外暴露的接口、参数尽可能少。
+* 
 
 ### ARouter的原理？
 

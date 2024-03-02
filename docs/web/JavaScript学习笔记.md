@@ -114,3 +114,93 @@ abc(1, 2);
 abcd(1, 2);
 ```
 
+## 事件冒泡和事件捕获
+
+### 事件冒泡
+
+指当一个事件被触发时，它会**从最内层的元素开始，然后逐级向外传播**，直到最外层的元素。
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+	<title>事件冒泡</title>
+</head>
+<body>
+	<div id="parent">
+		<div id="child">
+			<button id="btn">Click</button>
+		</div>
+	</div>
+
+	<script>
+		document.getElementById("btn").addEventListener("click", function() {
+			console.log("btn clicked");
+		});
+
+		document.getElementById("child").addEventListener("click", function() {
+			console.log("child div click");
+		});
+
+		document.getElementById("parent").addEventListener("click", function() {
+			console.log("parent div click");
+		});
+	</script>
+</body>
+</html>
+```
+
+输出：
+
+```shell
+btn clicked
+child div click
+parent div click
+```
+
+
+
+### 事件捕获
+
+指当一个事件被触发时，它会**从最外层的元素开始，然后逐级向内传播**，直到最内层的元素。
+
+ `addEventListener("click",  handleClick, true)` 第三个参数传 true 表示开启事件捕获。
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+	<title>事件捕获</title>
+</head>
+<body>
+	<div id="parent">
+		<div id="child">
+			<button id="btn">Click</button>
+		</div>
+	</div>
+
+	<script>
+		document.getElementById("btn").addEventListener("click", function() {
+			console.log("btn clicked");
+		}, true);
+
+		document.getElementById("child").addEventListener("click", function() {
+			console.log("child div click");
+		}, true);
+
+		document.getElementById("parent").addEventListener("click", function() {
+			console.log("parent div click");
+		}, true);
+	</script>
+</body>
+</html>
+```
+
+输出：
+
+```shell
+parent div click
+child div click
+btn clicked
+```
+

@@ -723,15 +723,15 @@ public final class ViewRootImpl implements ViewParent ... {
 
 * **DecorView赋值关联**：将 `PhoneWindow.decorView `赋值给 `Activity.mDecor`。
 * **添加Window**：将 `PhoneWindow.decorView` 添加到 WindowManagerImpl 中，实际是添加到了 `WindowManagerGlobal` 中。
-* **创建 ViewRootImpl**：WindowManagerGlobal 创建了 `ViewRootImpl`，并通过 `ViewRootImpl.setView(decorView )` 将 decorView 放入到 ViewRootImpl中。
-* **开始绘制**：ViewRootImpl 调用 `requestLayout()` 开始第一次 UI 绘制。
-  * 这个也是为什么我们至少要在 resume之后才能获取到view宽高的原因（不过view的测量和生命周期并不是同步执行的，onResume()时不一定测量完成了）。
+* **创建 ViewRootImpl**：WindowManagerGlobal 创建了 `ViewRootImpl`，并通过 `ViewRootImpl.setView(decorView)` 将 decorView 和 ViewRootImpl 进行关联。
+* **开始绘制**：`setView` 流程中会 调用 `ViewRootImpl.requestLayout()` 开始执行UI 绘制流程(measure、layout、draw)。
+  * 也就是说在 resume 期间 执行了 View的测量，不过由于 view的测量走 handler 消息流程，需要等待Vsync到来，因此和生命周期函数调用是一个异步操作，所以在 `Activity.onResume()` 调用时不一定测量就完成了，也就不一定能获取到View的宽高。
 
 
 > [ActivityThread.java - Android Code Search](https://cs.android.com/android/platform/superproject/+/refs/heads/master:frameworks/base/core/java/android/app/ActivityThread.java;drc=7346c436e5a11ce08f6a80dcfeb8ef941ca30176;l=4814)
 
 ```java
- 	@Override
+ 	 @Override
     public void handleResumeActivity(ActivityClientRecord r, boolean finalStateRequest,
             boolean isForward, boolean shouldSendCompatFakeFocus, String reason) {
         // If we are getting ready to gc after going to the background, well
@@ -739,11 +739,18 @@ public final class ViewRootImpl implements ViewParent ... {
         unscheduleGcIdler();
         mSomeActivitiesChanged = true;
         //
-        final Activity a = r.activity;
-		//
-        final int forwardBit = isForward
-                ? WindowManager.LayoutParams.SOFT_INPUT_IS_FORWARD_NAVIGATION : 0;
-
+				// TODO Push resumeArgs into the activity for consideration
+        // skip below steps for double-resume and r.mFinish = true case.
+        if (!performResumeActivity(r, finalStateRequest, reason)) {
+            return;
+        }
+        if (mActivitiesToBeDestroyed.containsKey(r.token)) {
+            // Although the activity is resumed, it is going to be destroyed. So the following
+            // UI operations are unnecessary and also prevents exception because its token may
+            // be gone that window manager cannot recognize it. All necessary cleanup actions
+            // performed below will be done while handling destruction.
+            return;
+        }
         // willBeVisible 表示 activity将可见
         boolean willBeVisible = !a.mStartedActivity;
         if (!willBeVisible) {
@@ -918,7 +925,7 @@ public final class WindowManagerGlobal {
 ### ViewRootImpl.setView()
 
 * 将传入的 `PhoneWindow.DecorView` 保存到 成员变量 mView中。
-* 调用 `requestLayout()`，这里进行布局绘制 。
+* 调用 `ViewRootImpl.requestLayout()`，这里进行布局绘制 。
 * 调用 `mWindowSession.addToDisplayAsUser()` ，将 mWindow 传给 WMS, 用于接收事件通知。
 * 将自身作为 DecorView的 ViewParent。
 
@@ -2279,24 +2286,27 @@ class SystemServiceRegistry  {
 
 ### Choreographer
 
-Choreographer 字面意思是编舞者，**负责协调 Vsync和 UI任务，保证vsync到来时立即执行绘制**。例如常见的View的绘制等都会抛给Choreographer处理。
+Choreographer 字面意思是编舞者，常见的View的绘制等都会抛给Choreographer处理，主要**负责协调 Vsync和 UI任务，保证vsync到来时立即执行绘制**。
 
-* ViewRootImpl 会在构造函数中调用 `Choreographer.getInstance()` 来创建 Choreographer实例。
-* Choreographer是一个单例，内部维护了一个使用 mainLooper的Handler，监听vsync的FrameDisplayEventReceiver。
+整体流程分析：
 
-* **viewRootImpl发送UI任务**：在渲染流程中的 `viewRootImpl.scheduleTraversals()` 会通过  `Choreographer.postCallback()` 发送绘制请求 `CALLBACK_TRAVERSAL`。
+* **创建 Choreographer实例**：ViewRootImpl 会在构造函数中调用 `Choreographer.getInstance()` 来创建 Choreographer实例。
+  * Choreographer是一个单例，内部维护了一个使用 mainLooper的Handler 以及监听vsync的FrameDisplayEventReceiver。
+
+* **viewRootImpl发送UI任务**：在渲染流程中， `viewRootImpl.scheduleTraversals()` 会先开启同步平展，然后通过  `Choreographer.postCallback()` 发送异步消息  `CALLBACK_TRAVERSAL`。
 * **Choreographer 添加任务到任务队列**：Choreographer 接收到 viewRootImpl的请求后会将 callback 保存在 CallbackQueue 中。若当前有可以执行则会立即准备执行任务，否则发送一个延迟消息，两者其实都是通过 FrameHandler 发送了消息。
-* **Choreographer 同步 vsync**：通过 FrameHandler 来发送异步消息，协调执行绘制请求。
-  * 4.1后默认开启vsync，此时会调用 `scheduleVsyncLocked()` ，然后通过 FrameDisplayEventReceiver调用`nativeScheduleVsync()`等到回调，接收到vsync回调后最终执行到 `doFrame()`。
+* **Choreographer 同步 vsync，等待回调**：通过 FrameHandler 来发送异步消息，协调执行绘制请求。
+  * 4.1后默认开启vsync，此时会调用 `scheduleVsyncLocked()` ，然后通过 FrameDisplayEventReceiver调用`nativeScheduleVsync()`等待 vsync 回调，接收到 vsync 回调后最终执行到 `doFrame()`。
   * 不开启vsync时，则是手动模拟vsync，计算得到下一帧时间，然后再发送消息，最终调用的也是 `doFrame()`。
-* **vsync回调执行任务**：`doFrame()` 中会按照一定顺序执行callback队列中的任务，也就是调用了 `callback.run()`，执行完毕后就从callback队列中移除。
+* **接收到 vsync 回调，执行 UI任务**：`doFrame()` 中会按照一定顺序执行callback队列中的任务，也就是调用了 `callback.run()`，触发 ``doTraversal()`` 执行绘制流程，执行完毕的callback 将从队列中移除。
 
 ```java
 class Choreographer {
     // 默认true，开始vsync
     private static final boolean USE_VSYNC = SystemProperties.getBoolean(
         "debug.choreographer.vsync", true);
-    //
+  
+    // 接收 vsync 事件
     private final FrameDisplayEventReceiver mDisplayEventReceiver;
     
     private static final ThreadLocal<Choreographer> sThreadInstance =
@@ -2381,7 +2391,7 @@ class Choreographer {
                     mHandler.sendMessageAtFrontOfQueue(msg);
                 }
             } else {
-                // 不管vsync 时，通过手动计算下一帧的时间。sFrameDelay = 10
+                // 不使用 vsync 时，需要手动计算下一帧的时间。sFrameDelay = 10
                 final long nextFrameTime = Math.max(
                         mLastFrameTimeNanos / TimeUtils.NANOS_PER_MS + sFrameDelay, now);
                 // 发送一个 MSG_DO_FRAME 异步消息
@@ -2392,6 +2402,7 @@ class Choreographer {
         }
     }
     
+    // 这个函数 用于获取 vsync 信息，会回调在 mDisplayEventReceiver.onVsync()
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     private void scheduleVsyncLocked() {
         try {
@@ -2546,7 +2557,7 @@ private final class FrameDisplayEventReceiver extends DisplayEventReceiver
         super(looper, vsyncSource, 0);
     }
 
-    // vsync 回调
+    // 接收 vsync 回调，然后 自身作为 message callback, 延迟执行时间执行 run() 会被调用
     // timestampNanos：vsync信号时间
     // physicalDisplayId：displayId
     // frame：帧id，

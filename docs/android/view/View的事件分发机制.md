@@ -87,7 +87,7 @@ Android定义了一些的触摸事件用来表示用户手指在屏幕上的操�
 
 ### onTouchEvent()
 
-真正决定是否消费事件的地方。
+真正决定是否消费事件的地方。消费事件后就不会再向上传递。
 
 * 返回 true： 表示当前View 消费了事件，不会再继续向上传播事件。
 * 返回 false：表示不消费，事件会向上传递。
@@ -129,21 +129,19 @@ Android定义了一些的触摸事件用来表示用户手指在屏幕上的操�
 
 这里先做一个总结：
 
-事件序列是从 `ACTION_DOWN` 开始的，会先调用 ViewGroup自身的`onInterceptTouchEvent()` 检查是否需要拦截。
+事件序列是从 `ACTION_DOWN` 开始的，会先调用 ViewGroup自身的`onInterceptTouchEvent()` 检查 自身是否需要拦截事件。
 
-此时存在2种情况：
+此时 针对 `ACTION_DOWN` 事件进行分析存在2种情况：
 
-1. 若 ViewGroup自身拦截了 `ACTION_DOWN` 事件：那么最终会调用 `super.dispatchTouchEvent()` 然后调用自身`onTouchEvent()`，事件不会在向下传递。
-   * 若 `onTouchEvent() return true`：那么后续的事件都将会被ViewGroup拦截。
-   * 若 `onTouchEvent() return false`：那么会将事件向上传递回去，由上层处理。
-2. 若 ViewGroup 不拦截 `ACTION_DOWN` 事件：继续分发流程。
+1. 若 ViewGroup自身拦截了 `ACTION_DOWN` 事件：那么最终会调用 `super.dispatchTouchEvent()` 然后调用自身`onTouchEvent()`，此时事件序列后续事件将不会再向下传递，即最远只能传播到这个ViewGroup，childView 无法收到。
+   * 若 `onTouchEvent() return true`消费事件：这里若将ViewGroup看作是子类，那么就等价于父View 不处理 交由子View消费的场景。
+   * 若 `onTouchEvent() return false` 不消费事件：那么Down事件将向上传递回去，交由上层处理，最终会传递到 ``Activity.onTouchEvent()`中。
+2. 若 ViewGroup 不拦截 `ACTION_DOWN` 事件：那么ViewGroup会遍历所有的child，并判断是否存在子元素消费事件。
 
-ViewGroup不拦截 `ACTION_DOWN` 时，那么会遍历所有的child，并判断是否存在子元素消费事件。
+接着分析 ViewGroup不拦截 `ACTION_DOWN` 的后续场景，此时也分为 2 种情况：
 
-此时又将存在2种情况：
-
-1. 若存在子元素消费事件：mFirstTouchTarget 将被赋值，指向这个子元素，会将事件分发给这个子元素。
-2. 若子元素 也不消费事件：由于没人处理事件，所有这个事件又会向上传递，最终会回调到 `Activity.onTouchEvent()` 由 Activity处理。
+1. 存在子元素消费事件：那么 `mFirstTouchTarget` 将被赋值，指向这个子元素，后续事件可以分发给这个子元素。
+2. 子元素 也不消费事件：由于没人处理事件，所有这个事件又会向上传递，最终会回调到 `Activity.onTouchEvent()` 由 Activity处理。
 
 从上面对ACTION_DOWN事件的处理可以看出：**ACTION_DOWN 事件的作用就是用来决定最远能由谁来处理后续的事件序列**。事件序列中后续的 ACTION_MOVE、ACTION_UP等事件的分发，是根据ACTION_DOWN 的处理流程决定的，可以概括为一下三种情况：
 

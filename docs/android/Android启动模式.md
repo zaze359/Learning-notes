@@ -9,19 +9,20 @@ date: 2020-08-12 09:38
 
 * task：任务。
 * back stack：task中的堆栈。
+* LuanchMode: 启动模式。
 * taskAffinity：亲和性，表明该 Activity 倾向于哪个task，默认值是应用的包名。
 
-## 任务亲和性
+## TaskAffinity：任务亲和性
 
 亲和性表示Activity 倾向于哪个task，它的默认值是应用的包名。可以使用`taskAffinity`属性指定 Activity 的亲和性。
 
-若设置了Activity的启动模式，在不违背Activity启动模式规则的情况下，依然会优先使用相同亲和性的`task`。
+若设置了Activity的启动模式，在不违背Activity启动模式规则的情况下，会优先使用相同亲和性的`task`。
 
 * 即**最后这个Activity是否在会相同亲和性的栈中还和它的启动模式有关**。
 
 * 若两个Activity`taskAffinity`不同将可以在最近任务栏看到两个Activity分别占一栏。
 
-* **两个Activity的 `task` 可能不同，但是`taskAffinity`可能相同**。 启动`singleInstance/singleTask`的Activity时，会新建一个task，但是`taskAffinity`是相同的，除非指定了不同的`taskAffinity`。
+* **两个Activity的 `task` 可能不同，但是`taskAffinity`可能相同**。 启动`singleInstance/singleTask`的Activity时，会新建一个`taskAffinity`相同的 task，除非特意指定了不同的`taskAffinity`。
 
 > 同一应用中的所有 Activity 默认情况彼此具有亲和性。
 
@@ -68,9 +69,9 @@ date: 2020-08-12 09:38
 
 #### standard ：标准模式
 
-> Android中默认就是此模式。
+> Android中**默认**就是此模式。
 
-每次启动都会在启动该 Activity 的Task中创建一个Activity 的新实例，并置于栈顶。
+每次启动都会在启动该 Activity 的Task中创建一个Activity 的新实例，并置于栈顶。适用于相互独立的页面。
 
 * 栈内新建。
 * Activity 可以多次实例化。
@@ -88,19 +89,18 @@ date: 2020-08-12 09:38
 
 ![singleTop](./Android%E5%90%AF%E5%8A%A8%E6%A8%A1%E5%BC%8F.assets/singleTop-1679839413476-5.jpg)
 
-#### singleTask：栈内复用
+#### singleTask：栈内复用（栈内唯一）
 
-> **singleTask 一般用于需要一个应用内仅存在一个实例时的场景。**
+> **singleTask 一般用于应用内仅存在一个实例时的场景。**
 
-系统默认会创建新的`task`（存在相同亲和性的任务时就不创建了），并将新建的Activity作为`task`的`root activity`，此Activity 实例有且仅有一个，若其他task中存在则复用存在实例，不存在则是新建一个实例。需要注意的是复用这个Activity时，原先堆栈中位于其上方的Activity都将出栈。
+若不存在亲和性相同的任务栈则会新建一个栈。若在亲和性相同的任务栈中已存在Activity实例，则会在这个栈中直接复用已存在的实例，不过需要注意的是原先堆栈中位于其上方的Activity都将出栈。
 
-* Activity被作为`root activity`。
 * Activity 实例有且仅有一个，存在则复用，不存在则新建。
 * 复用时，原先堆栈中位于其上方的Activity都将出栈。
 
 ![singleTask](./Android%E5%90%AF%E5%8A%A8%E6%A8%A1%E5%BC%8F.assets/singleTask.jpg)
 
-#### singleInstance：单实例（且独占一个栈）
+#### singleInstance：单实例（独占一个栈）
 
 > **singleInstance一般用于需要和其他应用共享某个页面的场景。即多个应用共用一个实例。**
 >
@@ -124,6 +124,10 @@ date: 2020-08-12 09:38
 
 ---
 
+
+
+### LaunchMode
+
 > **假设堆栈中已存在 A-B-C-D 四个Activity实例，D为栈顶**。
 >
 > 不同启动模式的下对执行相同操作的结果如下表所示：
@@ -132,12 +136,13 @@ date: 2020-08-12 09:38
 > * C和D启动模式相同，根据情况变化。
 > * Tn表示不同的栈
 
-| C和D的启动模式 | 启动一个D            | 启动一个C                     | 启动一个E                                |
-| -------------- | -------------------- | ----------------------------- | ---------------------------------------- |
-| standard       | T1：A-B-C-D-D        | T1：A-B-C-D-D-C               | T1：A-B-C-D-D-C-E                        |
-| singleTop      | T1：A-B-C-D          | T1：A-B-C-D-C                 | T1：A-B-C-D-C-E                          |
-| singleTask     | T1：A-B-C<br />T2：D | T1：A-B<br />T2：D<br />T3：C | T1：A-B<br />T2：D<br />T3：C-E          |
-| singleInstance | T1：A-B-C<br />T2：D | T1：A-B<br />T2：D<br />T3：C | T1：A-B<br />T2：D<br />T3：C<br />T4：E |
+| C和D的启动模式               | 启动一个D                     | 启动一个C                     | 启动一个E                                |
+| ---------------------------- | ----------------------------- | ----------------------------- | ---------------------------------------- |
+| standard                     | T1：A-B-C-D-D                 | T1：A-B-C-D-D-C               | T1：A-B-C-D-D-C-E                        |
+| singleTop                    | T1：A-B-C-D                   | T1：A-B-C-D-C                 | T1：A-B-C-D-C-E                          |
+| singleTask，taskAffinity相同 | T1：A-B-C-D                   | T1：A-B-C                     | T1：A-B-C-E                              |
+| singleTask，taskAffinity不同 | T1：A-B<br />T2：C<br />T3：D | T1：A-B<br />T2：C<br />T3：D | T1：A-B<br />T2：C-E<br />T3：D          |
+| singleInstance               | T1：A-B-C<br />T2：D          | T1：A-B<br />T2：D<br />T3：C | T1：A-B<br />T2：D<br />T3：C<br />T4：E |
 
 ### 通过Intent中的Flag设置启动模式
 

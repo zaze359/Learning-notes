@@ -83,14 +83,6 @@ fun DefaultPreview() {
 
 
 
-### 附带效应
-
-**附带效应（副作用）**：发生在可组合函数作用域之外的应用状态的变化，官方推荐在 `onClick`等回调中触发附带效应，以免发生异常。
-
-* 写入共享对象的属性
-* 更新 `ViewModel` 中的可观察项
-* 更新共享偏好设置
-
 ### Compose 中的状态
 
 [状态和 Jetpack Compose  | Android Developers](https://developer.android.com/jetpack/compose/state)
@@ -105,18 +97,20 @@ interface MutableState<T> : State<T> {
 }
 ```
 
-#### 状态存储：remember
+#### 状态存储：rememberXXX
 
 ##### remember
 
-**使用 `remember {}` 将状态存储在内存中**，防止重组时状态被重置，起到保护当前状态的作用。
+**使用 `remember {}` 将状态存储在内存中**，防止重组时状态被重置，起到保护当前状态的作用。remember 支持接收 key参数，当key发生变化时 remember将重新执行初始化。`remember` 既可用于存储可变对象，又可用于存储不可变对象。
 
-> Notes：调用 `remember` 的可组合项从组合中移除后，记录的值也将被移除。
+> Notes：remember的生命周期和调用点绑定，调用 `remember` 的可组合项从组合中移除后，记录的值也将被移除。
 
 ```kotlin
 @Composable
 private fun Greeting(name: String) {
-
+    // 这里重组依然还是之前的name
+    val test = remember { name }
+  	// remember支持返回任何类型，这里返回State，可以被修改且获取到最新值
     val expanded = remember { mutableStateOf(false) }
 
     val extraPadding = if (expanded.value) 48.dp else 0.dp
@@ -143,17 +137,50 @@ private fun Greeting(name: String) {
 }
 ```
 
+##### rememberUpdatedState
+
+`rememberUpdatedState` 会更新状态并保存在内存中，**保证每次都能获取到最新的值**。
+
+它其实是对上方 `remember` 保存 state 的一个封装，源码如下：
+
+```kotlin
+@Composable
+fun <T> rememberUpdatedState(newValue: T): State<T> = remember {
+    // 创建一个 State
+    mutableStateOf(newValue)
+}.apply { value = newValue }
+```
+
+样例：
+
+```kotlin
+@Composable
+fun LandingScreen(onTimeout: () -> Unit) {
+    // 将 onTimeout 保存为状态
+    val currentOnTimeout by rememberUpdatedState(onTimeout)
+
+    // 传入 true 固定值，使 LaunchedEffect 不重新执行。
+    LaunchedEffect(true) {
+        delay(SplashWaitTimeMillis)
+      	// 读取并执行
+        currentOnTimeout()
+    }
+
+    /* Landing screen content */
+}
+```
+
 ##### rememberSaveable
 
 **对于重新创建 activity 或进程的场景，应使用 `rememberSaveable` 来保存状态，以便恢复界面的状态**。
 
-对于一般的数据类型，直接保存即可：
+* 对于一般的数据类型，直接保存即可：
 
-```kotlin
-val expanded = rememberSaveable { mutableStateOf(false) }
-```
+  ```kotlin
+  val expanded = rememberSaveable { mutableStateOf(false) }
+  ```
 
-对于无法保存到 Bundle 中的内容，可以使用以下几种方式
+对于无法保存到 Bundle 中的内容，可以使用以下几种方式：
 
 * Parcelize
 
@@ -177,6 +204,7 @@ val expanded = rememberSaveable { mutableStateOf(false) }
   val CitySaver = run {
       val nameKey = "Name"
       val countryKey = "Country"
+    	//
       mapSaver(
           save = { mapOf(nameKey to it.name, countryKey to it.country) },
           restore = { City(it[nameKey] as String, it[countryKey] as String) }
@@ -195,7 +223,7 @@ val expanded = rememberSaveable { mutableStateOf(false) }
 
   ```kotlin
   data class City(val name: String, val country: String)
-  
+  //
   val CitySaver = listSaver<City, Any>(
       save = { listOf(it.name, it.country) },
       restore = { City(it[0] as String, it[1] as String) }
@@ -208,42 +236,6 @@ val expanded = rememberSaveable { mutableStateOf(false) }
       }
   }
   ```
-
-##### rememberUpdatedState
-
-`rememberUpdatedState` 会更新保存在内存中值，从而**保证每次都能获取到最新的值**。它其实是 对上方 `remember` 保存状态的一个封装。
-
-> **当一个值需要被长生命周期的表达式引用（LaunchedEffect）时使用，保证效应在值改变时不重启。**
-
-源码：
-
-```kotlin
-@Composable
-fun <T> rememberUpdatedState(newValue: T): State<T> = remember {
-    mutableStateOf(newValue)
-}.apply { value = newValue }
-```
-
-样例：
-
-```kotlin
-@Composable
-fun LandingScreen(onTimeout: () -> Unit) {
-    // 保存最新数据
-    val currentOnTimeout by rememberUpdatedState(onTimeout)
-
-    // 传入 true 固定值，使 LaunchedEffect 不重新执行。
-    LaunchedEffect(true) {
-        delay(SplashWaitTimeMillis)
-      	// 读取并执行
-        currentOnTimeout()
-    }
-
-    /* Landing screen content */
-}
-```
-
-
 
 
 
@@ -280,88 +272,17 @@ Jetpack Compose 中的常规状态提升模式是将状态变量替换为两个�
 
 
 
-### CompositionLocal（数据传递）
+### Side-effects
 
-> 建议使用 `CompositionLocal` 的情况为：
->
-> * 可能**会被任何（而非少数几个）后代使用**。
-> * `CompositionLocal` 应**具有合适的默认值**。
->
-> 其他场景应优先使用 显示参数传递给所需可组合项 或者 控制反转（父级通过逻辑处理组合项）的方式。
+**Side-effects 副作用**：指发生在可组合函数作用域之外的应用状态的变化，官方推荐在 `onClick`等回调中触发附带效应，以免发生异常。
 
-Compose 提供 `CompositionLocal` 使数据在界面树中能够隐式传递，而无需使用显示参数的方式进行传递。
-
-* `CompositionLocal` 是**通过组合隐式向下传递数据的工具**。
-
-* `CompositionLocal` 实例的**作用域限定为组合的一部分**
-* `CompositionLocal` 的 `current` 值对应于该组合部分中的某个祖先提供的**最接近的值**。
-
-> 范例源码来自 `JetChat中的 BackPressHandler`
-
-#### 创建
-
-* `compositionLocalOf`：在重组期间更改提供的值只会使读取其 `current` 值的内容无效，**即仅重组读取值的位置**。
-* `staticCompositionLocalOf` ：与 `compositionLocalOf` 不同，更改该值会导致提供 `CompositionLocal` 的整个 `content` lambda 被重组，而不仅仅是在组合中读取 `current` 值的位置。**所以仅当 `CompositionLocal` 提供的值几乎或者永远不会更改时使用。** 
-
-> 使用范例：
-
-```kotlin
-// val LocalBackPressedDispatcher = compositionLocalOf { error("No Back Dispatcher provided") 
-
-// 构建并赋予默认值
-val LocalBackPressedDispatcher =
-    staticCompositionLocalOf<OnBackPressedDispatcher> { error("No Back Dispatcher provided") }
-
-```
-
-#### 赋值
-
-使用 `provides` infix 函数, 将 `CompositionLocal` 和 `value` 相关联。
-
-```kotlin
-CompositionLocalProvider(
-  // 此处调用 provides 中缀方法 以onBackPressedDispatcher 为value 创建值
-  LocalBackPressedDispatcher provides this@NavActivity.onBackPressedDispatcher
-) {
-}
-```
-
-> 源码
-
-```kotlin
-@Stable
-abstract class ProvidableCompositionLocal<T> internal constructor(defaultFactory: () -> T) :
-    CompositionLocal<T> (defaultFactory) {
-
-    /**
-     * 中缀方法，方便构造
-     */
-    @Suppress("UNCHECKED_CAST")
-    infix fun provides(value: T) = ProvidedValue(this, value, true)
-
-    /**
-     * 中缀方法，方便构造
-     */
-    @Suppress("UNCHECKED_CAST")
-    infix fun providesDefault(value: T) = ProvidedValue(this, value, false)
-}
-```
-
-#### 取值
-
-使用 `CompositionLocal.current` 返回值
-
-```kotlin
-val backDispatcher = LocalBackPressedDispatcher.current
-```
-
-
-
-### 在Compose中使用协程
+* 写入共享对象的属性
+* 更新 `ViewModel` 中的可观察项
+* 更新共享偏好设置
 
 #### LaunchedEffect
 
-允许我们在可组合项内运行挂起函数。
+允许我们在可组合项 内运行挂起函数。
 
 它可以接收一个 key 参数，和一个协程体 block ：
 
@@ -482,7 +403,6 @@ internal fun createCompositionCoroutineScope(
 也就是说，除了以上几种情况，它都不会执行，适用于做一些注册/反注册的操作。
 
 ```kotlin
-
 // LocalLifecycleOwner.current 表示当前Composable的生命周期
 @Composable
 fun HomeScreen(
@@ -509,6 +429,85 @@ fun HomeScreen(
 ```
 
 
+
+
+
+---
+
+### CompositionLocal（数据传递）
+
+> 建议使用 `CompositionLocal` 的情况为：
+>
+> * 可能**会被任何（而非少数几个）后代使用**。
+> * `CompositionLocal` 应**具有合适的默认值**。
+>
+> 其他场景应优先使用 显示参数传递给所需可组合项 或者 控制反转（父级通过逻辑处理组合项）的方式。
+
+Compose 提供 `CompositionLocal` 使数据在界面树中能够隐式传递，而无需使用显示参数的方式进行传递。
+
+* `CompositionLocal` 是**通过组合隐式向下传递数据的工具**。
+
+* `CompositionLocal` 实例的**作用域限定为组合的一部分**
+* `CompositionLocal` 的 `current` 值对应于该组合部分中的某个祖先提供的**最接近的值**。
+
+> 范例源码来自 `JetChat中的 BackPressHandler`
+
+#### 创建
+
+* `compositionLocalOf`：在重组期间更改提供的值只会使读取其 `current` 值的内容无效，**即仅重组读取值的位置**。
+* `staticCompositionLocalOf` ：与 `compositionLocalOf` 不同，更改该值会导致提供 `CompositionLocal` 的整个 `content` lambda 被重组，而不仅仅是在组合中读取 `current` 值的位置。**所以仅当 `CompositionLocal` 提供的值几乎或者永远不会更改时使用。** 
+
+> 使用范例：
+
+```kotlin
+// val LocalBackPressedDispatcher = compositionLocalOf { error("No Back Dispatcher provided") 
+
+// 构建并赋予默认值
+val LocalBackPressedDispatcher =
+    staticCompositionLocalOf<OnBackPressedDispatcher> { error("No Back Dispatcher provided") }
+
+```
+
+#### 赋值
+
+使用 `provides` infix 函数, 将 `CompositionLocal` 和 `value` 相关联。
+
+```kotlin
+CompositionLocalProvider(
+  // 此处调用 provides 中缀方法 以onBackPressedDispatcher 为value 创建值
+  LocalBackPressedDispatcher provides this@NavActivity.onBackPressedDispatcher
+) {
+}
+```
+
+> 源码
+
+```kotlin
+@Stable
+abstract class ProvidableCompositionLocal<T> internal constructor(defaultFactory: () -> T) :
+    CompositionLocal<T> (defaultFactory) {
+
+    /**
+     * 中缀方法，方便构造
+     */
+    @Suppress("UNCHECKED_CAST")
+    infix fun provides(value: T) = ProvidedValue(this, value, true)
+
+    /**
+     * 中缀方法，方便构造
+     */
+    @Suppress("UNCHECKED_CAST")
+    infix fun providesDefault(value: T) = ProvidedValue(this, value, false)
+}
+```
+
+#### 取值
+
+使用 `CompositionLocal.current` 返回值
+
+```kotlin
+val backDispatcher = LocalBackPressedDispatcher.current
+```
 
 ### 状态转换
 

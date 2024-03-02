@@ -102,8 +102,7 @@ fun main() = runBlocking {
 
 ## Flow
 
-> Flow 将协程与响应式编程向结合，需要在协程内执行, 是**冷数据流**。和RxJava很像，同样支持链式调用
->
+Flow 是冷数据流，它将协程与响应式编程向结合，**需要在协程内执行**。和RxJava很像，同样支持链式调用
 
 * **构建Flow**：使用`Flow builders`。
 
@@ -127,18 +126,16 @@ fun main() = runBlocking {
 
 ### StateFlow
 
-> 是可观察的数据容器类。
->
-> 如果需要更新这个状态，可以使用`MutableStateFlow`
+> 如果是需要进行修改操作，需要使用`MutableStateFlow` 这个可变类型。
 
-* `StateFlow`是热数据流。通过`value`属性读取当前状态数据。
-* 它的作用 和 LiveData 类似，当有新的订阅方开始从 StateFlow 中收集数据时，会返回**最近一个状态以及任何后续的状态**。
+* **StateFlow 是热数据流**。通过`value`属性读取当前状态数据，初始化必须赋值。
+* StateFlow 是可观察的数据容器类，和 LiveData 类似。当有新的订阅方开始从 StateFlow 中收集数据时，会返回**最近一个状态以及任何后续的状态**。
+* StateFlow支持防抖，即相同值不执行，而LiveData 相同值依然会执行操作。
+* StateFlow 没有和生命周期绑定。
 
-> 官方推荐在页面中使用`repeatOnLifecycle(Lifecycle.State.xxx)`来更新界面。
+> 由于 `launch` 或 `launchIn` 这些扩展函数并没有和生命周期绑定，所以当 界面直接收集数据流时，即使当前页面是不可见的(onStop)，依然还会处理相关回调，甚至可能还会导致应用崩溃。 
 >
-> 因为使用 `launch` 或 `launchIn` 扩展函数从界面直接收集数据流。即使 View 不可见，这些函数也会处理事件。可能会导致应用崩溃。 
->
-> `launchWhenResumed()`等扩展函数在新的源码中已经备注会引起资源浪费的问题，后续将会废弃。
+> **官方推荐在页面中使用`repeatOnLifecycle(Lifecycle.State.xxx)`来更新界面。`launchWhenResumed()`等扩展函数在新的源码中已经备注会引起资源浪费的问题，后续将会废弃。**
 
 ```kotlin
 override fun onCreate(savedInstanceState: Bundle?) {
@@ -156,16 +153,16 @@ override fun onCreate(savedInstanceState: Bundle?) {
 
 ### SharedFlow
 
-> `SharedFlow` 是 `StateFlow` 的可配置性极高的泛化数据流。想更新数据可以使用`MutableSharedFlow`。
->
->  `shareIn()` 将 StateFlow 转为 SharedFlow。
+> `SharedFlow` 是 可配置性极高的泛化数据流，它的作用是创建一个共享流。对应支持修改操作的 `MutableSharedFlow`。
 
--  `replay`：用于配置 ，有新订阅者时，需要重新发送多少个之前已发出的值。默认是0。
+* `shareIn()` 用于将 StateFlow 转为 SharedFlow。
+
+-  `replay`：用于配置回放数量，默认是0。指定当有新订阅者时，需要重新发送多少个之前已发出的值。StateFlow 其实相当于` replay = 1`
 -  `onBufferOverflow`：指定在处理缓冲区溢出(背压)时，发送的数据执行的策略。默认值为 `BufferOverflow.SUSPEND`挂起，同Channel中的配置。
 
 
 
-## backpressure（背压）
+## 背压 (backpressure) 问题
 
 由于是响应式编程，和RxJava一样也存在背压问题。**上游生产速度大于下游消费速度，导致下游的 Buffer 溢出**。
 
