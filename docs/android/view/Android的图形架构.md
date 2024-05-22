@@ -612,7 +612,9 @@ Surface中不同的layer定义：
 
 > mipmap 适合 应用图标，而drawable适合存放应用的图片资源（.9、png、gif、xml等等）
 
-两者在正常情况下表现形式是一致的，仅在使用了 `Bundle(.aab)` 才会有明显的差别，Bundle会按需下载drawable：
+两者在正常情况下表现形式是一致的，仅在使用了 `Bundle(.aab)` 才会有明显的差别。
+
+App Bundle 会按需下载drawable：
 
 * apk中drawable仅加载符合当前像素密度文件，而mipmap会全部保留。
 * 缩放差异：drawable用于是同一张图进行缩放，mipmap则会找比分辨率大且最接近的那张来进行缩放。

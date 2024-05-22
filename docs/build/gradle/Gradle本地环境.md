@@ -17,6 +17,8 @@ brew install gradle
 
 一般选择新的下载即可。gradle版本跨度太大时需要注意适配。
 
+[Compatibility Matrix (gradle.org)](https://docs.gradle.org/current/userguide/compatibility.html)
+
 > Android Studio配置使用本地Gradle
 
 ![image-20221007215201059](./Gradle%E6%9C%AC%E5%9C%B0%E7%8E%AF%E5%A2%83.assets/image-20221007215201059.png)

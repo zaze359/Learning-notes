@@ -25,6 +25,9 @@ git grep $regexp $(git rev-list --all)
 
 # 避免自动merge
 git pull --rebase
+
+# 还原 B ~ D
+git revert B^...D
 ```
 
 ## Config参数配置
@@ -174,6 +177,10 @@ git remote prune origin
 
 ```shell
 git merge branch2
+
+# 一般用于从公共分支合并到个人分支。
+git rebase master
+git rebase --continue
 ```
 
 ### 分支地址操作
@@ -258,6 +265,12 @@ git cherry-pick <HashA> <HashB>
 git cherry-pick A..B 
 ## 包含A提交 添加^
 git cherry-pick A^..B 
+
+git cherry-pick b2b51d6e5a8db07a7f3025f5f5f7c3bd430d8e47^..c536c1c121d8b665d185ff174cacc7fa9a3b9cb5
+
+git config --global user.name "zaze"
+git config --global user.email 359635919@qq.com
+
 ```
 
 
@@ -281,7 +294,7 @@ git cherry-pick A^..B
 - 显示暂存内容
 
   ```shell
-  # 默认stash@{0}
+  # 默认stash@{0}， 0表示最近一个。
   git stash show
   # or
   git stash show stash@{0}
@@ -301,7 +314,7 @@ git cherry-pick A^..B
 - 删除暂存内容
 
   ```shell
-  # 默认stash@{0}
+  # 默认删除最上面 stash@{0}
   git stash drop
   # or
   git stash drop stash@{0}

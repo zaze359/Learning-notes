@@ -53,7 +53,7 @@ MAT 是一个功能丰富的Java堆分析器。
 
 ```shell
 # 可以将hprof-conv 配置到环境变量，方便使用
-# 执行转换
+# 执行转换A
 hprof-conv xx.hprof xx-conv.hprof
 ```
 

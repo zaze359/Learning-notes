@@ -29,3 +29,22 @@
 
 * 调用 `View.getDrawingCache()` 获取WebView视图的bitmap对象。
 * 缩放后遍历像素点，判断非白色像素的占比，从而判断是否是白屏，例如 非白色像素 大于 5%则不是白屏。
+
+## WebView调试
+
+浏览器输入:
+
+```shell
+# edge
+edge://inspect/#devices
+# chrome
+chrome://inspect/#devices
+```
+
+webview配置:
+
+```java
+// 开启允许调试
+WebView.setWebContentsDebuggingEnabled(true);
+```
+

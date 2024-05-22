@@ -36,7 +36,7 @@ adb connect 127.0.0.1:xxxx
 adb kill-server
 adb start-server
 adb -s <serial number> shell
-adb nodaemon server 查看adb
+adb nodaemon server #查看adb
 ```
 
 ### 打开可读写模拟器

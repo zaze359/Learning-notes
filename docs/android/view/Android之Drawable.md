@@ -65,7 +65,7 @@ Drawable 表示一种可以在Canvas上绘制的概念，并不是一个UI控件
 
 ## Drawable的缓存机制
 
-* **DrawableCache**：管理Drawable缓存，实际上保持的是Drawable的状态 ConstantState。
+* **DrawableCache**：管理Drawable缓存，实际上保持的是Drawable的状态（**ConstantState**）。
   * 存在两个DrawableCache，一个是管理ColorDrawable，另一个是管理非ColorDrawable的。
 * **ConstantState**：用于管理Drawable的状态，并且可以通过状态来创建Drawable对象。一般情况下同一个资源生成的Drawable对象是共享同一个状态的。
   * 最常见的子类有 `BitmapState`，内部持有一个Bitmap对象。
@@ -195,7 +195,7 @@ public class ResourcesImpl {
 }
 ```
 
-## mutate()
+## mutate()：独立Drawable
 
 默认情况下同一个资源加载得到的 Drawable 对象会共享状态（ConstantState），所以修改其中一个Drawable的状态时其他同资源的 Drawable也会受到影响。
 

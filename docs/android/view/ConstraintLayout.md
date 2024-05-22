@@ -39,12 +39,12 @@
 ```
 
 ```xml
-<android.support.constraint.Group
+<androidx.constraintlayout.widget.Group
     android:id="@+id/viewGroup"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
+    android:visibility="gone"
 		app:constraint_referenced_ids="view1,view2" />
-
 ```
 
 

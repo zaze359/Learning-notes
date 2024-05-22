@@ -22,7 +22,9 @@ ssh-keygen -t rsa -C "xxx@gmail.com"
 
 ### 3. 后续需要设置文件名和密码，可直接回车跳过即可
 
-### 4. 查看复制**id_rsa.pub**中的内容
+若此时输入了密码，则以后git 推拉代码 会需要输入密码
+
+### 4. 查看复制**id_rsa.pub** 公钥中的内容
 
 ```bash
 cat id_rsa.pub

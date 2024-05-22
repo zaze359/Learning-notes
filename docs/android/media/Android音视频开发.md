@@ -43,3 +43,9 @@ MediaExtractor：Android系统提供，不过`seekTo`接口只能跳转到关键
 * 基于MediaCodec开发播放器。
 
 * ExoPlayer：Google开源播放器。
+
+## OpenGL ES 环境搭建
+
+* 使用 GLSurfaceView。
+* 使用EGL API，在Native层基于C++进行搭建。
+

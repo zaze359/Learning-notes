@@ -120,7 +120,7 @@ date: 2020-08-12 09:38
 
 > Android 12 新增，
 
- "`singleInstancePerTask`" activity 在 `FLAG_ACTIVITY_MULTIPLE_TASK` 或 `FLAG_ACTIVITY_NEW_DOCUMENT` 已设置的情况下，在不同的任务中可以多次实例化。
+ `singleInstancePerTask`activity 在 `FLAG_ACTIVITY_MULTIPLE_TASK` 或 `FLAG_ACTIVITY_NEW_DOCUMENT` 已设置的情况下，在不同的任务中可以多次实例化。
 
 ---
 
