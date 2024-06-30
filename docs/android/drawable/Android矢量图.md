@@ -20,14 +20,39 @@ SVG 意为可缩放矢量图形（Scalable Vector Graphics），是使用 XML �
 | :- | :------------------------------- | :-------------------------------------------- |
 | M | moveto                           | 相当于android Path里的moveTo(),用于移动起始点 |
 | L | lineto                           | 相当于android Path里的lineTo(),用于画线       |
-| H | horizontal lineto                | 用于画水平线                                  |
-| V | vertical lineto                  | 用于画竖直线                                  |
+| H | horizontal lineto                | 用于画 水平线                                 |
+| V | vertical lineto                  | 用于画 竖直线                                 |
 | C | curveto                          | 相当于cubicTo(),三次贝塞尔曲线                |
 | S | smooth curveto                   | 同样三次贝塞尔曲线，更平滑                    |
 | Q | quadratic Belzier curve quadTo() | 二次贝塞尔曲线                                |
 | T | smooth quadratic Belzier curveto | 同样二次贝塞尔曲线，更平滑                    |
-| A | elliptical Arc                   | 相当于arcTo()，用于画弧                       |
+| A | elliptical Arc                   | 相当于arcTo()，用于画弧。                     |
 | Z | closepath                        | 相当于closeTo(),关闭path                      |
+|  |  |  |
+|  |  |  |
+|  |  |  |
+|  |  |  |
+|  |  |  |
+
+```
+"M50,50 a10,5 0 0,0 0 7"
+起始点 50, 50
+10，5 为椭圆x，y轴半径
+第一个0 为 x轴旋转角度
+第二个0 为取大小弧度，0为小，1为大
+第三个0 为顺逆时针，0为逆1为顺
+第四个0 起始 y 偏移，
+7 起始 x 偏移，
+
+```
+
+
+
+
+
+
+
+
 
 ### svg
 

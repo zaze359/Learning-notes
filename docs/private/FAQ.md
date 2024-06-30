@@ -585,3 +585,17 @@ systeminfo
 
 4. 搜索打开 **hyper-v 管理器** 。
 
+## MAC 打开应用提示已损坏
+
+```shell
+# 开启任何来源
+sudo spctl --master-disable
+# 修改应用属性
+sudo xattr -cr /Applications/应用名.app
+```
+
+
+
+## 崩溃问题
+
+[崩溃分析: resetCancelNextUpFlag 空指针. 今天收到一份崩溃日志，经过一番分析之后，找到了原因，但对于这个崩溃，由于堆栈暴露… | by Wan Xiao | Medium](https://medium.com/@wanxiao1994/崩溃分析-resetcancelnextupflag-空指针-b1b703fd5d76)

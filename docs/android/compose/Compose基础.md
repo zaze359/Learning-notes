@@ -1303,12 +1303,20 @@ private fun MyApp() {
 
 ## Compose 和 Flutter 
 
+> Flutter：强调的是所有平台上业务和UI的一致。最终都是在Flutter的Skia引擎上处理的，而不是对应平台的操作系统。可移植性好，性能略差。
+>
+> Kotlin Multiplatform + Compose Multiplatform：Compose实现多端的UI， KMP 则是会编译成指定平台的二进制文件，调用的是原生API。侧重于复用，可移植性差些，性能好。
+
 | Compose          | Flutter      |                                                              |
 | ---------------- | ------------ | ------------------------------------------------------------ |
 | 树形结构界面     | 树形结构界面 | 一般尽量仅更新修改的部分                                     |
 | @Composable      | Widget       | 都是元素的配置，用于描述应用的界面。而并非是真正的控件。且两者提供的常用组件的命名也十分类似 |
 | CompositionLocal | Provider     | 一种数据共享的方式，同时限制了作用域。数据可以在界面树中传递 |
 |                  |              |                                                              |
+
+
+
+
 
 
 

@@ -249,9 +249,9 @@ public class ResourcesImpl {
 
 ## tint()
 
-* tint：指定图像着色器的颜色。修改的是 src 、bitmap指定的图片。
-* tintMode：图像着色类型，包含 add、multiply、screen、src_over、src_in、src_atop 这六种。
-* backgroundTint：指定背景着色器的颜色。修改的是 background 指定的背景。
+* tint：指定**图像着色器**的颜色。修改的是 src 、bitmap指定的图片。
+* tintMode：图像着色类型，包含 add、multiply、screen、src_over、src_in（默认）、src_atop 这六种。
+* backgroundTint：指定**背景着色器**的颜色。修改的是 background 指定的背景。
 * backgroundTintMode：指定背景着色器的着色类型
 
 为了兼容不同版本，我们一般会使用 `DrawableCompat` 来处理图片。

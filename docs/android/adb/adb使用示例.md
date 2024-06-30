@@ -165,7 +165,7 @@ input swipe 666 888 666 666
 
 ### statusbar
 
-```
+```shell
 # 查看帮助
 cmd statusbar help
 ```

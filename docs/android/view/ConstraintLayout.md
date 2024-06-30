@@ -1,14 +1,14 @@
 
 
 ```xml
-<android.support.constraint.Guideline
+<androidx.constraintlayout.widget.Guideline
     android:id="@+id/beginLine"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:orientation="vertical"
     app:layout_constraintGuide_begin="@dimen/dp_40" />
 
-<android.support.constraint.Guideline
+<androidx.constraintlayout.widget.Guideline
     android:id="@+id/endLine"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
@@ -30,7 +30,7 @@
     app:layout_constraintRight_toRightOf="parent"
     app:layout_constraintTop_toTopOf="parent" />
 
-<android.support.constraint.Barrier
+<androidx.constraintlayout.widget.Barrier
     android:id="@+id/messageTextDialogBarrier"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
