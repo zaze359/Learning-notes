@@ -306,11 +306,15 @@
 
 [Gradle学习笔记](./docs/gradle/Gradle学习笔记.md)
 
-[Android-Gradle插件开发](./docs/gradle/AGP.md)
-
 [Gradle Debug](./docs/gradle/Gradle调试.md)
 
 [Gradle性能诊断](./docs/gradle/Gradle性能诊断.md)
+
+
+
+[Android-Gradle插件开发](./docs/gradle/AGP.md)
+
+[构建脚本管理](./docs/build/构建脚本管理.md)
 
 ## Maven
 
