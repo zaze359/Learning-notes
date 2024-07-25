@@ -54,3 +54,20 @@ app:layout_constraintWidth_default="percent"
 app:layout_constraintWidth_percent="0.2"
 ```
 
+
+
+`wrap_parent` 导致边界元素溢出时使用。
+
+```xml
+app:layout_constrainedHeight="true"
+app:layout_constrainedWidth="true"
+```
+
+
+
+
+
+```xml
+layout_goneMarginBottom
+```
+

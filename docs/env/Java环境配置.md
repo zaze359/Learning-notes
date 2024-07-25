@@ -35,14 +35,14 @@ java -version
 ```shell
 export JAVA_8_HOME=/Library/Java/JavaVirtualMachines/jdk-1.8.jdk/Contents/Home
 export JAVA_11_HOME=/Library/Java/JavaVirtualMachines/jdk-11.jdk/Contents/Home
-export JAVA_17_HOME=/Library/Java/JavaVirtualMachines/jdk-18.jdk/Contents/Home
+export JAVA_17_HOME=/Library/Java/JavaVirtualMachines/jdk-17.jdk/Contents/Home
 export JAVA_HOME=$JAVA_11_HOME
 
-alias jdk8="export JAVA_HOME=$JAVA_8_HOME"
+alias jdk8 ="export JAVA_HOME=$JAVA_8_HOME"
 alias jdk11="export JAVA_HOME=$JAVA_11_HOME"
 alias jdk17="export JAVA_HOME=$JAVA_17_HOME"
 
-export PATH=$JAVA_HOME/bin:$PATH
+#export PATH=$JAVA_HOME/bin:$PATH
 
 ```
 

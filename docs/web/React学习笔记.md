@@ -186,6 +186,8 @@ React在运行时会先将声明的组件渲染成虚拟DOM，接着React 框架
 
 它的轻量来源于 通过算法过滤掉了大量没有必要的真实 DOM API调用。
 
+本质就是将真实DOM 抽象成一个对象，然后通过对象进行动态生成。
+
 ### 协调（Reconciliation）
 
 每次有 props、state 、context等数据变动时，组件会渲染出新的元素树，React 框架会与之前的树做 Diffing 对比，将元素的变动最终体现在浏览器页面的 DOM 中。
