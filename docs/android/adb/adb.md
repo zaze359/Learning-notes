@@ -50,7 +50,7 @@
 
    ![image-20210910235216830](adb.assets/image-20210910235216830.png)
 
-5. 拔掉USB线, 使用**connect连接到此IP对应的设备。
+5. 拔掉USB线, 使用 **connect** 连接到此IP对应的设备。
 
    ```shell
    adb connect 192.168.50.114:5555

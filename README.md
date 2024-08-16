@@ -204,6 +204,8 @@
 
 [Android电量优化](./docs/android/性能/电量优化.md)
 
+[Android性能分析](./docs/android/性能/Android性能分析.md)
+
 ---
 
 ## 异常分析
