@@ -909,7 +909,7 @@ adb shell perfetto --config CONFIG-FIle --out FILE
 
 #### 将trace文件导入到perfetto中
 
-打开https://ui.perfetto.dev/网页。选择`Open trace file`。
+打开 https://ui.perfetto.dev 选择`Open trace file`。
 
 
 

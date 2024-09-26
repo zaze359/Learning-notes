@@ -172,6 +172,8 @@
 
 [Compose基础](./docs/android/compose/Compose基础.md)
 
+[Compose状态管理](./docs/android/compose/Compose状态管理.md)
+
 ---
 
 ## 功能开发
@@ -290,8 +292,6 @@
 
 
 
-
-
 <!--[Docker](./docs/docker/Docker学习笔记.md)-->
 
 <!--[Kubernetes](./docs/kubernetes/Kubernetes学习笔记.md) -->
@@ -306,15 +306,15 @@
 
 [Gradle本地环境配置](./docs/build/gradle/Gradle本地环境.md)
 
-[Gradle学习笔记](./docs/gradle/Gradle学习笔记.md)
+[Gradle学习笔记](./docs/build/gradle/Gradle学习笔记.md)
 
-[Gradle Debug](./docs/gradle/Gradle调试.md)
+[Gradle Debug](./docs/build/gradle/Gradle调试.md)
 
 [Gradle性能诊断](./docs/gradle/Gradle性能诊断.md)
 
 
 
-[Android-Gradle插件开发](./docs/gradle/AGP.md)
+[Android-Gradle插件开发](./docs/build/gradle/AndroidGradlePlugin.md)
 
 [构建脚本管理](./docs/build/构建脚本管理.md)
 
