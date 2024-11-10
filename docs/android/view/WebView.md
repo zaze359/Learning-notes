@@ -32,13 +32,15 @@
 
 ## WebView调试
 
-浏览器输入:
+查看内核版本:
 
 ```shell
 # edge
 edge://inspect/#devices
 # chrome
 chrome://inspect/#devices
+# 网址
+https://liulanmi.com/labs/core.html
 ```
 
 webview配置:

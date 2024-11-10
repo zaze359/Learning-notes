@@ -594,6 +594,17 @@ sudo spctl --master-disable
 sudo xattr -cr /Applications/应用名.app
 ```
 
+## Wireshark
+
+You don't have permission to capture on local interfaces.
+
+```shell
+sudo launchctl enable system/org.wireshark.ChmodBPF
+sudo launchctl load '/Library/LaunchDaemons/org.wireshark.ChmodBPF.plist'
+```
+
+
+
 
 
 ## 崩溃问题

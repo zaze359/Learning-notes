@@ -28,7 +28,15 @@ tar zxvf .\image-angler-opm7.181205.001.zip -C ./images
 
 ### 从设备中提取镜像
 
+```shell
+# 输出路径：/path/to/output.img
+# 分区名：{partition_name}
+fastboot --disable-verity --disable-verification flash /path/to/output.img /dev/block/bootdevice/by-name/{partition_name}
 
+fastboot reboot
+
+fastboot devices
+```
 
 完整的镜像组要由以下几个文件组成：
 
