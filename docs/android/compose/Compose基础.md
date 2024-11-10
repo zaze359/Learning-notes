@@ -2,13 +2,105 @@
 
 # Compose基础
 
-Compose 是声明式工具集，它的更新方式是通过新参数调用同一个可组合项。这些参数是界面状态的表现形式。每当状态更新时，都会发生重组。
+## 什么是Compose
 
-## 基础概念
+Compose是一个由 Google Android 团队官方推出的声明式UI框架，对标 我们之前使用的 View体系（命令式UI）。
+
+> 命令式：需要从头开始，先创建View，然后拿到View，再来更新View。
+>
+> 声明式：事先声明好了UI布局，通过维护UI的状态来更新控件的状态。框架内部帮我们哪些命令式的操作。
+
+### 传统的View体系
+
+- 通过**XML** 来写布局。
+- `LayoutInflater` 读取 XML 并解析，然后创建对应的View。
+- 将View关联到 Window上，这里可能是 Activity、Dialog等，我们会 使用 Java 或者 Kotlin 来开发。
+
+存在问题：
+
+系统需要读取解析XML，在转为View，存在性能损耗。当然我们也可以直接使用代码的方式来布局并创建View，只不过写法相对繁琐。
+
+![image-20241111011638745](./Compose%E5%9F%BA%E7%A1%80.assets/image-20241111011638745.png)
+
+### Compose
+
+* 是一种声明式UI框架，可以方便的 使用 Kotlin 直接以纯代码的方式来写布局。也算是顺应了时代的潮流。
+* 通过修改控件的状态来刷新UI。
+
+存在的问题：
+
+每个状态的变更都会需要去刷新界面，这里会依赖 声明式UI框架的优化策略。跳过状态没有变化的控件，只更新状态变化的控件。
+
+![image-20241111011116238](./Compose%E5%9F%BA%E7%A1%80.assets/image-20241111011116238-1731258681314-1.png)
 
 
 
-### 预览界面
+
+
+
+
+
+
+## 可组合函数（composable function）
+
+> 可组合函数用于**描述所需的界面状态**，并不是结构界面组件。
+>
+> Compose 在渲染时并不会转化成`View`，它的布局与渲染还是在`LayoutNode`上完成的
+
+我们通过添加 `@Composable` 注解，即可定义一个可组合函数，这个注释会告诉 Compose 编译器：这个函数是将数据转换为界面。
+
+```kotlin
+@Composable
+fun Greeting(name: String) {
+    Text(text = "Hello $name!")
+}
+```
+
+* 只有 Composable 函数内能调用 Composable 函数。
+* 可组合函数可能会像动画的每一帧一样非常频繁地运行，所以**应避免副作用（Effect）**。
+* 可组合函数可以按任何顺序执行，可组合函数可以并行运行。
+
+
+
+### 重组
+
+**输入更改时会再次调用可组合函数，这个过程叫做重组。**Compose 的重组是其声明式 UI 运转的基础，每当状态更新时，都会发生重组，不过会跳过尽可能多的可组合函数和 lambda，仅重组需要更新的部分。
+
+同时重组是乐观操作，Compose 会在参数再次更改之前完成重组。如果某个参数在重组完成之前发生更改，Compose 可能会取消重组，并使用新参数重新开始。（但是 **Effect 依旧会执行，所以可能会导致异常**）。
+
+但并不是说数据没变就不会重组，当**调用点**发生变化时也会触发重组。同时 **不稳定类型也不能跳过重组**。
+
+> **调用点**：调用可组合项的源代码位置。会影响其在组合中的位置，因此会影响界面树。
+>
+> **不稳定类型**：例如一个有 var 成员的 data class。https://developer.android.com/develop/ui/compose/performance/stability
+>
+> **稳定类型**：不可变对象(val String等)、仅有 val 成员的 data class 。稳定类型的成员必须也是稳定类型。
+
+* 每个调用都有**唯一的调用点和源位置**，编译器将使用它们对调用进行唯一识别。
+
+* 当从同一个调用点多次调用某个可组合项时，除了调用点之外，还会使用**执行顺序来区分实例**。
+
+所以左侧图例中 列表下方增加数据时，已存在部分将会被重复使用。但是在上方增加、移除或者数据重排时，将会导致参数变化的位置发生重组。
+
+而右侧图例中通过**使用 `key` 指定唯一性** 来避免重组。
+
+![image-20241111020554607](./Compose%E5%9F%BA%E7%A1%80.assets/image-20241111020554607.png)
+
+
+
+#### ViewCompositionStrategy：重组策略
+
+| 策略                                          | 说明                                                         | 使用场景                     |
+| --------------------------------------------- | ------------------------------------------------------------ | ---------------------------- |
+| DisposeOnDetachedFromWindowOrReleasedFromPool | 默认策略。当组合依赖的ComposeView **从 Window 分离或不在容器池**时，组合将被释放。 |                              |
+| DisposeOnLifecycleDestroyed                   | ComposeView对应的Lifecycle 被销毁时，组合将被释放            |                              |
+| DisposeOnViewTreeLifecycleDestroyed           | 当`ViewTreeLifecycleOwner.Lifecycle` 被销毁时，组合将被释放。即Activity.view 或者 Fragment.view 被销毁时 | Fragment 中使用ComposeView时 |
+
+
+
+
+
+## 预览界面
 
 添加 `@Preview` 注解后，就能在 Android Stuido 中预览布局。
 
