@@ -362,7 +362,9 @@ git config --global http.postBuffer 524288000
 无法下载，所要使用镜像
 
 ```shell
-npm config set registry "https://registry.npm.taobao.org"
+## npm config set registry "https://registry.npm.taobao.org"
+
+npm config set registry https://registry.npmmirror.com/
 ```
 
 ## CMD在此系统上禁止运行脚本

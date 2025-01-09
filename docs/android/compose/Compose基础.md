@@ -35,13 +35,7 @@ Compose是一个由 Google Android 团队官方推出的声明式UI框架，对�
 
 
 
-
-
-
-
-
-
-## 可组合函数（composable function）
+## Composable 函数
 
 > 可组合函数用于**描述所需的界面状态**，并不是结构界面组件。
 >
@@ -62,7 +56,7 @@ fun Greeting(name: String) {
 
 
 
-### 重组
+## 重组
 
 **输入更改时会再次调用可组合函数，这个过程叫做重组。**Compose 的重组是其声明式 UI 运转的基础，每当状态更新时，都会发生重组，不过会跳过尽可能多的可组合函数和 lambda，仅重组需要更新的部分。
 
@@ -86,11 +80,7 @@ fun Greeting(name: String) {
 
 ![image-20241111020554607](./Compose%E5%9F%BA%E7%A1%80.assets/image-20241111020554607.png)
 
-
-
-#### ViewCompositionStrategy：重组策略
-
-| 策略                                          | 说明                                                         | 使用场景                     |
+| 重组策略                                      | 说明                                                         | 使用场景                     |
 | --------------------------------------------- | ------------------------------------------------------------ | ---------------------------- |
 | DisposeOnDetachedFromWindowOrReleasedFromPool | 默认策略。当组合依赖的ComposeView **从 Window 分离或不在容器池**时，组合将被释放。 |                              |
 | DisposeOnLifecycleDestroyed                   | ComposeView对应的Lifecycle 被销毁时，组合将被释放            |                              |
